@@ -1,0 +1,48 @@
+{
+  "name": "dsh-external-plugin-devkit",
+  "version": "0.1.0",
+  "description": "Out-of-process plugin devkit for DeepSeek Harness. CLI: dshx. For Cursor / Grok / Codex — not Creator Mode.",
+  "type": "module",
+  "license": "MIT",
+  "private": false,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aa2246740/dsh-external-plugin-devkit.git"
+  },
+  "homepage": "https://github.com/aa2246740/dsh-external-plugin-devkit",
+  "bugs": {
+    "url": "https://github.com/aa2246740/dsh-external-plugin-devkit/issues"
+  },
+  "bin": {
+    "dshx": "./src/cli.ts"
+  },
+  "scripts": {
+    "dshx": "node --import tsx/esm src/cli.ts",
+    "test": "node --import tsx/esm --test tests/*.spec.ts"
+  },
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "dshx",
+    "plugin",
+    "devkit"
+  ],
+  "files": [
+    "src",
+    "knowledge",
+    "AGENTS.md",
+    "LICENSE",
+    "README.md"
+  ],
+  "dependencies": {
+    "js-yaml": "^4.2.0",
+    "tsx": "^4.22.4"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^22.20.0"
+  }
+}
