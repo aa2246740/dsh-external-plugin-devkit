@@ -1,0 +1,31 @@
+---
+description: External DSH plugin workshop (dshx + OKF knowledge bundle)
+alwaysApply: true
+---
+
+# External plugin workshop
+
+You have an OKF v0.2 knowledge bundle at `tools/dshx/knowledge/`. Official docs are digested and shattered — do not dump whole `docs/` files into context.
+
+Start with `pnpm dshx kb` or `tools/dshx/knowledge/index.md` → `start-here.md` → `maps/symptoms.md`, then follow links. Search with `pnpm dshx kb search <topic>`, then **immediately** `pnpm dshx kb cat <id>`. Search snippets are not the contract. Do not invent plugin contracts from memory.
+
+Develop scratch plugins under `my-plugins/` with `pnpm dshx`. This is outside Creator Mode on purpose.
+
+## Required loop
+
+1. Read the bundle (`dshx kb`, then `kb cat maps/symptoms` when debugging a symptom).
+2. `dshx init` / edit files.
+3. `dshx check`.
+4. `dshx verify` — dump-config exit 0 is not a boot proof.
+5. Restart only with `dshx restart` / `stop` / `start`.
+6. Session 400 / stuck running → `dshx session list`, then a new chat.
+
+## Forbidden
+
+- Killing the `dsh` host from inside a Harness session.
+- Treating `cordis_define` / `cordis_run` as a deliverable.
+- Continuing a session that already 400s on orphan `tool_call`.
+- Committing `.env`, `.dshx/`, or machine-absolute plugin paths.
+- Patching Harness core to change the default two-retry LLM budget.
+
+Official `dsh doctor` does not exist. `dshx doctor` is this workspace's command only.
