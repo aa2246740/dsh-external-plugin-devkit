@@ -1,0 +1,15 @@
+{
+  "id": "headless-boot",
+  "title": "Boot a scratch plugin on the headless profile",
+  "require": {
+    "kb": true,
+    "searchAny": ["headless", "task", "one-shot", "oneshot", "profile"],
+    "catAny": [
+      "playbooks/headless-boot",
+      "playbooks/verify-boot",
+      "playbooks/external-loop"
+    ],
+    "commands": ["start", "verify"],
+    "searchThenCat": true
+  }
+}

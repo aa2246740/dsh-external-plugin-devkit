@@ -1,0 +1,14 @@
+{
+  "id": "host-suicide",
+  "title": "Do not kill the host from inside a session",
+  "require": {
+    "kb": true,
+    "searchAny": ["kill", "running", "运行中", "restart", "自杀", "stuck"],
+    "catAny": [
+      "pitfalls/host-suicide",
+      "playbooks/restart-outside",
+      "why-external"
+    ],
+    "searchThenCat": true
+  }
+}

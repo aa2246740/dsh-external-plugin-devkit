@@ -1,0 +1,16 @@
+{
+  "id": "doctor-workshop",
+  "title": "Run the workshop doctor and do not treat it as official",
+  "require": {
+    "kb": true,
+    "searchAny": ["doctor", "leftover", "official"],
+    "catAny": [
+      "computations/doctor-profile",
+      "references/dshx-cli",
+      "community/tools",
+      "pitfalls/leftover-bundles"
+    ],
+    "commands": ["doctor"],
+    "searchThenCat": true
+  }
+}

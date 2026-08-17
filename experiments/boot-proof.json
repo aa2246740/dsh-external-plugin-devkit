@@ -1,0 +1,16 @@
+{
+  "id": "boot-proof",
+  "title": "Scaffold a scratch plugin and prove a real boot",
+  "require": {
+    "kb": true,
+    "commands": ["init", "check", "verify"],
+    "catAny": [
+      "playbooks/verify-boot",
+      "playbooks/external-loop",
+      "playbooks/init-plugin",
+      "start-here",
+      "contracts/plugin-forms"
+    ],
+    "searchThenCat": true
+  }
+}

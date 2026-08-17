@@ -1,0 +1,15 @@
+{
+  "id": "dump-trap",
+  "title": "dump-config exit 0 is not a loaded plugin",
+  "require": {
+    "kb": true,
+    "searchAny": ["dump", "dump-config", "boot", "verify", "假阴性"],
+    "catAny": [
+      "contracts/dump-config",
+      "pitfalls/dump-false-negative",
+      "playbooks/verify-boot",
+      "computations/verify-plugin-boot"
+    ],
+    "searchThenCat": true
+  }
+}

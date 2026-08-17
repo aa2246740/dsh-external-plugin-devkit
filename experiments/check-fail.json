@@ -1,0 +1,16 @@
+{
+  "id": "check-fail",
+  "title": "Make dshx check fail a default-export or absolute-path plugin",
+  "require": {
+    "kb": true,
+    "searchAny": ["check", "default", "export", "portable", "absolute"],
+    "catAny": [
+      "playbooks/check-plugin",
+      "contracts/plugin-forms",
+      "contracts/patch-overlay",
+      "playbooks/init-plugin"
+    ],
+    "commands": ["check"],
+    "searchThenCat": true
+  }
+}

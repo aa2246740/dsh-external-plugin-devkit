@@ -1,0 +1,16 @@
+{
+  "id": "creator-ship",
+  "title": "cordis_define is not a shippable plugin",
+  "require": {
+    "kb": true,
+    "searchAny": ["creator", "cordis_define", "创造模式", "persist", "落盘"],
+    "catAny": [
+      "pitfalls/creator-memory",
+      "playbooks/persist-files",
+      "why-external",
+      "contracts/creator-mode",
+      "playbooks/init-plugin"
+    ],
+    "searchThenCat": true
+  }
+}

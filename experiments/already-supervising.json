@@ -1,0 +1,15 @@
+{
+  "id": "already-supervising",
+  "title": "A second start must stop or restart, not --force",
+  "require": {
+    "kb": true,
+    "searchAny": ["supervis", "restart", "start", "status"],
+    "catAny": [
+      "playbooks/restart-outside",
+      "references/dshx-cli",
+      "playbooks/external-loop"
+    ],
+    "commands": ["start", "status"],
+    "searchThenCat": true
+  }
+}
