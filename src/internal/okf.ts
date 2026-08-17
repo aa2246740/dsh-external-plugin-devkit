@@ -61,7 +61,7 @@ const SYNONYM_GROUPS: string[][] = [
   ['retry', 'retries', 'retried', 'maxretries', 'retrypolicy', 'dsh-llm-retry', 'llm-retry', '重试', '自动重试'],
   ['timeout', 'timeouts', 'idle', 'streamidletimeout', 'streamidletimeoutms', 'llm_stream_idle_timeout', '超时', '断流'],
   ['llmerror', 'llm-error', 'harnesserror', 'failure.code', '报错'],
-  ['orphan', 'scar', '伤痕', 'pairing', 'tool_call', 'tool_calls', 'tool-call'],
+  ['orphan', 'scar', '伤疤', 'pairing', 'tool_call', 'tool_calls', 'tool-call'],
   ['400', 'invalid_request', 'invalid-request'],
   ['session', 'chat', '会话', '新对话', '新会话'],
   ['creator', '创造模式', 'creator mode', 'cordis_define', 'cordis_run'],
