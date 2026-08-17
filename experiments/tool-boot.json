@@ -1,0 +1,15 @@
+{
+  "id": "tool-boot",
+  "title": "Scaffold a defineTool plugin and prove a real boot",
+  "require": {
+    "kb": true,
+    "commands": ["init", "check", "verify"],
+    "catAny": [
+      "contracts/define-tool",
+      "playbooks/init-plugin",
+      "playbooks/verify-boot",
+      "contracts/plugin-forms"
+    ],
+    "searchThenCat": true
+  }
+}

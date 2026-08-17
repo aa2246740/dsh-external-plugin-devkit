@@ -1,0 +1,13 @@
+{
+  "id": "mixed-ux",
+  "title": "Timeout-stop and 400 pairing are two contracts",
+  "require": {
+    "kb": true,
+    "searchAny": ["timeout", "retry", "400", "tool_call", "超时", "重试"],
+    "catGroups": [
+      ["contracts/llm-retry", "contracts/llm-timeout", "pitfalls/two-retry-stop", "playbooks/diagnose-model-ux"],
+      ["pitfalls/orphan-tool-call", "playbooks/new-session", "contracts/turn-error", "contracts/persistence"]
+    ],
+    "searchThenCat": true
+  }
+}

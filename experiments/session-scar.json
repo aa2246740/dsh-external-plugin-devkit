@@ -1,0 +1,16 @@
+{
+  "id": "session-scar",
+  "title": "Orphan tool_call 400 is not healable in the same session",
+  "require": {
+    "kb": true,
+    "searchAny": ["orphan", "tool_call", "400", "session", "伤疤"],
+    "catAny": [
+      "pitfalls/orphan-tool-call",
+      "playbooks/new-session",
+      "contracts/turn-error",
+      "contracts/persistence"
+    ],
+    "commands": ["session"],
+    "searchThenCat": true
+  }
+}

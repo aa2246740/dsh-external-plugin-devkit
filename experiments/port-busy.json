@@ -1,0 +1,16 @@
+{
+  "id": "port-busy",
+  "title": "Unsupervised :3080 is not your plugin host",
+  "require": {
+    "kb": true,
+    "searchAny": ["port", "3080", "status", "busy", "占用"],
+    "catAny": [
+      "references/dshx-cli",
+      "playbooks/restart-outside",
+      "playbooks/verify-boot",
+      "maps/symptoms"
+    ],
+    "commands": ["status"],
+    "searchThenCat": true
+  }
+}

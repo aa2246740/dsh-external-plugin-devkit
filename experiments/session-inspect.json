@@ -1,0 +1,15 @@
+{
+  "id": "session-inspect",
+  "title": "List and inspect local sessions without healing a scar",
+  "require": {
+    "kb": true,
+    "searchAny": ["session", "orphan", "inspect", "400"],
+    "catAny": [
+      "playbooks/new-session",
+      "pitfalls/orphan-tool-call",
+      "contracts/turn-error"
+    ],
+    "commands": ["session"],
+    "searchThenCat": true
+  }
+}

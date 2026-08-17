@@ -1,0 +1,15 @@
+{
+  "id": "leftover-bundle",
+  "title": "Failed plugin remove leaves dsh.profile.bundles",
+  "require": {
+    "kb": true,
+    "searchAny": ["leftover", "remove", "bundle", "cannot resolve"],
+    "catAny": [
+      "pitfalls/leftover-bundles",
+      "playbooks/external-loop",
+      "computations/doctor-profile"
+    ],
+    "commands": ["doctor"],
+    "searchThenCat": true
+  }
+}

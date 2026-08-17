@@ -1,0 +1,15 @@
+{
+  "id": "init-force",
+  "title": "Overwrite an existing scaffold only with --force",
+  "require": {
+    "kb": true,
+    "searchAny": ["init", "force", "overwrite", "already exists", "scaffold"],
+    "catAny": [
+      "playbooks/init-plugin",
+      "playbooks/check-plugin",
+      "playbooks/external-loop"
+    ],
+    "commands": ["init"],
+    "searchThenCat": true
+  }
+}

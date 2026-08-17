@@ -1,0 +1,15 @@
+{
+  "id": "overlay-gen",
+  "title": "Generate an absolute overlay and keep git portable",
+  "require": {
+    "kb": true,
+    "searchAny": ["overlay", "portable", "patch", "absolute"],
+    "catAny": [
+      "contracts/patch-overlay",
+      "pitfalls/relative-patch-name",
+      "playbooks/check-plugin"
+    ],
+    "commands": ["overlay"],
+    "searchThenCat": true
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "id": "logs-after-verify",
+  "title": "Read the launcher log after verify stops the host",
+  "require": {
+    "kb": true,
+    "commands": ["verify", "logs"],
+    "catAny": [
+      "playbooks/verify-boot",
+      "computations/verify-plugin-boot",
+      "start-here"
+    ],
+    "searchThenCat": true
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "id": "verify-keep",
+  "title": "Leave the host up after verify and read the last log",
+  "require": {
+    "kb": true,
+    "searchAny": ["keep", "logs", "verify"],
+    "catAny": [
+      "playbooks/verify-boot",
+      "computations/verify-plugin-boot",
+      "references/dshx-cli"
+    ],
+    "commands": ["verify", "logs", "stop"],
+    "searchThenCat": true
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "id": "retry-ux",
+  "title": "Diagnose two-timeout stop without guessing the contract",
+  "require": {
+    "kb": true,
+    "searchAny": ["retry", "timeout", "重试", "超时", "maxRetries", "retryPolicy"],
+    "catAny": [
+      "contracts/llm-retry",
+      "contracts/llm-timeout",
+      "pitfalls/two-retry-stop",
+      "playbooks/diagnose-model-ux"
+    ],
+    "searchThenCat": true
+  }
+}

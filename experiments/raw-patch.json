@@ -1,0 +1,15 @@
+{
+  "id": "raw-patch",
+  "title": "Committed relative cordis.yml is not a raw --patch file",
+  "require": {
+    "kb": true,
+    "searchAny": ["patch", "relative", "portable", "overlay", "name"],
+    "catAny": [
+      "contracts/patch-overlay",
+      "pitfalls/relative-patch-name",
+      "playbooks/verify-boot",
+      "playbooks/init-plugin"
+    ],
+    "searchThenCat": true
+  }
+}
