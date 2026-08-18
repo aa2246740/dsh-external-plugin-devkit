@@ -68,6 +68,7 @@ const SYNONYM_GROUPS: string[][] = [
   ['dump', 'dump-config', 'dumpconfig', '假阴性'],
   ['verify', 'boot', 'marker', '真启动'],
   ['kill', 'suicide', '自杀', 'taskkill', 'host-suicide'],
+  ['recopy', 'already up to date', 'stale-file-copy', 'file-copy-stale'],
   ['adapter', 'llm-adapter', 'registeradapter', 'provider'],
   ['config', 'schema', 'schemastery', 'plugin-config'],
   ['supervising', 'supervises', 'already supervising', 'already supervises'],
@@ -111,6 +112,11 @@ export const RETRIEVAL_FIXTURES: RetrievalFixture[] = [
   { query: 'busy port', mustInclude: 'references/dshx-cli' },
   { query: 'port-3080', mustInclude: 'references/dshx-cli' },
   { query: 'host-supervised', mustInclude: 'references/dshx-cli' },
+  { query: 'Already up to date', mustInclude: 'pitfalls/file-copy-stale', first: 'pitfalls/file-copy-stale' },
+  { query: 'file: recopy', mustInclude: 'pitfalls/file-copy-stale' },
+  { query: 'dshx ship', mustInclude: 'playbooks/ship-plugin', first: 'playbooks/ship-plugin' },
+  { query: 'DSHX_HARNESS', mustInclude: 'playbooks/setup-workshop' },
+  { query: 'one-liner', mustInclude: 'playbooks/setup-workshop', first: 'playbooks/setup-workshop' },
 ]
 
 function walkMd(dir: string, acc: string[] = []): string[] {

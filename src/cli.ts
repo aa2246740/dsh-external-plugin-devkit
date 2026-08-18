@@ -10,6 +10,8 @@ import { cmdOverlay } from './commands/overlay.ts'
 import { cmdSession } from './commands/session.ts'
 import { cmdWhich } from './commands/which.ts'
 import { cmdExperiment } from './commands/experiment.ts'
+import { cmdSetup } from './commands/setup.ts'
+import { cmdShip } from './commands/ship.ts'
 import { finding, parseCli, printReport, report } from './internal/io.ts'
 import { logObserve } from './internal/observe.ts'
 import { findRepoRoot } from './internal/paths.ts'
@@ -33,6 +35,9 @@ async function main(): Promise<number> {
   if (command === 'loop') {
     process.stdout.write(LOOP)
     return 0
+  }
+  if (command === 'setup') {
+    return cmdSetup(args, options)
   }
 
   let root: string
@@ -77,6 +82,9 @@ async function main(): Promise<number> {
       return cmdWhich(args, options, root)
     case 'experiment':
       return cmdExperiment(args, options, root)
+    case 'ship':
+    case 'recopy':
+      return cmdShip(args, options, root)
     default:
       printReport(report(command, [
         finding('error', 'unknown', `unknown command: ${command}`),

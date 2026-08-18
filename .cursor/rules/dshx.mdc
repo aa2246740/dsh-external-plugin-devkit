@@ -18,7 +18,8 @@ Develop scratch plugins under `my-plugins/` with `pnpm dshx`. This is outside Cr
 3. `dshx check`.
 4. `dshx verify` — dump-config exit 0 is not a boot proof.
 5. Restart only with `dshx restart` / `stop` / `start`.
-6. Session 400 / stuck running → `dshx session list`, then a new chat.
+6. `file:` profile packages: `dshx ship <dir>`. `plugin add file:` "Already up to date" does not recopy `lib/`.
+7. Session 400 / stuck running → `dshx session list`, then a new chat.
 
 ## Forbidden
 

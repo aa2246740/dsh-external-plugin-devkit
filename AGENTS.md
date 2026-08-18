@@ -9,6 +9,7 @@ Path: `tools/dshx/knowledge/` (OKF v0.2). Official docs were digested and shatte
 Explore it yourself. Do not guess contracts from memory.
 
 ```sh
+pnpm dshx setup --print-prompt
 pnpm dshx kb
 pnpm dshx kb cat start-here
 pnpm dshx kb cat maps/symptoms
@@ -26,9 +27,11 @@ Open `knowledge/index.md`, then follow links. When a concept lists `resource` or
 ```sh
 pnpm dshx check <name>
 pnpm dshx verify <name>     # dump-config exit 0 is not enough
+pnpm dshx ship <dir>        # file: packages; add-only does not recopy lib/
 pnpm dshx start web <name>
 pnpm dshx stop | restart
 pnpm dshx doctor
+pnpm dshx which
 pnpm dshx session list
 ```
 

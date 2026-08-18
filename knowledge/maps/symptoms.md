@@ -43,6 +43,7 @@ stale_after: 2026-11-17
 | dump-config 退出 0 但真实 boot 崩 | [dump-config](/contracts/dump-config.md) | [dump-false-negative](/pitfalls/dump-false-negative.md)、[verify-boot](/playbooks/verify-boot.md) |
 | `duplicate loader entry id` | [duplicate-loader-id](/pitfalls/duplicate-loader-id.md) | [composition](/contracts/composition.md) |
 | `plugin remove` 后 profile 起不来 | [leftover-bundles](/pitfalls/leftover-bundles.md) | `dshx doctor` |
+| `file:` add 显示 Already up to date，页面仍是旧包 | [file-copy-stale](/pitfalls/file-copy-stale.md) | [ship-plugin](/playbooks/ship-plugin.md)、`dshx ship` |
 | `--patch` 相对 `name` 解析错目录 | [relative-patch-name](/pitfalls/relative-patch-name.md) | [patch-overlay](/contracts/patch-overlay.md) |
 | `pnpm dsh web --patch` 相对 name 找不到模块 | [relative-patch-name](/pitfalls/relative-patch-name.md) | 用 `dshx verify` / `start`，不要把绝对路径写进 git |
 | 默认 3080 已被占用、dshx 没在监督 | [dshx-cli](/references/dshx-cli.md) | `dshx status`，换 `--port 3091`，不要 `--force` 去抢别人的监听 |
@@ -57,7 +58,9 @@ stale_after: 2026-11-17
 | Creator 里写的插件重启消失 | [creator-memory](/pitfalls/creator-memory.md) | [why-external](/why-external.md)、[persist-files](/playbooks/persist-files.md) |
 | 不知道插件该导出什么 | [plugin-forms](/contracts/plugin-forms.md) | [plugin-config](/contracts/plugin-config.md)、[init-plugin](/playbooks/init-plugin.md) |
 | `export default` / check 红 | [check-plugin](/playbooks/check-plugin.md) | [plugin-forms](/contracts/plugin-forms.md) |
+| 别人 clone 后不知道怎么装 | [setup-workshop](/playbooks/setup-workshop.md) | `dshx setup --print-prompt` |
 | 目录已在、想覆盖脚手架 | [init-plugin](/playbooks/init-plugin.md) | `dshx init <name> --force` |
+| 要一块 Web 设置/slot 脚手架 | [init-plugin](/playbooks/init-plugin.md) | `dshx init <name> --kind client` |
 | verify 成功后还想看日志 / 留宿主 | [verify-boot](/playbooks/verify-boot.md) | `--keep`，然后 `dshx logs` / `stop` |
 | 要挂模型面工具 | [define-tool](/contracts/define-tool.md) | [events](/contracts/events.md) |
 | 官方文档太长，不知从哪读 | [okf-practice](/maps/okf-practice.md) | [official-sources](/maps/official-sources.md) |

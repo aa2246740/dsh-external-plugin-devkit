@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
+import { clientEntryFindings } from './file-copy.ts'
 import { finding } from './io.ts'
 import { pluginSource, readCommittedOverlay } from './plugin.ts'
 import type { Finding, PluginManifest } from './types.ts'
@@ -23,7 +24,7 @@ export function checkPlugin(plugin: PluginManifest, repoRoot: string): Finding[]
   const hasApply = /export\s+function\s+apply\s*\(/.test(source) || /export\s+async\s+function\s+apply\s*\(/.test(source)
   const hasDefault = /export\s+default\s+/.test(source)
 
-  if (plugin.kind === 'function' || plugin.kind === 'tool') {
+  if (plugin.kind === 'function' || plugin.kind === 'tool' || plugin.kind === 'client') {
     if (hasName) findings.push(finding('ok', 'export-name', 'named export `name`', { path: rel }))
     else findings.push(finding('error', 'export-name', 'function plugin must named-export `name`', { path: rel }))
     if (hasInject) findings.push(finding('ok', 'export-inject', 'named export `inject`', { path: rel }))
@@ -85,6 +86,8 @@ export function checkPlugin(plugin: PluginManifest, repoRoot: string): Finding[]
   if (!existsSync(plugin.entryAbs)) {
     findings.push(finding('error', 'entry', `entry missing: ${plugin.entryAbs}`))
   }
+
+  findings.push(...clientEntryFindings(plugin.dir))
 
   return findings
 }

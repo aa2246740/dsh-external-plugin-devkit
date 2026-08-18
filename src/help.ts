@@ -20,21 +20,24 @@ export const HELP = `dshx — 在 DeepSeek Harness 进程外开发插件的工�
   模型「超时两次后停」是 dsh-llm-retry 默认预算，见 kb cat contracts/llm-retry。
 
 推荐闭环（全部在本 CLI，不要在 DSH 里杀进程）
+  0. 第一次：dshx setup --print-prompt，把那段话交给外部 Agent
   1. dshx kb / dshx kb cat maps/symptoms
-  2. dshx init <name> [--kind tool]
+  2. dshx init <name> [--kind tool|client]
   3. 用外部 Agent 改 my-plugins/<name>
   4. dshx check <name>
   5. dshx verify <name>               静态 + dump + 真实 boot（看 marker）
-  6. 失败就 dshx logs --grep 和 dshx doctor
-  7. 改完再 dshx restart（从外面重启）
-  8. 会话 400 → dshx session list，不要 Continue
+  6. file: 包改完用 dshx ship <dir>，不要只 add
+  7. 失败就 dshx logs --grep 和 dshx doctor
+  8. 改完再 dshx restart（从外面重启）
+  9. 会话 400 → dshx session list，不要 Continue
 
 命令
   help                 本说明
+  setup                装脚本 / 通用 skill / 记住 Harness；--print-prompt / --dry-run
   kb                   知识库入口 / ls / catalog / cat / search / lint / path
   loop                 打印推荐开发闭环
   init <name>          在 my-plugins/ 脚手架
-  check [name]         静态合同（exports、portable path、marker）
+  check [name]         静态合同（exports、portable path、marker、client 入口）
   overlay [name]       生成绝对路径 --patch 文件（不提交）
   dump [name]          调官方 dump-config；退出 0 ≠ 能 boot
   start [web|headless] [name]   已在监督则报 already-supervising，先 stop/restart
@@ -43,9 +46,10 @@ export const HELP = `dshx — 在 DeepSeek Harness 进程外开发插件的工�
   status               本工具是否在监督宿主
   logs [--follow] [--grep <text>]   宿主已停也读最后一份 launcher log
   verify [name]        唯一「插件真的起来了」的命令
-  doctor               环境 / profile / dump 重复 id / 会话孤儿 call
+  ship <dir|name>      remove + add file:，强制重拷 lib（别名 recopy）
+  doctor               环境 / leftover / stale file: / dump 重复 id / 会话孤儿
   session list|inspect [id]
-  which                打印关键路径
+  which                打印路径、Harness 来源、skill 安装状态
   experiment           观察者打分（begin|end|score）。写插件的 Agent 不必用
 
 常用旗标
@@ -53,7 +57,10 @@ export const HELP = `dshx — 在 DeepSeek Harness 进程外开发插件的工�
                                 默认 3080 被占且不是你的：换 --port 3091，不要 --force
   --keep          verify 成功后不关宿主
   --force         init: 覆盖已有脚手架文件。start/verify: 不要用来抢别人的端口，也不能接管自己正在监督的宿主
-  --kind function|tool
+  --kind function|tool|client
+  --harness <path>    setup 指定 checkout；多个 checkout 时必须显式选
+  --dry-run / --print-prompt    setup
+  --restart       ship 成功后再 restart
   --task "..."    headless 一次性任务
 
 这不是官方 dsh doctor。官方没有 doctor 子命令。
@@ -93,7 +100,11 @@ export const LOOP = `外部插件开发闭环
    孤儿 tool_call → 新开会话或 headless，不要在伤疤会话上重试。
    宿主被杀 → 外面 dshx start，不要续那个 running 会话。
 
-7. profile 被 plugin add/remove 写坏
+7. file: 包装进 profile 后改了 lib 却看不见
+   pnpm dshx ship /abs/path/to/pkg
+   doctor 的 stale-file-copy 为红。不要相信 add 的 Already up to date。
+
+8. profile 被 plugin add/remove 写坏
    pnpm dshx doctor
-   leftover-bundle / duplicate-id 按 pitfalls 文档手修。
+   leftover-bundle / duplicate-id / stale-file-copy 按 pitfalls 文档手修。
 `

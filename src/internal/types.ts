@@ -15,7 +15,7 @@ export interface Report {
   data?: object
 }
 
-export type PluginKind = 'function' | 'tool' | 'object' | 'class'
+export type PluginKind = 'function' | 'tool' | 'client' | 'object' | 'class'
 export type ProfileName = 'web' | 'headless'
 
 export interface PluginManifest {
@@ -54,9 +54,13 @@ export interface CliOptions {
   force: boolean
   kind: PluginKind
   task?: string
+  dryRun: boolean
+  printPrompt: boolean
+  restart: boolean
+  harness?: string
 }
 
-export const DSHX_VERSION = '0.1.0'
+export const DSHX_VERSION = '0.2.0'
 export const DEFAULT_PORT = 3080
 export const DEFAULT_TIMEOUT_MS = 60_000
 export const DEFAULT_PROFILE: ProfileName = 'web'

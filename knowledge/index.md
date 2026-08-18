@@ -27,11 +27,11 @@ okf_version: "0.2"
 
 # 工作流
 
-* [Playbooks](playbooks/) - 初始化、静态 check、进程外重启、真实 boot、headless、新会话、模型 UX 诊断
+* [Playbooks](playbooks/) - setup、初始化、静态 check、ship、进程外重启、真实 boot、headless、新会话、模型 UX 诊断
 
 # 坑
 
-* [Pitfalls](pitfalls/) - 孤儿 tool_call、宿主自杀、两次重试后停、dump 假阴性
+* [Pitfalls](pitfalls/) - 孤儿 tool_call、宿主自杀、两次重试后停、dump 假阴性、file: 不重拷
 
 # 地图
 

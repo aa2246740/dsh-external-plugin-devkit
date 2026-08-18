@@ -53,7 +53,7 @@ export function envHas(name: string, extra?: Record<string, string>): boolean {
   return Boolean(value && value.trim())
 }
 
-const VALUE_FLAGS = new Set(['--profile', '--port', '--timeout', '--grep', '--kind', '--task'])
+const VALUE_FLAGS = new Set(['--profile', '--port', '--timeout', '--grep', '--kind', '--task', '--harness'])
 
 const COMMAND_FLAGS: Record<string, ReadonlySet<string>> = {
   kb: new Set(['--json']),
@@ -72,6 +72,9 @@ const COMMAND_FLAGS: Record<string, ReadonlySet<string>> = {
   session: new Set(['--json']),
   which: new Set(['--json']),
   experiment: new Set(['--json']),
+  setup: new Set(['--json', '--dry-run', '--print-prompt', '--harness', '--force']),
+  ship: new Set(['--json', '--profile', '--restart', '--force']),
+  recopy: new Set(['--json', '--profile', '--restart', '--force']),
   help: new Set(['--json']),
   loop: new Set(['--json']),
   version: new Set(['--json']),
@@ -95,6 +98,13 @@ function applyFlag(token: string, argv: string[], index: number, options: CliOpt
   else if (token === '--follow' || token === '-f') options.follow = true
   else if (token === '--keep') options.keep = true
   else if (token === '--force') options.force = true
+  else if (token === '--dry-run') options.dryRun = true
+  else if (token === '--print-prompt') options.printPrompt = true
+  else if (token === '--restart') options.restart = true
+  else if (token === '--harness' && argv[index + 1]) {
+    options.harness = argv[index + 1]
+    return index + 1
+  }
   else if (token === '--profile' && argv[index + 1]) {
     options.profile = argv[index + 1] as ProfileName
     return index + 1
@@ -131,6 +141,9 @@ export function parseCli(argv: string[]): { command: string; args: string[]; opt
     keep: false,
     force: false,
     kind: 'function',
+    dryRun: false,
+    printPrompt: false,
+    restart: false,
   }
   const { command: found, index: commandIndex } = findCommand(argv)
   const allowed = COMMAND_FLAGS[found] ?? new Set(['--json'])

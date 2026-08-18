@@ -16,6 +16,31 @@ export function apply(_ctx: Context) {
 `
 }
 
+function clientHostSource(id: string, marker: string): string {
+  return `import type { Context } from '@deepseek-ai/cordis'
+
+export const name = '${id}'
+export const inject = []
+
+export function apply(_ctx: Context) {
+  console.log('${marker}')
+}
+`
+}
+
+function clientSource(id: string): string {
+  return `import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
+
+export const name = '${id}-client'
+export const inject = ['slots']
+
+export function apply(_ctx: ClientContext) {
+  // Register additive slots only. Read tools/dshx/knowledge/maps/extension-points.md
+  // before touching official ui-files or replacing a core surface.
+}
+`
+}
+
 function toolSource(id: string, marker: string): string {
   return `import type { Context } from '@deepseek-ai/cordis'
 import { defineTool } from '@deepseek-ai/dsh-tools'
@@ -46,7 +71,7 @@ export function apply(ctx: Context) {
 export function cmdInit(args: string[], options: CliOptions, root: string): number {
   const name = args[0]
   if (!name || !/^[a-z][a-z0-9-]*$/.test(name)) {
-    printReport(report('init', [finding('error', 'usage', 'dshx init <kebab-name> [--kind function|tool]')]), options.json)
+    printReport(report('init', [finding('error', 'usage', 'dshx init <kebab-name> [--kind function|tool|client]')]), options.json)
     return 1
   }
   const dir = join(pluginsDir(root), name)
@@ -56,8 +81,31 @@ export function cmdInit(args: string[], options: CliOptions, root: string): numb
   }
   const marker = `[my-plugins/${name}] loaded`
   const entry = `src/${name}.ts`
-  const source = options.kind === 'tool' ? toolSource(name, marker) : functionSource(name, marker)
+  const source = options.kind === 'tool'
+    ? toolSource(name, marker)
+    : options.kind === 'client'
+      ? clientHostSource(name, marker)
+      : functionSource(name, marker)
   writeText(join(dir, entry), source)
+  if (options.kind === 'client') {
+    writeText(join(dir, 'src/client/index.tsx'), clientSource(name))
+    writeText(join(dir, 'package.json'), `${JSON.stringify({
+      name,
+      version: '0.0.0',
+      type: 'module',
+      main: entry,
+      exports: {
+        '.': `./${entry}`,
+        './client': './src/client/index.tsx',
+      },
+      dsh: {
+        client: {
+          inject: ['@deepseek-ai/dsh-client-runtime'],
+          platform: 'web',
+        },
+      },
+    }, null, 2)}\n`)
+  }
   writeText(join(dir, 'dshx.yml'), [
     `id: ${name}`,
     `entry: ${entry}`,

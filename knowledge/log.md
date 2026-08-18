@@ -1,5 +1,9 @@
 # Directory Update Log
 
+## 2026-08-18
+
+* **Update**: Onboarding for external agents. `dshx setup` / `--print-prompt` / portable `skill/dshx`, `DSHX_HARNESS` + `~/.config/dshx/harness`, `dshx ship` for stale `file:` copies, `doctor` `stale-file-copy`, `check` `client-entry`, `init --kind client`.
+
 ## 2026-08-17
 
 * **Update**: Round 6 (4/4). `doctor` now prints ok leftover/duplicate/orphan rows when clean, and warns on unsupervised :3080 like `status`. Finding codes `port-3080` / `host-supervised` retrieve `dshx-cli`.

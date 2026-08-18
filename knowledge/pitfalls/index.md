@@ -11,3 +11,4 @@
 * [Creator memory](creator-memory.md) - 重启消失是合同
 * [Preset collision](preset-collision.md) - 两个 tool-cordis
 * [Relative patch name](relative-patch-name.md) - 相对路径解析错目录
+* [file: add does not recopy](file-copy-stale.md) - Already up to date ≠ lib 已更新

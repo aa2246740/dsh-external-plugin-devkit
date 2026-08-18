@@ -35,6 +35,10 @@ sources:
 
 按 Google OKF 的约定：先读 `index.md`，再顺着 markdown 链接走。`kb search` 只返回 id 和一句 description。**snippet 不是合同，命中后必须 `kb cat`。** 不要对整仓官方长文做无目的全文搜索来「猜」插件合同。组织方法见 [okf-practice](maps/okf-practice.md)。
 
+# 第一次来这台机器
+
+人把 README 里的一句话交给任意外部 Agent。Agent 跑 `dshx setup --harness <checkout>`（先 `--dry-run` 也可以）。不要启动或杀掉 `dsh`。细节见 [setup-workshop](playbooks/setup-workshop.md)。
+
 # 你也有一套进程外工具
 
 `dshx` 补的是 Creator Mode 缺的能力：自己重启、自己验证、自己看会话伤疤。

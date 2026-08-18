@@ -1,7 +1,7 @@
 {
   "name": "dsh-external-plugin-devkit",
-  "version": "0.1.0",
-  "description": "Out-of-process plugin devkit for DeepSeek Harness. CLI: dshx. For Cursor / Grok / Codex — not Creator Mode.",
+  "version": "0.2.0",
+  "description": "Out-of-process plugin devkit for DeepSeek Harness. CLI: dshx. For any external agent — not Creator Mode.",
   "type": "module",
   "license": "MIT",
   "private": false,
@@ -33,6 +33,8 @@
   "files": [
     "src",
     "knowledge",
+    "skill",
+    "examples",
     "AGENTS.md",
     "LICENSE",
     "README.md"

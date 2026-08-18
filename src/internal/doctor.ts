@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import { dumpConfig, dumpDefaultConfig, duplicateIds, parseDumpEntries } from './dsh.ts'
 import { envHas, finding, loadDotEnv, loadJson, loadYaml } from './io.ts'
 import { currentHost, portOpen } from './host.ts'
+import { staleFileCopyFindings } from './file-copy.ts'
 import { profileDir, resolveDshHome, sessionsRoot } from './paths.ts'
 import { listSessions } from './sessions.ts'
 import { TEMPLATE_BUNDLES, type Finding, type ProfileName } from './types.ts'
@@ -67,6 +68,12 @@ export async function runDoctor(root: string, profile: ProfileName): Promise<Fin
       }
       if (leftover === 0) {
         findings.push(finding('ok', 'leftover-bundle', 'no leftover dsh.profile.bundles rows'))
+      }
+      const stale = staleFileCopyFindings(profile)
+      if (stale.length === 0) {
+        findings.push(finding('ok', 'stale-file-copy', 'no file: plugins in this profile'))
+      } else {
+        findings.push(...stale)
       }
       const patchPath = join(prof, 'cordis.patch.yml')
       if (existsSync(patchPath)) {

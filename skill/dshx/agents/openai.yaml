@@ -1,0 +1,4 @@
+interface:
+  display_name: "dshx"
+  short_description: "Run dshx and query its knowledge bundle"
+  default_prompt: "Use dshx to look up the DeepSeek Harness plugin contract and run the dshx CLI."

@@ -31,4 +31,17 @@ describe('parseCli', () => {
     assert.equal(parsed.options.json, true)
     assert.equal(parsed.options.port, 3091)
   })
+
+  it('parses setup and ship flags', () => {
+    const setup = parseCli(['setup', '--dry-run', '--print-prompt', '--harness', '/tmp/h'])
+    assert.equal(setup.command, 'setup')
+    assert.equal(setup.options.dryRun, true)
+    assert.equal(setup.options.printPrompt, true)
+    assert.equal(setup.options.harness, '/tmp/h')
+    const ship = parseCli(['ship', './pkg', '--restart', '--profile', 'web'])
+    assert.equal(ship.command, 'ship')
+    assert.deepEqual(ship.args, ['./pkg'])
+    assert.equal(ship.options.restart, true)
+    assert.equal(ship.options.profile, 'web')
+  })
 })

@@ -1,7 +1,7 @@
 ---
 type: Playbook
 title: Scaffold a scratch plugin
-description: 用 dshx init 在 my-plugins/ 建最小 function 或 tool 插件。目录已在则 --force 覆盖脚手架文件，不是去抢端口。
+description: 用 dshx init 在 my-plugins/ 建最小 function、tool 或 client 插件。目录已在则 --force 覆盖脚手架文件，不是去抢端口。
 tags: [init, scaffold]
 aliases: ["init", "scaffold", "脚手架", "overwrite", "already exists", "init --force"]
 status: stable
@@ -14,6 +14,7 @@ stale_after: 2026-11-17
 ```sh
 pnpm dshx init my-feature
 pnpm dshx init my-tool --kind tool
+pnpm dshx init my-panel --kind client
 pnpm dshx init my-feature --force    # 覆盖已有脚手架文件
 ```
 
@@ -35,6 +36,7 @@ my-plugins/<name>/
 
 - function：`export const name` / `inject` / `apply`，无 default
 - tool：`inject: ['tools']` + `defineTool`
+- client：host 仍是 named export；另有 `src/client/index.tsx` + `package.json` `dsh.client`。只加 slot，不要去挂官方 `ui-files`
 - 保留 `console.log('[my-plugins/<name>] loaded')`，与 `dshx.yml` 的 `marker` 一致
 - 可调参数用 `Config` schema，不要写死
 - 注册走 `ctx.effect` / `ctx.on` / `ctx.tools.register`

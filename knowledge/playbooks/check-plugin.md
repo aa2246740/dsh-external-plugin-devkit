@@ -32,6 +32,7 @@ pnpm dshx check              # 扫 my-plugins/ 下每一个目录（含别人留
 | `portable-path` | 已提交的 `cordis.yml` 写成了机器绝对路径 |
 | `cordis-yml` | 已提交 overlay 不是顶层 YAML 数组 |
 | `entry` | entry 文件不存在 |
+| `client-entry` | `dsh.client` / `exports["./client"]` 指向的 `.js` 不存在（只有 `.mjs` 也会红） |
 
 # 常见负例
 

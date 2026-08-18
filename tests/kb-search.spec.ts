@@ -49,6 +49,9 @@ describe('OKF retrieval', () => {
     assert.ok(ids('--force').includes('playbooks/init-plugin'))
     assert.ok(ids('port-3080').includes('references/dshx-cli'))
     assert.ok(ids('host-supervised').includes('references/dshx-cli'))
+    assert.equal(ids('Already up to date')[0], 'pitfalls/file-copy-stale')
+    assert.equal(ids('dshx ship')[0], 'playbooks/ship-plugin')
+    assert.ok(ids('DSHX_HARNESS').includes('playbooks/setup-workshop'))
   })
 
   it('keeps retrieval fixtures green', () => {

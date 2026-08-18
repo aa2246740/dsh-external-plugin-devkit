@@ -1,28 +1,155 @@
-import { existsSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const here = dirname(fileURLToPath(import.meta.url))
 
+export type HarnessSource = 'flag' | 'env' | 'config' | 'walk'
+
+export interface HarnessHit {
+  root: string
+  source: HarnessSource
+}
+
+export interface HarnessResolve {
+  ok: boolean
+  root?: string
+  source?: HarnessSource
+  candidates: HarnessHit[]
+  message?: string
+}
+
 export function dshxPackageRoot(): string {
   return resolve(here, '../..')
 }
 
-export function findRepoRoot(start = process.cwd()): string {
+export function userConfigDir(): string {
+  const xdg = process.env.XDG_CONFIG_HOME?.trim()
+  if (xdg) return join(xdg, 'dshx')
+  return join(homedir(), '.config', 'dshx')
+}
+
+export function userHarnessConfigPath(): string {
+  return join(userConfigDir(), 'harness')
+}
+
+export function skillPackageDir(): string {
+  return join(dshxPackageRoot(), 'skill', 'dshx')
+}
+
+export function isHarnessCheckout(dir: string, requireDshx = true): boolean {
+  if (!existsSync(join(dir, 'apps/cli/src/bin.ts'))) return false
+  if (!requireDshx) return true
+  return existsSync(join(dir, 'tools/dshx/src/cli.ts'))
+}
+
+export function walkToHarness(start: string, requireDshx = true): string | undefined {
   let dir = resolve(start)
   for (;;) {
-    const launcher = join(dir, 'apps/cli/src/bin.ts')
-    const dshxCli = join(dir, 'tools/dshx/src/cli.ts')
-    if (existsSync(launcher) && existsSync(dshxCli)) return dir
+    if (isHarnessCheckout(dir, requireDshx)) return dir
     const parent = dirname(dir)
-    if (parent === dir) {
-      throw new Error(
-        'cannot find a DeepSeek Harness checkout (looked for apps/cli/src/bin.ts and tools/dshx/src/cli.ts). Put this repo at <harness>/tools/dshx',
-      )
-    }
+    if (parent === dir) return undefined
     dir = parent
   }
+}
+
+export function readHarnessConfig(): string | undefined {
+  const path = userHarnessConfigPath()
+  if (!existsSync(path)) return undefined
+  const text = readFileSync(path, 'utf8').trim()
+  return text.length > 0 ? resolve(text) : undefined
+}
+
+export function writeHarnessConfig(root: string): string {
+  const path = userHarnessConfigPath()
+  mkdirSync(dirname(path), { recursive: true })
+  writeFileSync(path, `${resolve(root)}\n`)
+  return path
+}
+
+function pushUnique(hits: HarnessHit[], hit: HarnessHit): void {
+  const root = resolve(hit.root)
+  if (hits.some(item => item.root === root)) return
+  hits.push({ root, source: hit.source })
+}
+
+export function resolveHarness(options: {
+  start?: string
+  flag?: string
+  requireDshx?: boolean
+} = {}): HarnessResolve {
+  const requireDshx = options.requireDshx ?? true
+  const start = options.start ?? process.cwd()
+  const candidates: HarnessHit[] = []
+
+  if (options.flag?.trim()) {
+    const flagged = resolve(options.flag.trim())
+    if (!isHarnessCheckout(flagged, requireDshx)) {
+      return {
+        ok: false,
+        candidates,
+        message: `--harness is not a DeepSeek Harness checkout${requireDshx ? ' with tools/dshx' : ''}: ${flagged}`,
+      }
+    }
+    return { ok: true, root: flagged, source: 'flag', candidates: [{ root: flagged, source: 'flag' }] }
+  }
+
+  const fromEnv = process.env.DSHX_HARNESS?.trim()
+  if (fromEnv) {
+    const envRoot = resolve(fromEnv)
+    if (!isHarnessCheckout(envRoot, requireDshx)) {
+      return {
+        ok: false,
+        candidates,
+        message: `DSHX_HARNESS is set but is not a DeepSeek Harness checkout${requireDshx ? ' with tools/dshx' : ''}: ${envRoot}`,
+      }
+    }
+    pushUnique(candidates, { root: envRoot, source: 'env' })
+  }
+
+  const fromConfig = readHarnessConfig()
+  if (fromConfig) {
+    if (!isHarnessCheckout(fromConfig, requireDshx)) {
+      return {
+        ok: false,
+        candidates,
+        message: `${userHarnessConfigPath()} points at a path that is not a DeepSeek Harness checkout${requireDshx ? ' with tools/dshx' : ''}: ${fromConfig}`,
+      }
+    }
+    pushUnique(candidates, { root: fromConfig, source: 'config' })
+  }
+
+  const walked = walkToHarness(start, requireDshx)
+  if (walked) pushUnique(candidates, { root: walked, source: 'walk' })
+
+  if (candidates.length === 0) {
+    return {
+      ok: false,
+      candidates,
+      message: requireDshx
+        ? 'cannot find a DeepSeek Harness checkout (looked for apps/cli/src/bin.ts and tools/dshx/src/cli.ts). Set DSHX_HARNESS, pass --harness, write ~/.config/dshx/harness, or put this repo at <harness>/tools/dshx'
+        : 'cannot find a DeepSeek Harness checkout (looked for apps/cli/src/bin.ts). Pass --harness or cd into the checkout',
+    }
+  }
+  if (candidates.length > 1) {
+    const listed = candidates.map(item => `${item.source}: ${item.root}`).join('; ')
+    return {
+      ok: false,
+      candidates,
+      message: `multiple DeepSeek Harness checkouts found (${listed}). Pass --harness <path> or set DSHX_HARNESS; do not guess`,
+    }
+  }
+  const [only] = candidates
+  return { ok: true, root: only!.root, source: only!.source, candidates }
+}
+
+export function findRepoRoot(start = process.cwd()): string {
+  const resolved = resolveHarness({ start, requireDshx: true })
+  if (!resolved.ok || !resolved.root) {
+    throw new Error(resolved.message ?? 'cannot find a DeepSeek Harness checkout')
+  }
+  return resolved.root
 }
 
 export function stateDir(root: string): string {

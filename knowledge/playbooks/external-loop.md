@@ -23,6 +23,7 @@ pnpm dshx init demo --kind function    # 或 --kind tool
 # 外部 Agent 改 my-plugins/demo
 pnpm dshx check demo
 pnpm dshx verify demo                  # 唯一「真的起来了」；默认会停
+pnpm dshx ship /abs/path/to/pkg        # file: 包；不要只 add
 pnpm dshx verify demo --keep           # 证明后留宿主
 pnpm dshx start web demo               # start 本来就不关；--keep 是 verify 的旗标
 pnpm dshx logs --grep '[my-plugins/demo]'
