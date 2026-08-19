@@ -37,3 +37,5 @@ sources:
 官方没有 Trajectory CLI。验证插件 = 看已记录的 `tool/call` / `tool/result` 和下一次完整 `request/header`。内存挂载没有专用 `cordis/mount` 事件（v1 已拒绝）。
 
 `dshx session list|inspect` 只读扫描磁盘日志（含 zstd），用来发现孤儿 `tool_call`，不改历史。CLOSED error 会不会自愈见 [turn-error](turn-error.md)。
+
+0.1.0-rc.7 起 max-tokens 截断后会话应仍可继续；截断本身仍是已记录事件，不是另写一条 context。

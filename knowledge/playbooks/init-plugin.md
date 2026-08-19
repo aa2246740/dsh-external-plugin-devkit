@@ -36,7 +36,7 @@ my-plugins/<name>/
 
 - function：`export const name` / `inject` / `apply`，无 default
 - tool：`inject: ['tools']` + `defineTool`
-- client：host 仍是 named export；另有 `src/client/index.tsx` + `package.json` `dsh.client`。只加 slot，不要去挂官方 `ui-files`
+- client：Host `installSettingsSection` + 浏览器 `settings.plugin.item`（rc.7 设置卡片）。整页才用 `settings.section`。见 [settings-card](settings-card.md)
 - 保留 `console.log('[my-plugins/<name>] loaded')`，与 `dshx.yml` 的 `marker` 一致
 - 可调参数用 `Config` schema，不要写死
 - 注册走 `ctx.effect` / `ctx.on` / `ctx.tools.register`

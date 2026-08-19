@@ -24,6 +24,10 @@ sources:
 | Native hook | `ctx.on` | `docs/cookbook/extension-cookbook.md` |
 | LLM adapter | `ctx.llm.registerAdapter` | [llm-adapter](/contracts/llm-adapter.md)、`docs/cookbook/adding-an-llm-adapter.md` |
 | UI / Chat 节点 | `session/event` 或 `ConversationNodeDefinition` + slots | `docs/cookbook/adding-a-conversation-node.md` |
+| 插件设置卡片 | Host `installSettingsSection` + `settings.plugin.item` | [settings-card](/contracts/settings-card.md)、`docs/cookbook/adding-a-settings-card.md` |
+| 设置整页 | `settings.section`（`id` / `order` / `label`） | `packages/client/ui-settings/src/client/contract/slots.ts` |
+| 持久图片 | `ctx.attachments`（先落盘再写 session 事件） | `docs/subsystems/attachment.md` |
+| 后台任务 / Job Panel | `ctx.jobs` | `docs/subsystems/jobs.md` |
 | 人发命令 | `ctx.commands` | 不经模型 turn |
 | 后台任务 | `ctx.jobs` | |
 | FS / sandbox / shell | 能力缝 Definition / Provider / Consumer | |

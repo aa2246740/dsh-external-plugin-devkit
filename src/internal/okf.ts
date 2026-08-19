@@ -69,6 +69,7 @@ const SYNONYM_GROUPS: string[][] = [
   ['verify', 'boot', 'marker', '真启动'],
   ['kill', 'suicide', '自杀', 'taskkill', 'host-suicide'],
   ['recopy', 'already up to date', 'stale-file-copy', 'file-copy-stale'],
+  ['settingscard', 'settings-card', 'settingspluginitem', 'installsettingssection', '设置卡片'],
   ['adapter', 'llm-adapter', 'registeradapter', 'provider'],
   ['config', 'schema', 'schemastery', 'plugin-config'],
   ['supervising', 'supervises', 'already supervising', 'already supervises'],
@@ -117,6 +118,10 @@ export const RETRIEVAL_FIXTURES: RetrievalFixture[] = [
   { query: 'dshx ship', mustInclude: 'playbooks/ship-plugin', first: 'playbooks/ship-plugin' },
   { query: 'DSHX_HARNESS', mustInclude: 'playbooks/setup-workshop' },
   { query: 'one-liner', mustInclude: 'playbooks/setup-workshop', first: 'playbooks/setup-workshop' },
+  { query: 'settings card', mustInclude: 'contracts/settings-card', first: 'contracts/settings-card' },
+  { query: 'settings.plugin.item', mustInclude: 'contracts/settings-card', first: 'contracts/settings-card' },
+  { query: 'installSettingsSection', mustInclude: 'contracts/settings-card' },
+  { query: 'PTC mode', mustInclude: 'contracts/creator-mode' },
 ]
 
 function walkMd(dir: string, acc: string[] = []): string[] {

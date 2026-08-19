@@ -18,27 +18,57 @@ export function apply(_ctx: Context) {
 
 function clientHostSource(id: string, marker: string): string {
   return `import type { Context } from '@deepseek-ai/cordis'
+import { installSettingsSection, settingsNamespace } from '@deepseek-ai/dsh-settings'
+import z from '@deepseek-ai/schemastery'
 
 export const name = '${id}'
 export const inject = []
 
-export function apply(_ctx: Context) {
+const NS = settingsNamespace('${id}')
+
+export interface Config {
+  enabled?: boolean
+}
+
+export const Config: z<Config> = z.object({
+  enabled: z.boolean().default(true),
+})
+
+export function apply(ctx: Context, config: Config) {
   console.log('${marker}')
+  let source = () => config
+  installSettingsSection(ctx, NS, Config, config, {
+    setSource: current => { source = current },
+    onChange: () => { void source() },
+  })
 }
 `
 }
 
 function clientSource(id: string): string {
   return `import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
+import type {} from '@deepseek-ai/dsh-client-ui-settings-plugins/client'
 
 export const name = '${id}-client'
-export const inject = ['slots']
+export const inject = ['slots', 'settingsScope']
 
-export function apply(_ctx: ClientContext) {
-  // Register additive slots only. Read tools/dshx/knowledge/maps/extension-points.md
-  // before touching official ui-files or replacing a core surface.
+export function apply(ctx: ClientContext) {
+  // Official rc.7 card: settings.plugin.item keyed by the Host namespace.
+  // Do not register a top-level settings.section unless you need a whole page.
+  ctx.slots.inject('settings.plugin.item', () => ctx.slots.register({
+    name: 'settings.plugin.item',
+    key: '${id}',
+  }, ${pascal(id)}Card))
+}
+
+function ${pascal(id)}Card() {
+  return null
 }
 `
+}
+
+function pascal(id: string): string {
+  return id.split('-').filter(Boolean).map(part => part[0]!.toUpperCase() + part.slice(1)).join('')
 }
 
 function toolSource(id: string, marker: string): string {
@@ -100,7 +130,7 @@ export function cmdInit(args: string[], options: CliOptions, root: string): numb
       },
       dsh: {
         client: {
-          inject: ['@deepseek-ai/dsh-client-runtime'],
+          inject: ['@deepseek-ai/dsh-client-ui-settings-plugins'],
           platform: 'web',
         },
       },

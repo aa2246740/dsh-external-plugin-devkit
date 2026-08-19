@@ -19,7 +19,7 @@ sources:
 pnpm dshx kb
 pnpm dshx kb cat start-here
 pnpm dshx kb cat maps/symptoms
-pnpm dshx init demo --kind function    # 或 --kind tool
+pnpm dshx init demo --kind function    # 或 --kind tool / client（client = rc.7 设置卡片）
 # 外部 Agent 改 my-plugins/demo
 pnpm dshx check demo
 pnpm dshx verify demo                  # 唯一「真的起来了」；默认会停

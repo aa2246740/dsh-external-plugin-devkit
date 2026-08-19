@@ -3,7 +3,7 @@ type: Runtime Contract
 title: Creator Mode (preset cordis)
 description: 创造模式是 shipped agent-preset id cordis，不是独立 bundle，也没有规格对象。
 tags: [creator, cordis, preset]
-aliases: ["Creator Mode", "创造模式", "preset cordis"]
+aliases: ["Creator Mode", "创造模式", "preset cordis", "PTC mode", "Code mode", "PTC 模式"]
 status: stable
 resource: apps/cli/config/agent-presets/cordis/preset.yml
 generated: { by: dshx/grok-4.6, at: 2026-08-17T12:30:00Z }
@@ -24,7 +24,7 @@ sources:
 
 磁盘：`apps/cli/config/agent-presets/cordis/`
 UI：`name: 创造模式`，`order: 4`
-并列：`standard` / `code` / `minimal` / `cordis`
+并列：`standard` / `code` / `minimal` / `cordis`。磁盘 id 仍是 `code`；**0.1.0-rc.7** 起英文 UI 把 `Code mode` 改成 **`PTC mode`**（中文「PTC 模式」）。搜 Code mode 先对这个 rename，不要当新 preset。
 
 产品页三句话：inspect 当前运行时、在内存里试 Cordis 插件、把它们组合成新 mode。**没有** Creator 规格对象能绑住后续步骤。
 

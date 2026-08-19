@@ -52,6 +52,8 @@ describe('OKF retrieval', () => {
     assert.equal(ids('Already up to date')[0], 'pitfalls/file-copy-stale')
     assert.equal(ids('dshx ship')[0], 'playbooks/ship-plugin')
     assert.ok(ids('DSHX_HARNESS').includes('playbooks/setup-workshop'))
+    assert.equal(ids('settings.plugin.item')[0], 'contracts/settings-card')
+    assert.ok(ids('PTC mode').includes('contracts/creator-mode'))
   })
 
   it('keeps retrieval fixtures green', () => {

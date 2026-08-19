@@ -4,6 +4,7 @@
 * [Explore the knowledge base](explore-kb.md) - index → symptoms → cat；search 之后必须 cat
 * [First-time setup](setup-workshop.md) - 一句话 prompt / `dshx setup`
 * [Init a plugin](init-plugin.md) - 脚手架
+* [Add a settings card](settings-card.md) - rc.7 官方设置卡片
 * [Check a plugin](check-plugin.md) - 静态合同；default export / 绝对路径会红
 * [Restart from outside](restart-outside.md) - 禁止会话内杀宿主；already supervising
 * [Verify a real boot](verify-boot.md) - dump + marker + HTTP

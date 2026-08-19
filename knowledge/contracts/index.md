@@ -7,6 +7,7 @@
 * [Authority](authority.md) - 谁说了算
 * [Plugin forms](plugin-forms.md) - Function / Object / Class
 * [Plugin Config](plugin-config.md) - Schemastery `Config`，不要普通对象
+* [Settings cards](settings-card.md) - rc.7 `installSettingsSection` + `settings.plugin.item`
 
 # 工具与事件
 

@@ -9,7 +9,7 @@ generated: { by: dshx/grok-4.6, at: 2026-08-17T14:00:00Z }
 stale_after: 2026-11-17
 ---
 
-钉：本仓库是 DeepSeek Harness `0.1.0-rc.5` 的独立拷贝。路径相对仓库根。
+钉：合同对照官方 **0.1.0-rc.7**（tag `dsh-v0.1.0-rc.7`）。工作台 checkout 的 `package.json` 可能仍显示更早 rc；以官方 tag / npm `@deepseek-ai/dsh*` 为准。路径相对仓库根。
 
 **不要先把这些文件整篇读完。** 先走 [symptoms](symptoms.md) 或下面的「已拆成」列，需要逐条核对再打开原件。
 
@@ -22,6 +22,7 @@ stale_after: 2026-11-17
 | `packages/llm/llm/src/{index,error}.ts` | [llm-error](/contracts/llm-error.md) |
 | `docs/user/develop/practice/llm-adapter.md`、`docs/cookbook/adding-an-llm-adapter.md` | [llm-adapter](/contracts/llm-adapter.md) |
 | `docs/user/develop/basic/config.md` | [plugin-config](/contracts/plugin-config.md) |
+| `docs/cookbook/adding-a-settings-card.md`、`docs/subsystems/settings.md`、`installSettingsSection` | [settings-card](/contracts/settings-card.md) |
 | `docs/user/develop/basic/index.md`、`vendor/cordis/src/registry.ts` | [plugin-forms](/contracts/plugin-forms.md) |
 | `docs/cookbook/adding-a-tool.md`、`docs/user/develop/basic/tool.md` | [define-tool](/contracts/define-tool.md) |
 | `vendor/cordis/src/events.ts`、`docs/cordis-tutorial/04-events.md` | [events](/contracts/events.md) |
@@ -44,7 +45,7 @@ stale_after: 2026-11-17
 10. `website/docs.ts`
 11. `docs/architecture.md`、`docs/testing.md`
 12. `packages/core/agent-loop/src/invariant.ts`
-13. `docs/cookbook/{adding-a-tool,extension-cookbook,adding-an-llm-adapter,adding-a-conversation-node}.md`
+13. `docs/cookbook/{adding-a-tool,adding-a-settings-card,extension-cookbook,adding-an-llm-adapter,adding-a-conversation-node}.md`
 14. `docs/user/develop/basic/{index,tool,config,publish}.md`
 15. `docs/user/develop/framework/{index,service,events}.md`、`docs/cordis-tutorial/01-04`
 16. `packages/llm/llm/src/retry-policy.ts`、`packages/llm/llm-retry/src/index.ts`

@@ -1,6 +1,6 @@
 {
   "name": "dsh-external-plugin-devkit",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Out-of-process plugin devkit for DeepSeek Harness. CLI: dshx. For any external agent — not Creator Mode.",
   "type": "module",
   "license": "MIT",

@@ -1,5 +1,9 @@
 # Directory Update Log
 
+## 2026-08-19
+
+* **Update**: Track official **0.1.0-rc.7**. New contract [settings-card](/contracts/settings-card.md) + playbook: `installSettingsSection` and keyed `settings.plugin.item`. `init --kind client` scaffolds that path. Official-sources pin moved off rc.5. Creator preset `code` UI rename: Code mode → PTC mode. Session-truth notes max-token truncation no longer bricks continue. Extension-points list attachments + jobs.
+
 ## 2026-08-18
 
 * **Update**: Onboarding for external agents. `dshx setup` / `--print-prompt` / portable `skill/dshx`, `DSHX_HARNESS` + `~/.config/dshx/harness`, `dshx ship` for stale `file:` copies, `doctor` `stale-file-copy`, `check` `client-entry`, `init --kind client`.

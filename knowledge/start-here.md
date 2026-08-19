@@ -76,4 +76,5 @@ pnpm dshx which
 
 - 理解为什么要出仓开发：[why-external](why-external.md)
 - 最小插件合同：[plugin-forms](contracts/plugin-forms.md)
+- rc.7 设置卡片：[settings-card](contracts/settings-card.md)
 - 开写：[init-plugin](playbooks/init-plugin.md)

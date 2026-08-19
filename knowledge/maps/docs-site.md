@@ -24,4 +24,4 @@ stale_after: 2026-11-17
 | `docs/subsystems/*`（仅 subsystemGroups） | `/en/reference/subsystems/…` |
 | `docs/cookbook/*`、`docs/cordis-api/*` | `/en/reference/cookbook\|cordis-api/…` |
 
-`extensions.md` / `feedback.md` / `attachment.md` 未进 subsystemGroups。文档站 **没有**「Creator Mode」专页。
+`extensions.md` / `feedback.md` 未进 subsystemGroups。`settings.md` 与 cookbook `adding-a-settings-card.md` 已在 rc.7 站点。文档站 **没有**「Creator Mode」专页。

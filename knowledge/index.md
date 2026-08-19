@@ -22,7 +22,7 @@ okf_version: "0.2"
 
 # 合同（先于教程）
 
-* [Contracts](contracts/) - 插件形态、工具、事件、合成、Session、Creator、LLM retry/timeout、dump/patch
+* [Contracts](contracts/) - 插件形态、设置卡片、工具、事件、合成、Session、Creator、LLM retry/timeout、dump/patch
 * [Authority tiers](contracts/authority.md) - 源码 / 文档站 / skill / 社区谁说了算
 
 # 工作流

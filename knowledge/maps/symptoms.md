@@ -61,6 +61,8 @@ stale_after: 2026-11-17
 | 别人 clone 后不知道怎么装 | [setup-workshop](/playbooks/setup-workshop.md) | `dshx setup --print-prompt` |
 | 目录已在、想覆盖脚手架 | [init-plugin](/playbooks/init-plugin.md) | `dshx init <name> --force` |
 | 要一块 Web 设置/slot 脚手架 | [init-plugin](/playbooks/init-plugin.md) | `dshx init <name> --kind client` |
+| 插件配置要出现在设置 → 插件 | [settings-card](/contracts/settings-card.md) | [settings-card playbook](/playbooks/settings-card.md) |
+| 设置里多了一行导航、本该只是插件配置 | [settings-card](/contracts/settings-card.md) | 不要用 `settings.section` 冒充配置卡 |
 | verify 成功后还想看日志 / 留宿主 | [verify-boot](/playbooks/verify-boot.md) | `--keep`，然后 `dshx logs` / `stop` |
 | 要挂模型面工具 | [define-tool](/contracts/define-tool.md) | [events](/contracts/events.md) |
 | 官方文档太长，不知从哪读 | [okf-practice](/maps/okf-practice.md) | [official-sources](/maps/official-sources.md) |
