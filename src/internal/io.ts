@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 import yaml from 'js-yaml'
-import type { CliOptions, Finding, Level, PluginKind, ProfileName, Report } from './types.ts'
+import type { ActivationChange, CliOptions, Finding, Level, PluginKind, ProfileName, Report } from './types.ts'
 import { DEFAULT_PORT, DEFAULT_PROFILE, DEFAULT_TIMEOUT_MS } from './types.ts'
 
 export function ensureDir(path: string): void {
@@ -53,7 +53,7 @@ export function envHas(name: string, extra?: Record<string, string>): boolean {
   return Boolean(value && value.trim())
 }
 
-const VALUE_FLAGS = new Set(['--profile', '--port', '--timeout', '--grep', '--kind', '--task', '--harness'])
+const VALUE_FLAGS = new Set(['--profile', '--port', '--timeout', '--grep', '--kind', '--task', '--harness', '--change'])
 
 const COMMAND_FLAGS: Record<string, ReadonlySet<string>> = {
   kb: new Set(['--json']),
@@ -64,10 +64,13 @@ const COMMAND_FLAGS: Record<string, ReadonlySet<string>> = {
   dump: new Set(['--json', '--profile']),
   start: new Set(['--json', '--profile', '--port', '--timeout', '--keep', '--force', '--task']),
   stop: new Set(['--json']),
-  restart: new Set(['--json', '--profile', '--port', '--timeout', '--keep', '--force', '--task']),
+  restart: new Set(['--json']),
+  'restart-supervised': new Set(['--json']),
   status: new Set(['--json', '--port', '--profile']),
   logs: new Set(['--json', '--follow', '-f', '--grep', '--profile']),
-  verify: new Set(['--json', '--profile', '--port', '--timeout', '--keep', '--force', '--task']),
+  verify: new Set(['--json', '--profile', '--port', '--timeout', '--keep', '--task']),
+  'verify-boot': new Set(['--json', '--profile', '--port', '--timeout', '--keep', '--task']),
+  'activation-plan': new Set(['--json', '--profile', '--change']),
   doctor: new Set(['--json', '--profile']),
   session: new Set(['--json']),
   which: new Set(['--json']),
@@ -75,6 +78,7 @@ const COMMAND_FLAGS: Record<string, ReadonlySet<string>> = {
   setup: new Set(['--json', '--dry-run', '--print-prompt', '--harness', '--force']),
   ship: new Set(['--json', '--profile', '--restart', '--force']),
   recopy: new Set(['--json', '--profile', '--restart', '--force']),
+  'sync-artifact': new Set(['--json', '--profile', '--restart', '--force']),
   help: new Set(['--json']),
   loop: new Set(['--json']),
   version: new Set(['--json']),
@@ -122,6 +126,9 @@ function applyFlag(token: string, argv: string[], index: number, options: CliOpt
     return index + 1
   } else if (token === '--task' && argv[index + 1]) {
     options.task = argv[index + 1]
+    return index + 1
+  } else if (token === '--change' && argv[index + 1]) {
+    options.change = argv[index + 1] as ActivationChange
     return index + 1
   }
   return index

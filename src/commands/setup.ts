@@ -56,8 +56,8 @@ export function cmdSetup(args: string[], options: CliOptions): number {
     findings.push(finding('ok', 'config', 'remembered this checkout for later wrong-cwd runs', { path }))
   }
 
-  findings.push(finding('info', 'not-host', 'setup does not start or stop dsh. use dshx start / restart from outside Creator Mode later'))
-  findings.push(finding('info', 'next', 'dshx which && dshx doctor'))
+  findings.push(finding('info', 'not-host', 'setup does not start or stop dsh. classify future activation with contracts/live-activation'))
+  findings.push(finding('info', 'next', 'dshx which && dshx doctor && dshx kb cat contracts/live-activation'))
 
   const result = report('setup', findings, { repo: root, source: resolved.source })
   printReport(result, options.json)

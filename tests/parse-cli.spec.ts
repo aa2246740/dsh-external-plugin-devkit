@@ -44,4 +44,15 @@ describe('parseCli', () => {
     assert.equal(ship.options.restart, true)
     assert.equal(ship.options.profile, 'web')
   })
+
+  it('parses lifecycle commands without leaking flags into arguments', () => {
+    const plan = parseCli(['activation-plan', 'demo', '--change', 'new-client', '--profile', 'web'])
+    assert.equal(plan.command, 'activation-plan')
+    assert.deepEqual(plan.args, ['demo'])
+    assert.equal(plan.options.change, 'new-client')
+    const verify = parseCli(['verify-boot', 'demo', '--keep'])
+    assert.equal(verify.command, 'verify-boot')
+    assert.deepEqual(verify.args, ['demo'])
+    assert.equal(verify.options.keep, true)
+  })
 })

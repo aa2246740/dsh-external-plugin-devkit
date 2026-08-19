@@ -2,6 +2,7 @@
 
 ## 2026-08-19
 
+* **Lifecycle correction (0.3.0)**: added [live-activation](/contracts/live-activation.md) pinned to official rc.7 SHA `99f6f02`; split watched config HMR, next-boot manifest/bundles, existing-client HMR, new-client page reload, server restart, and artifact-only states. Added `activation-plan`, `verify-boot`, `sync-artifact`, and `restart-supervised` semantics; removed automatic Host stops/restarts; added link:/hash/order/rollback guards and lazy-CJS client checks.
 * **Update**: Track official **0.1.0-rc.7**. New contract [settings-card](/contracts/settings-card.md) + playbook: `installSettingsSection` and keyed `settings.plugin.item`. `init --kind client` scaffolds that path. Official-sources pin moved off rc.5. Creator preset `code` UI rename: Code mode → PTC mode. Session-truth notes max-token truncation no longer bricks continue. Extension-points list attachments + jobs.
 
 ## 2026-08-18

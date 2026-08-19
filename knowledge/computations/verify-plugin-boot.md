@@ -1,7 +1,7 @@
 ---
 type: Attested Computation
-title: Verify a scratch plugin actually boots
-description: 静态检查 + dump-config 含 id + 真实 spawn 后日志出现 marker。
+title: Verify a scratch plugin in an isolated cold boot
+description: 没有现存 supervised Host 时，静态检查 + dump-config + 独立 spawn marker/HTTP；不证明 live activation。
 tags: [verify, dshx]
 aliases: ["verify computation"]
 status: stable
@@ -23,7 +23,7 @@ stale_after: 2026-11-17
 # Computation
 
 ```
-pnpm dshx verify @plugin [--profile @profile] [--port @port] [--keep]
+pnpm dshx verify-boot @plugin [--profile @profile] [--port @port] [--keep]
 ```
 
-Agent 只能填已声明的参数。成功：exit 0，且 findings 含 `boot-marker` 为 ok。dump-config 单独为 0 不算成功。
+Agent 只能填已声明的参数。成功：exit 0，且 findings 含 `boot-marker` 为 ok。已有 supervised Host 时必须拒绝且 PID 不变；dump-config 单独为 0 不算成功，cold boot 也不等于 current-host activation。

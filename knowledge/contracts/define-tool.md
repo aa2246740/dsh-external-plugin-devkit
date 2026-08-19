@@ -67,4 +67,4 @@ export function apply(ctx: Context) {
 
 Code Mode 自动得到 `await tools.<name>(args)`，成功值是 canonical JSON，不是 Native 散文。
 
-`dshx verify` 只证明插件 `apply()` 跑过。活 tools 表不在 dump 里。静态看 `inject: ['tools']` + `defineTool`；活证据是新会话里真的能调到这个 name。
+`dshx verify-boot` 只证明隔离进程里 `apply()` 跑过。活 tools 表不在 dump 里。静态看 `inject: ['tools']` + `defineTool`；目标 Host 的活证据是新会话里真的能调到这个 name。

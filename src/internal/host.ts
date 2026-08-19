@@ -65,7 +65,7 @@ export interface StartSpec {
 export function startHost(root: string, spec: StartSpec): HostState {
   const existing = currentHost(root)
   if (existing) {
-    throw new Error(`dshx already supervises pid ${existing.pid} on port ${existing.port}. run dshx stop or dshx restart`)
+    throw new Error(`dshx already supervises pid ${existing.pid} on port ${existing.port}. classify the change first; use restart-supervised only when that branch requires it`)
   }
   const logFile = hostLogPath(root, spec.profile)
   ensureDir(dirname(logFile))

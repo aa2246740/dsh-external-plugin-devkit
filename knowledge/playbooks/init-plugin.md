@@ -1,7 +1,7 @@
 ---
 type: Playbook
 title: Scaffold a scratch plugin
-description: 用 dshx init 在 my-plugins/ 建最小 function、tool 或 client 插件。目录已在则 --force 覆盖脚手架文件，不是去抢端口。
+description: 用 dshx init 建 function、tool、client、object 或 class scratch 插件；client 明确要求后续构建 lazy-CJS lib/client.js。
 tags: [init, scaffold]
 aliases: ["init", "scaffold", "脚手架", "overwrite", "already exists", "init --force"]
 status: stable
@@ -15,6 +15,8 @@ stale_after: 2026-11-17
 pnpm dshx init my-feature
 pnpm dshx init my-tool --kind tool
 pnpm dshx init my-panel --kind client
+pnpm dshx init my-object --kind object
+pnpm dshx init my-service --kind class
 pnpm dshx init my-feature --force    # 覆盖已有脚手架文件
 ```
 
@@ -34,9 +36,11 @@ my-plugins/<name>/
 
 # 写的时候
 
-- function：`export const name` / `inject` / `apply`，无 default
+- function namespace：named `apply`；`name` / `inject` 可选；无 default
 - tool：`inject: ['tools']` + `defineTool`
-- client：Host `installSettingsSection` + 浏览器 `settings.plugin.item`（rc.7 设置卡片）。整页才用 `settings.section`。见 [settings-card](settings-card.md)
+- object：default `{ apply, name?, inject? }` + `kind: object`
+- class/service：default constructor + `kind: class`
+- client：Host `installSettingsSection` + 浏览器 `settings.plugin.item`；package export 预设为 `lib/client.js`。源码 TSX **不能**直接作为 browser entry，必须构建 `window.__ModuleLoader__.load({ id, factory })` lazy-CJS 产物后 check 才会绿。见 [settings-card](settings-card.md)
 - 保留 `console.log('[my-plugins/<name>] loaded')`，与 `dshx.yml` 的 `marker` 一致
 - 可调参数用 `Config` schema，不要写死
 - 注册走 `ctx.effect` / `ctx.on` / `ctx.tools.register`

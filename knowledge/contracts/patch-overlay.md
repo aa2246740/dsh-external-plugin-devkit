@@ -29,6 +29,8 @@ sources:
 2. `dshx overlay` / `start` / `verify` 在 `.dshx/overlays/<id>.yml` 生成带绝对 `name` 的机器本地文件
 3. 那个生成文件 **不要提交**
 
+`.dshx/overlays/<id>.yml` 只作为该次 `--patch` argv 层进入启动合成；DSH 的 user-patch watcher 不监听它。要在现有 Host 内热重组，必须改活动 profile/home 的真实 `cordis.patch.yml`，见 [hot-config-entry](../playbooks/hot-config-entry.md)。
+
 不要再手写 `/workspace/...` 进 git。
 
 # 合法 overlay 形状

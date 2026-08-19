@@ -74,6 +74,9 @@ const SYNONYM_GROUPS: string[][] = [
   ['config', 'schema', 'schemastery', 'plugin-config'],
   ['supervising', 'supervises', 'already supervising', 'already supervises'],
   ['headless', 'one-shot', 'oneshot', 'headless-boot', 'no-ui', 'noui', 'no ui'],
+  ['hmr', 'hot reload', 'hot-reload', '热重载', '热插拔', 'live activation', '不重启'],
+  ['manifest', 'package.json', 'dsh.profile.bundles', 'next boot', '下次启动'],
+  ['client reload', 'page reload', 'refresh page', '页面刷新', '重开页面'],
 ]
 
 export const RETRIEVAL_FIXTURES: RetrievalFixture[] = [
@@ -122,6 +125,17 @@ export const RETRIEVAL_FIXTURES: RetrievalFixture[] = [
   { query: 'settings.plugin.item', mustInclude: 'contracts/settings-card', first: 'contracts/settings-card' },
   { query: 'installSettingsSection', mustInclude: 'contracts/settings-card' },
   { query: 'PTC mode', mustInclude: 'contracts/creator-mode' },
+  { query: 'HMR', mustInclude: 'contracts/live-activation' },
+  { query: 'hot reload', mustInclude: 'contracts/live-activation', first: 'contracts/live-activation' },
+  { query: '热重载', mustInclude: 'contracts/live-activation', first: 'contracts/live-activation' },
+  { query: '热插拔', mustInclude: 'contracts/live-activation', first: 'contracts/live-activation' },
+  { query: '不重启', mustInclude: 'contracts/live-activation' },
+  { query: '插件装了没生效', mustInclude: 'pitfalls/installed-is-not-live', first: 'pitfalls/installed-is-not-live' },
+  { query: 'client reload', mustInclude: 'pitfalls/new-client-entry-needs-page-reload' },
+  { query: 'bundle', mustInclude: 'contracts/live-activation' },
+  { query: 'cordis.patch.yml', mustInclude: 'contracts/live-activation' },
+  { query: 'manifest', mustInclude: 'contracts/live-activation' },
+  { query: 'restart', mustInclude: 'contracts/live-activation' },
 ]
 
 function walkMd(dir: string, acc: string[] = []): string[] {
@@ -320,6 +334,8 @@ export function scoreDoc(doc: OkfDoc, query: string): SearchHit | undefined {
       score += 20
       matched.add('aliases')
     }
+    const exactAlias = doc.aliases.some(alias => fold(alias) === phrase || compact(alias) === compact(query))
+    if (exactAlias) score += 24
     if (wordHit(doc.title ?? '', phrase)) score += 12
     if (wordHit(doc.id, phrase)) score += 12
   }

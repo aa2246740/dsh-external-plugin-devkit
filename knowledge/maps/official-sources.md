@@ -29,6 +29,7 @@ stale_after: 2026-11-17
 | `docs/subsystems/persistence.md` | [persistence](/contracts/persistence.md)、[turn-error](/contracts/turn-error.md) |
 | `docs/architecture.md`（扩展缝） | [extension-points](/maps/extension-points.md) |
 | `apps/cli/src/dump-config.ts` | [dump-config](/contracts/dump-config.md) |
+| `apps/cli/src/profile-boot.ts`、`plugin.ts`、Web/client HMR | [live-activation](/contracts/live-activation.md) |
 | Creator preset + tool-cordis | [creator-mode](/contracts/creator-mode.md)、[tool-cordis](/contracts/tool-cordis.md) |
 
 # 仍应打开的权威清单
@@ -41,7 +42,7 @@ stale_after: 2026-11-17
 6. `packages/boot/app-boot/src/profile.ts`、`packages/boot/app-boot/src/index.ts`
 7. `vendor/cordis/src/{fiber.ts,events.ts,registry.ts}`
 8. `packages/preset/agent-presets/src/preset.ts`
-9. `apps/cli/src/{dump-config.ts,args.ts}`、`apps/cli/reference/README.md`
+9. `apps/cli/src/{profile-boot.ts,plugin.ts,dump-config.ts,args.ts}`、`apps/cli/reference/README.md`
 10. `website/docs.ts`
 11. `docs/architecture.md`、`docs/testing.md`
 12. `packages/core/agent-loop/src/invariant.ts`
@@ -51,5 +52,6 @@ stale_after: 2026-11-17
 16. `packages/llm/llm/src/retry-policy.ts`、`packages/llm/llm-retry/src/index.ts`
 17. `packages/preset/agent-presets/README.md`、`packages/extensions/cordis-host-runner/README.md`
 18. Creator skills：只收 workflow；工具动词过时
+19. `packages/client/{modules,hmr,web}` 与 `vendor/hmr`：client graph/HMR 和 server module-HMR 边界
 
 降权：`tool-cordis/README.md`、`examples/web-cordis`、Agent Note 2026-07-08、primer 的 mode 表、未进站点的 `docs/subsystems/extensions.md`。

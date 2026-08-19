@@ -17,6 +17,7 @@
 
 # 合成与验证
 
+* [Live activation](live-activation.md) - patch / manifest / client / new-client / server / artifact 六分支
 * [Composition](composition.md) - profile / bundle / patch
 * [dump-config](dump-config.md) - 离线拼树，不挂 Loader
 * [patch overlay](patch-overlay.md) - `--patch` 与绝对 name

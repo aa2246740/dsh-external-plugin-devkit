@@ -1,7 +1,7 @@
 ---
 type: Runtime Contract
 title: Three plugin forms
-description: Function / Object / Class 插件的运行时形状。Function 用 named export，不要 default export。
+description: Function / Object / Class 的官方运行时形状；namespace function 与 default object/class 的 Loader 选择边界。
 tags: [plugin, cordis, apply, inject]
 aliases: ["plugin", "plugin forms", "named export", "function plugin", "apply", "inject", "default export", "export default", "no default export"]
 status: stable
@@ -26,30 +26,28 @@ sources:
 
 `inject` 不是一次性启动检查：所需服务在运行中消失时依赖方会被卸掉，服务回来再装。
 
-# Function（scratch 默认）
+# Function namespace（scratch 默认）
 
-Harness 文档惯用 **named export** `name` / `inject` / `apply`，不要 default export。
+Harness 第一篇教程的 namespace 形态要求 named `apply`；`name` 和 `inject` 属于 `Plugin.Base`，均可选。这个 namespace 文件不要再放 default export：Loader 会优先取 default，兄弟 named metadata 不再组成同一个插件值。
 
 ```ts
 import type { Context } from '@deepseek-ai/cordis'
 
 export const name = 'hello'
-export const inject = []
-
 export function apply(_ctx: Context) {
   console.log('[my-plugins/hello] loaded')
 }
 ```
 
-无 `inject` 的 composition 插件还要保证 `expect('default' in mod).toBe(false)`，否则 default 换掉 named export 时 Loader smoke 仍绿。见 [testing](testing.md)。
+没有依赖时可以省略 `inject`；dshx scaffold 保留空数组只是显式风格，不是运行时要求。namespace composition test 仍应保证没有 default，见 [testing](testing.md)。
 
 # Object
 
-`{ apply(ctx, config), name?, inject?, … }`。`ctx.plugin({ inject, apply })` 与 `ctx.inject(deps, callback)` 等价。
+default-export `{ apply(ctx, config), name?, inject?, … }`。在 `dshx.yml` 写 `kind: object`；此时 default 是官方形态，不应被 function-form 规则误报。
 
 # Class / Constructor
 
-`new (ctx, config)`，通常 `extends Service`。`super(ctx, 'greeter')` 把实例登记到 `ctx.greeter`，登记是 effect，unload 即撤。`declare module` 只补类型。
+default-export `new (ctx, config)`，通常 `extends Service`。在 `dshx.yml` 写 `kind: class`。`super(ctx, 'greeter')` 把实例登记到 `ctx.greeter`，登记是 effect，unload 即撤。`declare module` 只补类型。
 
 # 注册皆为可逆 effect
 

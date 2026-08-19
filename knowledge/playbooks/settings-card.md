@@ -21,7 +21,7 @@ pnpm dshx init my-feature --kind client
 
 1. 两边 namespace / `key` 拼写一致。
 2. `dsh.client.inject` 含 `@deepseek-ai/dsh-client-ui-settings-plugins`。
-3. `exports["./client"]` 指向真实存在的 `.js`（或 scratch 的 `src/client/index.tsx`）。
-4. `dshx check` / `verify`。改完 `file:` 包装进 profile 用 `dshx ship`。
+3. `exports["./client"]` 指向构建后的 `lib/client.js`，且产物包含 `window.__ModuleLoader__.load({ id, factory })`。scratch 的 `src/client/index.tsx` 只是源码，不能直接服务。
+4. `dshx check` / `verify-boot`。需要 profile 产物时用 `sync-artifact`，再按 [live activation](../contracts/live-activation.md) 区分已有 client HMR 与新增 client 页面刷新。
 
 不要为插件 Config 再注册一个顶层 `settings.section`，除非你真的要单独一页。

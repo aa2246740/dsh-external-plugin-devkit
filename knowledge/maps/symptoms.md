@@ -44,10 +44,15 @@ stale_after: 2026-11-17
 | `duplicate loader entry id` | [duplicate-loader-id](/pitfalls/duplicate-loader-id.md) | [composition](/contracts/composition.md) |
 | `plugin remove` 后 profile 起不来 | [leftover-bundles](/pitfalls/leftover-bundles.md) | `dshx doctor` |
 | `file:` add 显示 Already up to date，页面仍是旧包 | [file-copy-stale](/pitfalls/file-copy-stale.md) | [ship-plugin](/playbooks/ship-plugin.md)、`dshx ship` |
+| plugin add / ship 成功但当前 Host 没生效 | [installed-is-not-live](/pitfalls/installed-is-not-live.md) | [live-activation](/contracts/live-activation.md)、`dshx activation-plan` |
+| 问热重载/热插拔/不重启该怎么做 | [live-activation](/contracts/live-activation.md) | 按 patch / manifest / client / new-client / server 分支走 |
+| 新 client Host 已挂上但旧页面不显示 | [new-client-entry-needs-page-reload](/pitfalls/new-client-entry-needs-page-reload.md) | [add-new-client-plugin](/playbooks/add-new-client-plugin.md)，刷新/重开页面 |
+| 已有 client 改完想同页面热更新 | [update-existing-client-bundle](/playbooks/update-existing-client-bundle.md) | 验 `rebuilt` + UI；不要重启 Host |
+| server module 代码改了 | [restart-server-plugin](/playbooks/restart-server-plugin.md) | 无专项 module-HMR 证据就受控重启 |
 | `--patch` 相对 `name` 解析错目录 | [relative-patch-name](/pitfalls/relative-patch-name.md) | [patch-overlay](/contracts/patch-overlay.md) |
-| `pnpm dsh web --patch` 相对 name 找不到模块 | [relative-patch-name](/pitfalls/relative-patch-name.md) | 用 `dshx verify` / `start`，不要把绝对路径写进 git |
+| `pnpm dsh web --patch` 相对 name 找不到模块 | [relative-patch-name](/pitfalls/relative-patch-name.md) | 用 `dshx verify-boot` / `start`，不要把绝对路径写进 git |
 | 默认 3080 已被占用、dshx 没在监督 | [dshx-cli](/references/dshx-cli.md) | `dshx status`，换 `--port 3091`，不要 `--force` 去抢别人的监听 |
-| `dshx already supervises` / 第二次 start | [restart-outside](/playbooks/restart-outside.md) | `dshx stop` 或 `restart`，不要 `--force` |
+| `dshx already supervises` / 第二次 start | [restart-outside](/playbooks/restart-outside.md) | 先判定是否真需重启；需要时 `restart-supervised`，不要 `--force` |
 | 要无 UI 跑一次性任务 | [headless-boot](/playbooks/headless-boot.md) | `start headless --task` 或 `verify --profile headless` |
 | `agent-preset-invalid` / 两个 tool-cordis | [preset-collision](/pitfalls/preset-collision.md) | [creator-mode](/contracts/creator-mode.md) |
 

@@ -22,7 +22,7 @@ node --import tsx/esm <harness>/tools/dshx/src/cli.ts setup --harness <harness>
 node --import tsx/esm <harness>/tools/dshx/src/cli.ts setup --dry-run
 ```
 
-`setup` 会：确认唯一 checkout、必要时 clone `tools/dshx`、写根目录 `dshx` 脚本、把 `skill/dshx` 链到已有的 Agent 家、写 `~/.config/dshx/harness`。
+`setup` 会：确认唯一 checkout、必要时 clone `tools/dshx`、写根目录 `dshx` 脚本、把 `skill/dshx` 链到已有的 Agent 家、写 `~/.config/dshx/harness`。日常 prompt 会先要求读取 `contracts/live-activation` 并分类，不再默认建议 restart。
 
 **禁止**：启动或杀掉 `dsh`；在多个 checkout 之间猜；写死另一台机器的路径。
 

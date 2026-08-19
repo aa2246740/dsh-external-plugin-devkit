@@ -36,6 +36,6 @@ shipped `dsh-llm-retry` + `resolveRetryPolicy(undefined)`：`TIMEOUT` 默认可�
 
 - 在自己的 adapter `Config` 上暴露 `retryPolicy` / `streamIdleTimeoutMs`
 - 失败文案保留原 `code`，追加「再发一条；Continue 失败就开新对话」
-- 用户要加大次数：改该 provider 行的 `retryPolicy.maxRetries`，然后 **进程外** `dshx restart`，必要时新会话
+- 用户要加大次数：改该 provider 行的 `retryPolicy.maxRetries`。若改的是被监听的 profile/home patch，等同 PID 配置热重组；只有 manifest/server 分支才 **进程外** `restart-supervised`。必要时新会话
 
 诊断步骤：[diagnose-model-ux](/playbooks/diagnose-model-ux.md)。

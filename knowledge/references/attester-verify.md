@@ -1,6 +1,6 @@
 ---
 type: Reference
-title: Attester for dshx verify
+title: Attester for dshx verify-boot
 description: 确定性检查 verify receipt。禁止用模型自己的成功叙述代替。
 tags: [attester]
 aliases: ["attester verify"]

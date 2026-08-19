@@ -41,7 +41,7 @@ sources:
 
 # 你也有一套进程外工具
 
-`dshx` 补的是 Creator Mode 缺的能力：自己重启、自己验证、自己看会话伤疤。
+`dshx` 补的是 Creator Mode 缺的能力：落盘交付、生命周期分类、隔离 cold boot、受控宿主管理和会话伤疤诊断。
 
 ```sh
 pnpm dshx help
@@ -53,14 +53,14 @@ pnpm dshx which
 
 # 五分钟决策树
 
-1. 要写 **可重启、可交付** 的插件 → 落盘到 `my-plugins/<name>/`，用 [external loop](playbooks/external-loop.md)。
+1. 要写 **可交付** 的插件 → 落盘到 `my-plugins/<name>/`，用 [external loop](playbooks/external-loop.md)。
 2. 只想在活进程里探针运行时 → 可以用 Creator Mode 的 `cordis_inspect_*`，但 [不要把内存包当交付物](pitfalls/creator-memory.md)。
-3. 需要重启才生效 → [从外面重启](playbooks/restart-outside.md)。禁止在 DSH 会话里 `kill` 宿主。
-4. 想证明插件加载了 → `dshx verify`，不要只看 `dump-config` 退出码。
+3. 涉及 ship / HMR / refresh / restart → 先读 [live activation matrix](contracts/live-activation.md)，再运行 `activation-plan --change <branch>`。
+4. 想证明插件能独立冷启动 → `dshx verify-boot`；它不是现有 Host 的 live proof，也不会停现有 Host。
 5. 会话 400 / 卡 running → [新开会话](playbooks/new-session.md)，不要在伤疤上重试。
 6. 模型超时 / 两次后停 → [symptoms](maps/symptoms.md) → [llm-retry](contracts/llm-retry.md)，不要先改 Harness 核心。
 7. 只要一次性任务、不要 Web UI → [headless-boot](playbooks/headless-boot.md)。
-8. `dshx check` 因 default export / 绝对路径红了 → [check-plugin](playbooks/check-plugin.md)。
+8. `dshx check` 因插件形态 / 绝对路径 / client artifact 红了 → [check-plugin](playbooks/check-plugin.md)。
 
 # 权威顺序
 

@@ -40,4 +40,4 @@ sources:
 # 怎么用
 
 `dshx dump <plugin>`：确认 id 出现在树上，并显式警告这不是 boot。
-`dshx verify <plugin>`：dump + 真启动 + marker。见 [verify-boot](../playbooks/verify-boot.md) 与 [dump-false-negative](../pitfalls/dump-false-negative.md)。
+`dshx verify-boot <plugin>`：dump + 隔离 cold boot + marker。见 [verify-boot](../playbooks/verify-boot.md) 与 [dump-false-negative](../pitfalls/dump-false-negative.md)。现有 Host activation 另按 [live activation](live-activation.md) 验证。

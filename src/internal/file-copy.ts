@@ -1,5 +1,6 @@
-import { existsSync, readdirSync, statSync } from 'node:fs'
-import { join, resolve } from 'node:path'
+import { createHash } from 'node:crypto'
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
+import { join, relative, resolve } from 'node:path'
 import { finding, loadJson } from './io.ts'
 import type { Finding, ProfileName } from './types.ts'
 import { profileDir, resolveDshHome } from './paths.ts'
@@ -15,6 +16,12 @@ interface PackageJson {
 export function resolveFileSpec(spec: string, fromDir: string): string | undefined {
   if (!spec.startsWith('file:')) return undefined
   return resolve(fromDir, spec.slice('file:'.length))
+}
+
+export function resolveLocalSpec(spec: string, fromDir: string): string | undefined {
+  if (spec.startsWith('file:')) return resolve(fromDir, spec.slice('file:'.length))
+  if (spec.startsWith('link:')) return resolve(fromDir, spec.slice('link:'.length))
+  return undefined
 }
 
 export function newestMtime(dir: string): number {
@@ -37,6 +44,29 @@ export function newestMtime(dir: string): number {
   return newest
 }
 
+export function treeHash(dir: string): string | undefined {
+  if (!existsSync(dir)) return undefined
+  const files: string[] = []
+  const stack = [dir]
+  while (stack.length > 0) {
+    const current = stack.pop()!
+    for (const entry of readdirSync(current, { withFileTypes: true })) {
+      if (entry.name === 'node_modules' || entry.name === '.git') continue
+      const path = join(current, entry.name)
+      if (entry.isDirectory()) stack.push(path)
+      else files.push(path)
+    }
+  }
+  const hash = createHash('sha256')
+  for (const path of files.sort()) {
+    hash.update(relative(dir, path))
+    hash.update('\0')
+    hash.update(readFileSync(path))
+    hash.update('\0')
+  }
+  return hash.digest('hex')
+}
+
 export function staleFileCopyFindings(profile: ProfileName): Finding[] {
   const prof = profileDir(resolveDshHome(), profile)
   const manifestPath = join(prof, 'package.json')
@@ -50,14 +80,14 @@ export function staleFileCopyFindings(profile: ProfileName): Finding[] {
     if (!existsSync(source)) {
       findings.push(finding('error', 'stale-file-copy', `file: source for ${name} is missing`, {
         path: source,
-        hint: 'dshx ship <dir> after the package exists on disk',
+        hint: 'dshx sync-artifact <dir> after the package exists on disk',
       }))
       continue
     }
     if (!existsSync(installed)) {
       findings.push(finding('warn', 'stale-file-copy', `${name} is a file: dep but is not installed in the profile`, {
         path: installed,
-        hint: `dshx ship ${source}`,
+        hint: `dshx sync-artifact ${source}`,
       }))
       continue
     }
@@ -70,7 +100,7 @@ export function staleFileCopyFindings(profile: ProfileName): Finding[] {
     if (versionDrift || libDrift) {
       findings.push(finding('error', 'stale-file-copy', `${name} profile copy is older than the file: source`, {
         path: installed,
-        hint: `dsh plugin add file: reports "Already up to date" without recopying lib/. Run: dshx ship ${source}`,
+        hint: `dsh plugin add file: reports "Already up to date" without recopying lib/. Run: dshx sync-artifact ${source}`,
       }))
     } else {
       findings.push(finding('ok', 'stale-file-copy', `${name} file: copy matches the source (${sourcePkg.version ?? 'no version'})`))
@@ -93,7 +123,22 @@ export function clientEntryFindings(pluginDir: string): Finding[] {
       : './lib/client.js'
   const abs = resolve(pluginDir, declared)
   if (existsSync(abs)) {
-    findings.push(finding('ok', 'client-entry', `client entry exists: ${declared}`))
+    if (!declared.endsWith('.js')) {
+      findings.push(finding('error', 'client-entry-format', `client export must target a built .js artifact, not ${declared}`, {
+        path: abs,
+        hint: 'build the browser half to lib/client.js with the official lazy-CJS handoff',
+      }))
+      return findings
+    }
+    const source = readFileSync(abs, 'utf8')
+    if (!source.includes('window.__ModuleLoader__.load') || !/factory\s*:/.test(source)) {
+      findings.push(finding('error', 'client-entry-format', `${declared} is not a DSH lazy-CJS client bundle`, {
+        path: abs,
+        hint: 'the artifact must register window.__ModuleLoader__.load({ id, factory })',
+      }))
+      return findings
+    }
+    findings.push(finding('ok', 'client-entry', `built lazy-CJS client entry exists: ${declared}`))
     return findings
   }
   const mjs = abs.replace(/\.js$/, '.mjs')

@@ -16,6 +16,30 @@ export function apply(_ctx: Context) {
 `
 }
 
+function objectSource(id: string, marker: string): string {
+  return `import type { Context } from '@deepseek-ai/cordis'
+
+export default {
+  name: '${id}',
+  apply(_ctx: Context) {
+    console.log('${marker}')
+  },
+}
+`
+}
+
+function classSource(id: string, marker: string): string {
+  return `import { Service, type Context } from '@deepseek-ai/cordis'
+
+export default class ${pascal(id)}Service extends Service {
+  constructor(ctx: Context) {
+    super(ctx, '${camel(id)}')
+    console.log('${marker}')
+  }
+}
+`
+}
+
 function clientHostSource(id: string, marker: string): string {
   return `import type { Context } from '@deepseek-ai/cordis'
 import { installSettingsSection, settingsNamespace } from '@deepseek-ai/dsh-settings'
@@ -71,6 +95,11 @@ function pascal(id: string): string {
   return id.split('-').filter(Boolean).map(part => part[0]!.toUpperCase() + part.slice(1)).join('')
 }
 
+function camel(id: string): string {
+  const value = pascal(id)
+  return value[0]!.toLowerCase() + value.slice(1)
+}
+
 function toolSource(id: string, marker: string): string {
   return `import type { Context } from '@deepseek-ai/cordis'
 import { defineTool } from '@deepseek-ai/dsh-tools'
@@ -100,8 +129,9 @@ export function apply(ctx: Context) {
 
 export function cmdInit(args: string[], options: CliOptions, root: string): number {
   const name = args[0]
-  if (!name || !/^[a-z][a-z0-9-]*$/.test(name)) {
-    printReport(report('init', [finding('error', 'usage', 'dshx init <kebab-name> [--kind function|tool|client]')]), options.json)
+  const kinds = new Set(['function', 'tool', 'client', 'object', 'class'])
+  if (!name || !/^[a-z][a-z0-9-]*$/.test(name) || !kinds.has(options.kind)) {
+    printReport(report('init', [finding('error', 'usage', 'dshx init <kebab-name> [--kind function|tool|client|object|class]')]), options.json)
     return 1
   }
   const dir = join(pluginsDir(root), name)
@@ -115,7 +145,11 @@ export function cmdInit(args: string[], options: CliOptions, root: string): numb
     ? toolSource(name, marker)
     : options.kind === 'client'
       ? clientHostSource(name, marker)
-      : functionSource(name, marker)
+      : options.kind === 'object'
+        ? objectSource(name, marker)
+        : options.kind === 'class'
+          ? classSource(name, marker)
+          : functionSource(name, marker)
   writeText(join(dir, entry), source)
   if (options.kind === 'client') {
     writeText(join(dir, 'src/client/index.tsx'), clientSource(name))
@@ -126,7 +160,7 @@ export function cmdInit(args: string[], options: CliOptions, root: string): numb
       main: entry,
       exports: {
         '.': `./${entry}`,
-        './client': './src/client/index.tsx',
+        './client': './lib/client.js',
       },
       dsh: {
         client: {
@@ -146,12 +180,18 @@ export function cmdInit(args: string[], options: CliOptions, root: string): numb
   ].join('\n'))
   writeText(join(dir, 'cordis.yml'), [
     '# portable overlay: relative name only. --patch resolves against the profile',
-    '# directory, so boot through `dshx start` / `dshx verify`, not raw pnpm dsh.',
+    '# directory, so cold-boot through `dshx start` / `dshx verify-boot`, not raw pnpm dsh.',
     '- insert:',
     `    - id: ${name}`,
     `      name: './${entry}'`,
     '',
   ].join('\n'))
+  const clientNotes = options.kind === 'client' ? [
+    '',
+    'The browser source is not a runnable client artifact. Build it as `lib/client.js`',
+    'using the official lazy-CJS handoff `window.__ModuleLoader__.load({ id, factory })`.',
+    '`dshx check` intentionally stays red until that artifact exists and has the handoff.',
+  ] : []
   writeText(join(dir, 'README.md'), [
     `# ${name}`,
     '',
@@ -159,16 +199,20 @@ export function cmdInit(args: string[], options: CliOptions, root: string): numb
     '',
     '```sh',
     `pnpm dshx check ${name}`,
-    `pnpm dshx verify ${name}`,
+    `pnpm dshx verify-boot ${name}`,
     `pnpm dshx start web ${name}`,
     '```',
+    ...clientNotes,
     '',
     'Read `tools/dshx/knowledge/start-here.md` before changing the contract.',
     '',
   ].join('\n'))
   const result = report('init', [
     finding('ok', 'scaffold', `created my-plugins/${name}`),
-    finding('info', 'next', `dshx check ${name} && dshx verify ${name}`),
+    ...options.kind === 'client'
+      ? [finding('warn', 'client-build-required', 'build lib/client.js with the official lazy-CJS handoff before check/verify-boot')]
+      : [],
+    finding('info', 'next', `dshx check ${name} && dshx verify-boot ${name}`),
   ], { dir, kind: options.kind, marker })
   printReport(result, options.json)
   return 0

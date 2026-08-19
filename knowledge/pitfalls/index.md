@@ -12,3 +12,5 @@
 * [Preset collision](preset-collision.md) - 两个 tool-cordis
 * [Relative patch name](relative-patch-name.md) - 相对路径解析错目录
 * [file: add does not recopy](file-copy-stale.md) - Already up to date ≠ lib 已更新
+* [Installed is not live](installed-is-not-live.md) - plugin add / artifact copy 不是当前 Host 激活
+* [New client entry needs page reload](new-client-entry-needs-page-reload.md) - 旧页面不采纳 graph 新行

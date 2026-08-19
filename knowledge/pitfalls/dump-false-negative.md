@@ -17,4 +17,4 @@ sources:
 
 dump 成功 ≠ 能 boot。#1496 把「No `dsh doctor` / `dsh check`」列为官方缺口。
 
-`dshx verify` 补的就是这个缺口的 scratch 子集，不是官方 Doctor。
+`dshx verify-boot` 补的是隔离 cold-boot 的 scratch 子集，不是官方 Doctor，也不证明现有 Host live activation。

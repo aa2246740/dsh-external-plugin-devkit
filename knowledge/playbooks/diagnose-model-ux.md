@@ -34,4 +34,4 @@ pnpm dshx session list
 
 # 验证
 
-改的是 scratch 插件就 `dshx check` + 插件自己的测试 + `dshx verify`。不要用 dump-config 退出码证明运行时 retry 行为。
+改的是 scratch 插件就 `dshx check` + 插件自己的测试；需要隔离启动时用 `dshx verify-boot`，现有 Host 则按 activation branch 验。不要用 dump-config 退出码证明运行时 retry 行为。

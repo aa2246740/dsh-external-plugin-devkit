@@ -28,7 +28,7 @@ sources:
 
 默认 `streamIdleTimeoutMs = 300_000`（5 分钟）。[^default]
 
-这 **不是** `dshx verify --timeout`（那是 CLI 等宿主起来的秒数）。也不是会话 400。
+这 **不是** `dshx verify-boot --timeout`（那是 CLI 等 cold-boot Host 起来的秒数）。也不是会话 400。
 
 # 和重试的关系
 

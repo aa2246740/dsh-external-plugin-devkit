@@ -12,6 +12,7 @@ import { cmdWhich } from './commands/which.ts'
 import { cmdExperiment } from './commands/experiment.ts'
 import { cmdSetup } from './commands/setup.ts'
 import { cmdShip } from './commands/ship.ts'
+import { cmdActivationPlan } from './commands/activation.ts'
 import { finding, parseCli, printReport, report } from './internal/io.ts'
 import { logObserve } from './internal/observe.ts'
 import { findRepoRoot } from './internal/paths.ts'
@@ -67,13 +68,17 @@ async function main(): Promise<number> {
     case 'stop':
       return cmdStop(args, options, root)
     case 'restart':
+    case 'restart-supervised':
       return cmdRestart(args, options, root)
     case 'status':
       return cmdStatus(args, options, root)
     case 'logs':
       return cmdLogs(args, options, root)
     case 'verify':
+    case 'verify-boot':
       return cmdVerify(args, options, root)
+    case 'activation-plan':
+      return cmdActivationPlan(args, options, root)
     case 'doctor':
       return cmdDoctor(args, options, root)
     case 'session':
@@ -84,6 +89,7 @@ async function main(): Promise<number> {
       return cmdExperiment(args, options, root)
     case 'ship':
     case 'recopy':
+    case 'sync-artifact':
       return cmdShip(args, options, root)
     default:
       printReport(report(command, [
