@@ -12,7 +12,7 @@ stale_after: 2026-11-17
 # 怎么用
 
 1. 在下表找到现象
-2. `pnpm dshx kb cat <id>`
+2. `dshx kb cat <id>`
 3. 需要原文再跟该篇 `sources`
 
 `kb search` 只是找 id。**snippet 不是合同。**
@@ -21,7 +21,8 @@ stale_after: 2026-11-17
 
 | 现象 | 先读 | 然后 |
 |---|---|---|
-| 超时两次后模型停了，没有再试提示 | [llm-retry](/contracts/llm-retry.md) | [two-retry-stop](/pitfalls/two-retry-stop.md)、[diagnose-model-ux](/playbooks/diagnose-model-ux.md) |
+| retry 预算用尽后模型停了，没有再试提示 | [llm-retry](/contracts/llm-retry.md) | [retry-budget-exhausted](/pitfalls/two-retry-stop.md)、[diagnose-model-ux](/playbooks/diagnose-model-ux.md) |
+| RC8 仍只重试两次 | [llm-retry](/contracts/llm-retry.md) | 查 provider override、旧 Host/旧包与实际错误码；RC8 默认是五次 |
 | 同一张工单里：先超时停、再 Continue 400 | 先 [llm-retry](/contracts/llm-retry.md)，再 [orphan-tool-call](/pitfalls/orphan-tool-call.md) | 两条合同，不是一个插件 bug |
 | stream 空闲很久然后 TIMEOUT | [llm-timeout](/contracts/llm-timeout.md) | [llm-error](/contracts/llm-error.md) |
 | 要接新模型 / provider | [llm-adapter](/contracts/llm-adapter.md) | [plugin-config](/contracts/plugin-config.md) |
@@ -44,10 +45,17 @@ stale_after: 2026-11-17
 | `duplicate loader entry id` | [duplicate-loader-id](/pitfalls/duplicate-loader-id.md) | [composition](/contracts/composition.md) |
 | `plugin remove` 后 profile 起不来 | [leftover-bundles](/pitfalls/leftover-bundles.md) | `dshx doctor` |
 | `file:` add 显示 Already up to date，页面仍是旧包 | [file-copy-stale](/pitfalls/file-copy-stale.md) | [ship-plugin](/playbooks/ship-plugin.md)、`dshx ship` |
+| plugin add / ship 成功但当前 Host 没生效 | [installed-is-not-live](/pitfalls/installed-is-not-live.md) | [live-activation](/contracts/live-activation.md)、`dshx activation-plan` |
+| 问热重载/热插拔/不重启该怎么做 | [live-activation](/contracts/live-activation.md) | 按 patch / manifest / preset / client / new-client / server 分支走 |
+| 新增 Creator Mode / 用户 preset 是否要重启 | [activate-user-preset](/playbooks/activate-user-preset.md) | Host 不重启；名单必要时刷新；用新会话验证 |
+| Creator Mode+ 支持哪些 App 壳、supervisor 是谁 | [creator-mode-plus](/contracts/creator-mode-plus.md) | 只验官方浏览器 WebUI；外部 dshx 是 supervisor |
+| 新 client Host 已挂上但旧页面不显示 | [new-client-entry-needs-page-reload](/pitfalls/new-client-entry-needs-page-reload.md) | [add-new-client-plugin](/playbooks/add-new-client-plugin.md)，刷新/重开页面 |
+| 已有 client 改完想同页面热更新 | [update-existing-client-bundle](/playbooks/update-existing-client-bundle.md) | 验 `rebuilt` + UI；不要重启 Host |
+| server module 代码改了 | [restart-server-plugin](/playbooks/restart-server-plugin.md) | 无专项 module-HMR 证据就受控重启 |
 | `--patch` 相对 `name` 解析错目录 | [relative-patch-name](/pitfalls/relative-patch-name.md) | [patch-overlay](/contracts/patch-overlay.md) |
-| `pnpm dsh web --patch` 相对 name 找不到模块 | [relative-patch-name](/pitfalls/relative-patch-name.md) | 用 `dshx verify` / `start`，不要把绝对路径写进 git |
+| `pnpm dsh web --patch` 相对 name 找不到模块 | [relative-patch-name](/pitfalls/relative-patch-name.md) | 用 `dshx verify-boot` / `start`，不要把绝对路径写进 git |
 | 默认 3080 已被占用、dshx 没在监督 | [dshx-cli](/references/dshx-cli.md) | `dshx status`，换 `--port 3091`，不要 `--force` 去抢别人的监听 |
-| `dshx already supervises` / 第二次 start | [restart-outside](/playbooks/restart-outside.md) | `dshx stop` 或 `restart`，不要 `--force` |
+| `dshx already supervises` / 第二次 start | [restart-outside](/playbooks/restart-outside.md) | 先判定是否真需重启；需要时 `restart-supervised`，不要 `--force` |
 | 要无 UI 跑一次性任务 | [headless-boot](/playbooks/headless-boot.md) | `start headless --task` 或 `verify --profile headless` |
 | `agent-preset-invalid` / 两个 tool-cordis | [preset-collision](/pitfalls/preset-collision.md) | [creator-mode](/contracts/creator-mode.md) |
 
@@ -61,6 +69,7 @@ stale_after: 2026-11-17
 | 别人 clone 后不知道怎么装 | [setup-workshop](/playbooks/setup-workshop.md) | `dshx setup --print-prompt` |
 | 目录已在、想覆盖脚手架 | [init-plugin](/playbooks/init-plugin.md) | `dshx init <name> --force` |
 | 要一块 Web 设置/slot 脚手架 | [init-plugin](/playbooks/init-plugin.md) | `dshx init <name> --kind client` |
+| RC8 外部 client 构建报 `no packages/*/*/package.json` | [client-build](/contracts/client-build.md) | 用生成的 `externalClientBundle`，不要改核心 glob 或移动插件 |
 | 插件配置要出现在设置 → 插件 | [settings-card](/contracts/settings-card.md) | [settings-card playbook](/playbooks/settings-card.md) |
 | 设置里多了一行导航、本该只是插件配置 | [settings-card](/contracts/settings-card.md) | 不要用 `settings.section` 冒充配置卡 |
 | verify 成功后还想看日志 / 留宿主 | [verify-boot](/playbooks/verify-boot.md) | `--keep`，然后 `dshx logs` / `stop` |

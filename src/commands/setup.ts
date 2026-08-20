@@ -1,15 +1,12 @@
-import { existsSync } from 'node:fs'
+import { chmodSync, existsSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
+import { homedir } from 'node:os'
 import { join } from 'node:path'
-import { finding, loadJson, printReport, report, writeText, readText } from '../internal/io.ts'
-import { resolveHarness, userHarnessConfigPath, writeHarnessConfig } from '../internal/paths.ts'
-import { DSHX_CLONE_URL, DAILY_PROMPT_EN, DAILY_PROMPT_ZH, HARNESS_SCRIPTS, SETUP_PROMPT_EN, SETUP_PROMPT_ZH } from '../internal/setup-prompt.ts'
+import { finding, printReport, readText, report, writeText } from '../internal/io.ts'
+import { resolveHarness, skillPackageDir, userHarnessConfigPath, writeHarnessConfig } from '../internal/paths.ts'
+import { DSHX_CLONE_URL, DAILY_PROMPT_EN, DAILY_PROMPT_ZH, SETUP_PROMPT_EN, SETUP_PROMPT_ZH } from '../internal/setup-prompt.ts'
 import { installSkills } from '../internal/skills.ts'
 import type { CliOptions, Finding } from '../internal/types.ts'
-
-interface RootPackage {
-  scripts?: Record<string, string>
-}
 
 export function cmdSetup(args: string[], options: CliOptions): number {
   if (options.printPrompt || args[0] === '--print-prompt') {
@@ -46,7 +43,7 @@ export function cmdSetup(args: string[], options: CliOptions): number {
   const clone = ensureDshxTree(root, options.dryRun)
   findings.push(...clone)
 
-  findings.push(...ensureRootScripts(root, options.dryRun))
+  findings.push(...ensureUserLauncher(options.dryRun))
   findings.push(...installSkills(root, options.dryRun))
 
   if (options.dryRun) {
@@ -56,8 +53,8 @@ export function cmdSetup(args: string[], options: CliOptions): number {
     findings.push(finding('ok', 'config', 'remembered this checkout for later wrong-cwd runs', { path }))
   }
 
-  findings.push(finding('info', 'not-host', 'setup does not start or stop dsh. use dshx start / restart from outside Creator Mode later'))
-  findings.push(finding('info', 'next', 'dshx which && dshx doctor'))
+  findings.push(finding('info', 'not-host', 'setup does not start or stop dsh. classify future activation with contracts/live-activation'))
+  findings.push(finding('info', 'next', 'dshx which && dshx doctor && dshx kb cat contracts/live-activation'))
 
   const result = report('setup', findings, { repo: root, source: resolved.source })
   printReport(result, options.json)
@@ -87,24 +84,20 @@ function ensureDshxTree(root: string, dryRun: boolean): Finding[] {
   return [finding('ok', 'dshx-tree', 'cloned dsh-external-plugin-devkit into tools/dshx', { path: dest })]
 }
 
-function ensureRootScripts(root: string, dryRun: boolean): Finding[] {
-  const pkgPath = join(root, 'package.json')
-  if (!existsSync(pkgPath)) {
-    return [finding('error', 'scripts', 'Harness package.json missing', { path: pkgPath })]
-  }
-  const pkg = loadJson<RootPackage>(pkgPath)
-  const scripts = { ...pkg.scripts }
-  const missing = Object.entries(HARNESS_SCRIPTS).filter(([key, value]) => scripts[key] !== value)
-  if (missing.length === 0) {
-    return [finding('ok', 'scripts', 'root package.json already has dshx scripts')]
+export function userLauncherPath(): string {
+  return join(homedir(), '.local', 'bin', 'dshx')
+}
+
+function ensureUserLauncher(dryRun: boolean): Finding[] {
+  const source = join(skillPackageDir(), 'scripts', 'dshx.sh')
+  const dest = userLauncherPath()
+  if (!existsSync(source)) {
+    return [finding('error', 'launcher', 'bundled dshx launcher is missing', { path: source })]
   }
   if (dryRun) {
-    return [finding('info', 'scripts', `would add scripts: ${missing.map(([key]) => key).join(', ')}`)]
+    return [finding('info', 'launcher', `would install user launcher ${dest}; Harness package.json remains unchanged`)]
   }
-  for (const [key, value] of missing) scripts[key] = value
-  const original = readText(pkgPath)
-  const parsed = JSON.parse(original) as RootPackage & Record<string, unknown>
-  parsed.scripts = scripts
-  writeText(pkgPath, `${JSON.stringify(parsed, null, 2)}\n`)
-  return [finding('ok', 'scripts', `added root scripts: ${missing.map(([key]) => key).join(', ')}`)]
+  writeText(dest, readText(source))
+  chmodSync(dest, 0o755)
+  return [finding('ok', 'launcher', 'installed user launcher without editing Harness core', { path: dest })]
 }

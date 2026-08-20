@@ -81,6 +81,25 @@ describe('resolveHarness', () => {
     }
   })
 
+  it('lets an explicit --harness disambiguate conflicting discovery sources', () => {
+    const tmp = mkdtempSync(join(tmpdir(), 'dshx-paths-'))
+    const restore = isolateConfig(tmp)
+    try {
+      const selected = fakeHarness(tmp, 'selected')
+      const configured = fakeHarness(tmp, 'configured')
+      const environment = fakeHarness(tmp, 'environment')
+      writeHarnessConfig(configured)
+      process.env.DSHX_HARNESS = environment
+      const found = resolveHarness({ start: configured, flag: selected, requireDshx: true })
+      assert.equal(found.ok, true)
+      assert.equal(found.root, selected)
+      assert.equal(found.source, 'flag')
+      assert.equal(findRepoRoot(configured, selected), selected)
+    } finally {
+      restore()
+    }
+  })
+
   it('setup mode can see a checkout before tools/dshx exists', () => {
     const tmp = mkdtempSync(join(tmpdir(), 'dshx-paths-'))
     const restore = isolateConfig(tmp)

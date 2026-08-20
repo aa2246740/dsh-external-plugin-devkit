@@ -19,22 +19,22 @@ Rubrics live next to this file. `kb search` snippets are not a pass; `kb cat` of
 | id | rubric | score | note |
 |---|---|---|---|
 | r1-retry-ux | retry-ux | 4/4 | search then cat llm-retry; did not touch Harness core |
-| r1-boot-proof | boot-proof | 4/4 | init + check + verify; found logs-after-stop hole |
+| r1-boot-proof | boot-proof | 4/4 | init + check + legacy verify alias; found logs-after-stop hole |
 | r1-session-scar | session-scar | 5/5 | session list + official vs community; `kb cat community` missed |
 | r2-dump-trap | dump-trap | 4/4 | dump ≠ boot; reproduced relative-name Loader miss |
 | r2-creator-ship | creator-ship | 4/4 | cordis_define is memory; ship via files |
 | r2-logs-after-verify | logs-after-verify | 4/4 | `dshx logs` after idle showed marker; `logs --help` was still wrong |
 | r3-mixed-ux | mixed-ux | 5/5 | split timeout-stop vs Continue 400; did not merge into one plugin bug |
 | r3-host-suicide | host-suicide | 4/4 | kill-from-chat is suicide; recover host outside, new session |
-| r3-raw-patch | raw-patch | 4/4 | reproduced relative name → `$DSH_HOME/profiles/web/`; dshx verify works |
+| r3-raw-patch | raw-patch | 4/4 | reproduced relative name → `$DSH_HOME/profiles/web/`; legacy verify alias worked |
 | r4-port-busy | port-busy | 5/5 | used the new `--port 3091` hint; left unsupervised :3080 alone |
 | r4-leftover-bundle | leftover-bundle | 5/5 | doctor + hand-delete `dsh.profile.bundles`; dump still not boot |
-| r4-tool-boot | tool-boot | 4/4 | `init --kind tool` + verify; noted live tools registry is not attested |
+| r4-tool-boot | tool-boot | 4/4 | `init --kind tool` + legacy verify alias; noted live tools registry is not attested |
 
 | r5-check-fail | check-fail | 5/5 | default-export + absolute path failed check; `check fail` search was 0 hits (fixed) |
-| r5-headless | headless-boot | 5/5 | task required; verify skipped :3080; last-host used to claim :3080 (fixed) |
+| r5-headless | headless-boot | 5/5 | task required; legacy verify skipped :3080; last-host used to claim :3080 (fixed) |
 | r5-already-supervising | already-supervising | 5/5 | second start → stop/restart; restart hid the old pid (fixed) |
-| r5-verify-keep | verify-keep | 5/5 | `verify --keep --port 3091`; left :3080 alone |
+| r5-verify-keep | verify-keep | 5/5 | legacy `verify --keep --port 3091`; left :3080 alone |
 
 | r6-init-force | init-force | 5/5 | `--force` search hid the init overwrite page (now both surface) |
 | r6-overlay | overlay-gen | 5/5 | relative git name vs generated absolute overlay |

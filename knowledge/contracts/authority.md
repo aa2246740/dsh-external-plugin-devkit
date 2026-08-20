@@ -38,4 +38,4 @@ sources:
 
 # preview / rc
 
-根 `package.json` 是 `0.1.0-rc.5`。产品页声明核心插件/API 会变。本 bundle 的 `stale_after` 按三个月估，升级后先对源码。
+本生命周期与 Creator 更新已对照官方 tag `dsh-v0.1.0-rc.8`、SHA `141eb6fef83422698aef7a981029e843e8161534`（2026-08-20）。产品仍是 RC；checkout/tag 变化后先重新核对 `profile-boot.ts`、`plugin.ts`、Web patch、browser boot、client build/HMR 与 Creator composition skill，不能只等 `stale_after` 到期。

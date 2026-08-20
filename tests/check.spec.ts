@@ -28,7 +28,7 @@ export default function apply(_ctx: Context) {
     const findings = checkPlugin(loadPlugin(root, 'broken'), root)
     const codes = findings.filter(item => item.level === 'error').map(item => item.code)
     assert.ok(codes.includes('default-export'), JSON.stringify(findings, null, 2))
-    assert.ok(codes.includes('export-name'), JSON.stringify(findings, null, 2))
+    assert.ok(codes.includes('export-apply'), JSON.stringify(findings, null, 2))
     assert.ok(codes.includes('portable-path'), JSON.stringify(findings, null, 2))
   })
 
@@ -48,5 +48,37 @@ export function apply(_ctx: Context) {
     })
     const findings = checkPlugin(loadPlugin(root, 'mute'), root)
     assert.ok(findings.some(item => item.code === 'inject-tools' && item.level === 'error'), JSON.stringify(findings, null, 2))
+  })
+
+  it('accepts a namespace function without optional name or inject exports', () => {
+    const root = mkdtempSync(join(tmpdir(), 'dshx-check-'))
+    writePlugin(root, 'minimal', {
+      'dshx.yml': 'id: minimal\nentry: src/minimal.ts\nmarker: "[minimal] loaded"\nkind: function\n',
+      'src/minimal.ts': `export function apply() { console.log('[minimal] loaded') }\n`,
+    })
+    const findings = checkPlugin(loadPlugin(root, 'minimal'), root)
+    assert.equal(findings.some(item => item.level === 'error'), false, JSON.stringify(findings, null, 2))
+  })
+
+  it('accepts the official default object form', () => {
+    const root = mkdtempSync(join(tmpdir(), 'dshx-check-'))
+    writePlugin(root, 'object-form', {
+      'dshx.yml': 'id: object-form\nentry: src/index.ts\nmarker: "[object] loaded"\nkind: object\n',
+      'src/index.ts': `export default { apply() { console.log('[object] loaded') } }\n`,
+    })
+    const findings = checkPlugin(loadPlugin(root, 'object-form'), root)
+    assert.ok(findings.some(item => item.code === 'object-form' && item.level === 'ok'), JSON.stringify(findings, null, 2))
+    assert.equal(findings.some(item => item.level === 'error'), false, JSON.stringify(findings, null, 2))
+  })
+
+  it('accepts the official default class form', () => {
+    const root = mkdtempSync(join(tmpdir(), 'dshx-check-'))
+    writePlugin(root, 'class-form', {
+      'dshx.yml': 'id: class-form\nentry: src/index.ts\nmarker: "[class] loaded"\nkind: class\n',
+      'src/index.ts': `export default class Plugin { constructor() { console.log('[class] loaded') } }\n`,
+    })
+    const findings = checkPlugin(loadPlugin(root, 'class-form'), root)
+    assert.ok(findings.some(item => item.code === 'class-form' && item.level === 'ok'), JSON.stringify(findings, null, 2))
+    assert.equal(findings.some(item => item.level === 'error'), false, JSON.stringify(findings, null, 2))
   })
 })

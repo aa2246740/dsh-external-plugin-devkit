@@ -18,4 +18,4 @@ sources:
 
 host-runner 原文：registry 是进程内存；session 日志只带 define 元数据，从不带代码；重启后没有定义是合法的。
 
-要留下：写文件 + `dshx verify`，或 `dsh plugin add` / composition。见 [persist-files](../playbooks/persist-files.md)。
+要留下：写文件 + `dshx check`，按需 `verify-boot`，再按 [live activation](../contracts/live-activation.md) 选择 profile patch / package 安装与运行时验收。见 [persist-files](../playbooks/persist-files.md)。

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { mkdtempSync } from 'node:fs'
+import { mkdtempSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, it } from 'node:test'
@@ -38,6 +38,7 @@ describe('setup', () => {
     const tmp = mkdtempSync(join(tmpdir(), 'dshx-setup-'))
     writeText(join(tmp, 'apps/cli/src/bin.ts'), 'export {}\n')
     writeText(join(tmp, 'package.json'), `${JSON.stringify({ name: 'h', scripts: {} }, null, 2)}\n`)
+    const packageBefore = readFileSync(join(tmp, 'package.json'), 'utf8')
     const prev = process.env.DSHX_HARNESS
     const prevXdg = process.env.XDG_CONFIG_HOME
     delete process.env.DSHX_HARNESS
@@ -46,7 +47,9 @@ describe('setup', () => {
       const { code, stdout } = captureSetup(['setup', '--dry-run', '--harness', tmp])
       assert.equal(code, 0, stdout)
       assert.match(stdout, /would git clone/)
-      assert.match(stdout, /would add scripts/)
+      assert.match(stdout, /would install user launcher/)
+      assert.match(stdout, /package\.json remains unchanged/)
+      assert.equal(readFileSync(join(tmp, 'package.json'), 'utf8'), packageBefore)
     } finally {
       if (prev === undefined) delete process.env.DSHX_HARNESS
       else process.env.DSHX_HARNESS = prev

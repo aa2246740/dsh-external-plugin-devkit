@@ -1,88 +1,111 @@
 ---
 name: dshx
 description: >-
-  Call the unofficial dshx CLI and look up its OKF knowledge bundle for
-  DeepSeek Harness out-of-process plugins. Use when the user says dshx, /dshx,
-  dsh-external-plugin-devkit, knowledge bundle, kb cat, kb search, my-plugins,
-  Creator Mode plugin delivery, setup a plugin workshop, ship a file: plugin,
-  or asks how to check, verify, or restart a DSH plugin from outside the host.
-  Not official dsh.
+  Use the unofficial dshx CLI and its OKF bundle for DeepSeek Harness external
+  plugin work. Trigger when the user says dshx, /dshx, dsh-external-plugin-devkit,
+  my-plugins, Creator Mode delivery, plugin add/ship/check/verify, HMR, hot reload,
+  热重载, 热插拔, 不重启, or asks whether a DSH plugin needs a browser reload or
+  Host restart. Before any ship/restart advice, classify the changed surface with
+  contracts/live-activation. Not official dsh.
 ---
 
 # dshx
 
-`dshx` (*dsh* + *xternal*) is the out-of-process plugin workshop for DeepSeek Harness. It is not official `dsh`, not a Harness fork, and not a plugin pack. Official `dsh doctor` does not exist; `dshx doctor` is this workshop's command.
-
-Source: https://github.com/aa2246740/dsh-external-plugin-devkit
+Use `dshx` for profile-scoped, file-backed plugins developed by an external agent or through the optional Creator Mode+ safe bridge. The CLI outside DSH is always the supervisor; Creator Mode+ exposes five fixed operations, including bounded new-client activation, but never process control. Do not transfer the original Creator Mode's in-memory lifecycle assumptions to external packages.
 
 ## Resolve the checkout
 
-`dshx` only runs inside a DeepSeek Harness checkout that has:
+The CLI requires one DeepSeek Harness checkout containing both `apps/cli/src/bin.ts` and `tools/dshx/src/cli.ts`.
 
-- `apps/cli/src/bin.ts`
-- `tools/dshx/src/cli.ts`
+Resolve with this fail-closed rule:
 
-This session's cwd is often **not** that checkout.
+1. If the user or command supplies `--harness <path>`, use that checkout after validating it. The explicit flag disambiguates all other discovery sources.
+2. Otherwise collect `$DSHX_HARNESS`, `~/.config/dshx/harness`, and the checkout found by walking upward from cwd.
+3. Continue only when every discovered source names the same checkout. If they disagree, stop and request an explicit `--harness`; never choose one by precedence.
 
-1. `$DSHX_HARNESS` when set.
-2. Walk up from cwd.
-3. `~/.config/dshx/harness` (written by `dshx setup`).
+Never guess or hardcode another machine's path. Run `which --harness <path>` when switching between release checkouts.
 
-If several checkouts appear, **stop and ask**. Do not guess. Do not hardcode another machine's path.
+Invoke through this skill's wrapper when possible:
 
-If `tools/dshx` is missing, run `dshx setup --harness <checkout>` or clone this repo into `<harness>/tools/dshx`. Scratch plugins go in `<harness>/my-plugins/`. State lives in `<harness>/.dshx/` — do not commit it.
-
-## Invoke
-
-Prefer the bundled wrapper. It finds the checkout and execs the CLI, so `pnpm` does not resolve the wrong cwd:
-
-```bash
-SCRIPT="$(dirname "$0")/scripts/dshx.sh"
-# from this skill directory:
-./scripts/dshx.sh <args>
+```sh
+./scripts/dshx.sh which
+./scripts/dshx.sh <command>
+./scripts/dshx.sh <command> --harness /absolute/path/to/deepseek-harness
 ```
 
-Equivalent, from the Harness root only:
+From the Harness root, the equivalent is:
 
-```bash
-node --import tsx/esm tools/dshx/src/cli.ts <args>
+```sh
+node --import tsx/esm tools/dshx/src/cli.ts <command>
 ```
 
-Confirm paths with `./scripts/dshx.sh which`. First-time machine: `./scripts/dshx.sh setup --print-prompt` then `setup` / `setup --dry-run`.
+## Classify activation before acting
 
-## Knowledge bundle
+When the request involves installation, delivery, HMR, hot-plugging, refresh, or restart, first run:
 
-The contract digest lives in the checkout, not in this skill:
-
-```text
-<harness>/tools/dshx/knowledge/     # OKF v0.2
+```sh
+./scripts/dshx.sh kb cat contracts/live-activation
+./scripts/dshx.sh activation-plan <plugin> --change <branch>
 ```
 
-```bash
-./scripts/dshx.sh kb
-./scripts/dshx.sh kb cat start-here
-./scripts/dshx.sh kb cat maps/symptoms
-./scripts/dshx.sh kb search <topic>
-./scripts/dshx.sh kb cat <id-from-search>
+Choose exactly one changed-surface branch:
+
+| Branch | Action | Host restart | Browser reload |
+|---|---|---|---|
+| `patch` | Edit the watched profile/home `cordis.patch.yml`; verify Host-tree reconcile | No | Only if this adds a client entry |
+| `manifest` | Update profile dependency / `dsh.profile.bundles`; verify after the next boot | Yes | Verify client separately |
+| `preset` | Write a user-owned preset, then verify it in a new/blank session | No | Only if the current page cached the roster |
+| `client` | Rebuild an already-rostered `lib/client.js`; observe client HMR and same-page behavior | No | No; plugin React-local state resets |
+| `new-client` | Hot-activate the Host patch entry, then reload/reopen the page for the new graph row | No | Yes |
+| `server` | Sync server artifact, then restart the current supervised Host unless exact module HMR is tested | Yes by default | Conditional |
+| `artifact` | Synchronize bytes only | Undecided | Undecided |
+
+`sync-artifact` / `ship` must end at `ARTIFACT_SYNCED; LIVE_ACTIVATION_UNPROVEN`. Never turn that result into an activation claim.
+
+For `new-client`, do not hand-edit the profile manifest and watched patch as separate steps. After `check` passes and activation is approved, run:
+
+```sh
+./scripts/dshx.sh activate-new-client <plugin> --profile web --port <current-web-port>
 ```
 
-`kb search` only finds an id. **Search snippets are not the contract.** After a hit, `kb cat` that id.
+The command owns the safe order: official profile link, resolvability proof, watched-patch insert/retrigger, current Host manifest proof. Exit 0 proves through `CLIENT_MANIFEST_PRESENT`, not `CLIENT_LOADED`; reload the page and verify UI separately. A nonzero exit is a stop condition, not permission to improvise. If it explicitly names a cached pre-install resolution failure from an earlier bad sequence, the external supervisor may perform one controlled restart; this is recovery for the scar, not the normal new-client branch.
 
-## Workshop loop
+Read only the selected branch:
 
-1. Read the bundle (`kb`, then `kb cat maps/symptoms` when debugging).
-2. `init <name>` (`--kind tool` or `--kind client` for a settings/slot stub). Keep `cordis.yml` portable.
-3. `check <name>`
-4. `verify <name>` — `dump-config` exit 0 is not a boot proof.
-5. Restart only with `restart` / `stop` / `start` from **outside** Creator Mode.
-6. `file:` profile packages: `ship <dir>` (remove + add). `plugin add file:` saying "Already up to date" does **not** recopy `lib/`. See `kb cat pitfalls/file-copy-stale`.
-7. Session 400 or stuck running → `session list`, then a new chat.
+- `patch` → `kb cat playbooks/hot-config-entry`
+- `preset` → `kb cat playbooks/activate-user-preset`
+- `client` → `kb cat playbooks/update-existing-client-bundle`
+- `new-client` → `kb cat playbooks/add-new-client-plugin`
+- `server` → `kb cat playbooks/restart-server-plugin`
+- ambiguous install/activation → `kb cat pitfalls/installed-is-not-live`
 
-Function plugins: named exports `name` / `inject` / `apply` (no default export).
+## Develop and prove
 
-Hard guardrails:
+1. Read the relevant contract with `kb cat`; a `kb search` snippet is only an id pointer.
+2. Edit `my-plugins/<name>/` or the named package. Keep committed `cordis.yml` portable.
+3. For a client package, read `kb cat contracts/client-build`. On RC8, an out-of-tree package must build with dshx `externalClientBundle`; do not import the repository-internal official `clientBundle()` or move the plugin under `packages/`.
+4. Run `check <name>`. Completion: no static contract errors; a client package also passes `client-cordis-inject` and has a built lazy-CJS `lib/client.js` handoff.
+5. Run `verify-boot <name>` only when an isolated cold boot is needed. Completion: marker and Web HTTP pass. It refuses to stop an existing supervised Host and does not prove current-host activation.
+6. If package bytes must reach a profile, run `sync-artifact <dir>` (`ship` is a compatibility alias). Completion: content hash matches; activation remains unproven.
+7. Execute the previously selected activation branch. For `new-client`, use only `activate-new-client`; restart only when a different branch requires it.
+8. Report evidence by layer: `SOURCE_BUILT`, `ARTIFACT_SYNCED`, `NEXT_BOOT_REGISTERED`, `HOST_TREE_ACTIVE`, `CLIENT_LOADED`, `VISUAL_BEHAVIOR_VERIFIED`. Omit unobserved layers.
 
-- Never `kill` the `dsh` host from inside a Harness session.
+## Plugin-form checks
+
+- Namespace function: named `apply`; optional `name` and `inject`; no default export in the same module.
+- Object: default-export `{ apply, name?, inject? }` and set `kind: object`.
+- Class/service: default-export the constructor and set `kind: class`.
+- Tool: inject `tools` and register with `defineTool`.
+- Client: `exports["./client"]` must target built `lib/client.js` containing `window.__ModuleLoader__.load({ id, factory })`; source TSX is not a served client artifact. Every direct `ctx.<service>` read must appear in the client entry's Cordis `export const inject`; `package.json` `dsh.client.inject` is unrelated package metadata. RC8 external packages use dshx `externalClientBundle`, while official `packages/client/tsdown.client.ts` remains the in-repository workspace preset.
+
+## Hard guardrails
+
+- Never kill or restart `dsh` from inside a Harness session.
+- Never bypass a failed `activate-new-client` by manually editing profile `package.json` or `cordis.patch.yml`; fix the reported blocker and retry the bounded command.
+- `restart-supervised` may restart only the currently live dshx-owned Web Host. It must not resurrect stale `last-host.json` or reconstruct a headless task.
+- Never mount the same plugin through both a bundle and a user-patch insert.
+- Never treat `dump-config` as a boot or live-Loader proof.
 - `cordis_define` / `cordis_run` are process memory, not a shippable plugin.
-- Do not commit `.env`, `.dshx/`, or machine-absolute plugin paths.
-- Do not start or stop `dsh` during `setup`.
+- Do not commit `.env`, `.dshx/`, secrets, or machine-absolute plugin paths.
+- A scarred 400/orphan-tool-call session needs a new session; do not Continue it.
+- RC8 `dsh web` opens a browser unless passed `--no-open`; dshx-supervised Web and cold-boot commands must suppress that side effect.

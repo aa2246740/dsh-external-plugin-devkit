@@ -18,20 +18,23 @@ okf_version: "0.2"
 * [Symptom index](maps/symptoms.md) - 超时 / 400 / dump 假阴性等现象 → 该 cat 哪篇
 * [OKF practice](maps/okf-practice.md) - 为什么拆散、index 怎么走、search 之后必须 cat
 * [Why external](why-external.md) - Creator Mode 为什么写不好可交付插件
+* [Creator Mode+ safe bridge](contracts/creator-mode-plus.md) - dshx 作为受限 preset 插件时的 WebUI 与 supervisor 边界
+* [Live activation matrix](contracts/live-activation.md) - 先区分 patch / manifest / preset / client / new-client / server / artifact
+* [RC8 external client build](contracts/client-build.md) - 官方 workspace helper 与外部 `my-plugins/*` 的边界
 * [Recommended loop](playbooks/external-loop.md) - `dshx` 闭环
 
 # 合同（先于教程）
 
-* [Contracts](contracts/) - 插件形态、设置卡片、工具、事件、合成、Session、Creator、LLM retry/timeout、dump/patch
+* [Contracts](contracts/) - live activation、插件形态、设置卡片、工具、事件、合成、Session、Creator、LLM retry/timeout、dump/patch
 * [Authority tiers](contracts/authority.md) - 源码 / 文档站 / skill / 社区谁说了算
 
 # 工作流
 
-* [Playbooks](playbooks/) - setup、初始化、静态 check、ship、进程外重启、真实 boot、headless、新会话、模型 UX 诊断
+* [Playbooks](playbooks/) - setup、初始化、静态 check、artifact sync、配置热重组、client HMR/刷新、受控重启、冷 boot
 
 # 坑
 
-* [Pitfalls](pitfalls/) - 孤儿 tool_call、宿主自杀、两次重试后停、dump 假阴性、file: 不重拷
+* [Pitfalls](pitfalls/) - installed ≠ live、新 client 需刷新、孤儿 tool_call、宿主自杀、dump 假阴性、file: 不重拷
 
 # 地图
 
@@ -43,7 +46,7 @@ okf_version: "0.2"
 
 # 可核验计算
 
-* [Attested computations](computations/) - `dshx verify` / `dump` / `doctor` / 检索夹具
+* [Attested computations](computations/) - `dshx verify-boot` / `dump` / `doctor` / 检索夹具
 
 # 参考
 

@@ -8,6 +8,7 @@
 * [Plugin forms](plugin-forms.md) - Function / Object / Class
 * [Plugin Config](plugin-config.md) - Schemastery `Config`，不要普通对象
 * [Settings cards](settings-card.md) - rc.7 `installSettingsSection` + `settings.plugin.item`
+* [RC8 external client build](client-build.md) - 官方 workspace preset 与 `my-plugins/*` 的构建边界
 
 # 工具与事件
 
@@ -17,6 +18,7 @@
 
 # 合成与验证
 
+* [Live activation](live-activation.md) - patch / manifest / preset / client / new-client / server / artifact 七分支
 * [Composition](composition.md) - profile / bundle / patch
 * [dump-config](dump-config.md) - 离线拼树，不挂 Loader
 * [patch overlay](patch-overlay.md) - `--patch` 与绝对 name
@@ -28,10 +30,11 @@
 * [Persistence](persistence.md) - 中断回合与 JSONL
 * [Turn error](turn-error.md) - CLOSED `reason:error` 不会自愈
 * [Creator Mode](creator-mode.md) - preset `cordis`
+* [Creator Mode+](creator-mode-plus.md) - user preset + fixed dshx bridge; WebUI boundary and supervisor ownership
 
 # LLM（观察实验里搜索为零的那一块）
 
-* [LLM retry](llm-retry.md) - `dsh-llm-retry`，默认两次
+* [LLM retry](llm-retry.md) - `dsh-llm-retry`，RC8 默认五次
 * [LLM timeout](llm-timeout.md) - `streamIdleTimeoutMs` / `TIMEOUT`
 * [LlmError](llm-error.md) - 稳定码，路由不看 message
 * [LLM adapter](llm-adapter.md) - `registerAdapter` 与 policy 所有权

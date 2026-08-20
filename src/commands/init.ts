@@ -16,6 +16,30 @@ export function apply(_ctx: Context) {
 `
 }
 
+function objectSource(id: string, marker: string): string {
+  return `import type { Context } from '@deepseek-ai/cordis'
+
+export default {
+  name: '${id}',
+  apply(_ctx: Context) {
+    console.log('${marker}')
+  },
+}
+`
+}
+
+function classSource(id: string, marker: string): string {
+  return `import { Service, type Context } from '@deepseek-ai/cordis'
+
+export default class ${pascal(id)}Service extends Service {
+  constructor(ctx: Context) {
+    super(ctx, '${camel(id)}')
+    console.log('${marker}')
+  }
+}
+`
+}
+
 function clientHostSource(id: string, marker: string): string {
   return `import type { Context } from '@deepseek-ai/cordis'
 import { installSettingsSection, settingsNamespace } from '@deepseek-ai/dsh-settings'
@@ -53,7 +77,7 @@ export const name = '${id}-client'
 export const inject = ['slots', 'settingsScope']
 
 export function apply(ctx: ClientContext) {
-  // Official rc.7 card: settings.plugin.item keyed by the Host namespace.
+  // Official settings card: settings.plugin.item keyed by the Host namespace.
   // Do not register a top-level settings.section unless you need a whole page.
   ctx.slots.inject('settings.plugin.item', () => ctx.slots.register({
     name: 'settings.plugin.item',
@@ -67,8 +91,40 @@ function ${pascal(id)}Card() {
 `
 }
 
+function clientTsconfig(): string {
+  return `${JSON.stringify({
+    extends: '../../tsconfig.base.client.json',
+    compilerOptions: {
+      rootDir: 'src',
+      outDir: 'lib/types',
+    },
+    include: ['src'],
+    references: [
+      { path: '../../vendor/cordis' },
+      { path: '../../vendor/schemastery' },
+      { path: '../../packages/settings/settings' },
+      { path: '../../packages/client/runtime' },
+      { path: '../../packages/client/ui-settings-plugins' },
+    ],
+  }, null, 2)}\n`
+}
+
+function clientBuildConfig(id: string): string {
+  return `import { externalClientBundle } from '../../tools/dshx/src/client-build.js'
+
+export default externalClientBundle('${id}', ['lib/types/${id}.js'], {
+  clientEntry: 'src/client/index.tsx',
+})
+`
+}
+
 function pascal(id: string): string {
   return id.split('-').filter(Boolean).map(part => part[0]!.toUpperCase() + part.slice(1)).join('')
+}
+
+function camel(id: string): string {
+  const value = pascal(id)
+  return value[0]!.toLowerCase() + value.slice(1)
 }
 
 function toolSource(id: string, marker: string): string {
@@ -100,8 +156,9 @@ export function apply(ctx: Context) {
 
 export function cmdInit(args: string[], options: CliOptions, root: string): number {
   const name = args[0]
-  if (!name || !/^[a-z][a-z0-9-]*$/.test(name)) {
-    printReport(report('init', [finding('error', 'usage', 'dshx init <kebab-name> [--kind function|tool|client]')]), options.json)
+  const kinds = new Set(['function', 'tool', 'client', 'object', 'class'])
+  if (!name || !/^[a-z][a-z0-9-]*$/.test(name) || !kinds.has(options.kind)) {
+    printReport(report('init', [finding('error', 'usage', 'dshx init <kebab-name> [--kind function|tool|client|object|class]')]), options.json)
     return 1
   }
   const dir = join(pluginsDir(root), name)
@@ -115,18 +172,35 @@ export function cmdInit(args: string[], options: CliOptions, root: string): numb
     ? toolSource(name, marker)
     : options.kind === 'client'
       ? clientHostSource(name, marker)
-      : functionSource(name, marker)
+      : options.kind === 'object'
+        ? objectSource(name, marker)
+        : options.kind === 'class'
+          ? classSource(name, marker)
+          : functionSource(name, marker)
   writeText(join(dir, entry), source)
   if (options.kind === 'client') {
     writeText(join(dir, 'src/client/index.tsx'), clientSource(name))
     writeText(join(dir, 'package.json'), `${JSON.stringify({
       name,
       version: '0.0.0',
+      description: `External DSH WebUI plugin ${name}`,
       type: 'module',
-      main: entry,
+      main: `lib/${name}.js`,
+      types: `lib/types/${name}.d.ts`,
+      scripts: {
+        build: 'tsc -p tsconfig.json && tsdown',
+        typecheck: 'tsc -p tsconfig.json --noEmit',
+      },
       exports: {
-        '.': `./${entry}`,
-        './client': './src/client/index.tsx',
+        '.': {
+          types: `./lib/types/${name}.d.ts`,
+          default: `./lib/${name}.js`,
+        },
+        './client': {
+          types: './lib/types/client/index.d.ts',
+          default: './lib/client.js',
+        },
+        './package.json': './package.json',
       },
       dsh: {
         client: {
@@ -134,7 +208,38 @@ export function cmdInit(args: string[], options: CliOptions, root: string): numb
           platform: 'web',
         },
       },
+      files: [
+        'lib/*.js',
+        'lib/*.js.map',
+        'lib/types/**/*.d.ts',
+        'cordis.yml',
+        'README.md',
+      ],
+      engines: {
+        node: '^22.19.0 || >=24.0.0',
+      },
+      license: 'MIT',
+      peerDependencies: {
+        '@deepseek-ai/cordis': '^4.0.1',
+        '@deepseek-ai/dsh-client-ui-settings-plugins': '^0.1.0-rc.8',
+        '@deepseek-ai/dsh-settings': '^0.1.0-rc.8',
+        '@deepseek-ai/schemastery': '^3.18.1',
+      },
+      devDependencies: {
+        '@deepseek-ai/cordis': '^4.0.1',
+        '@deepseek-ai/dsh-client-runtime': '^0.1.0-rc.8',
+        '@deepseek-ai/dsh-client-ui-settings-plugins': '^0.1.0-rc.8',
+        '@deepseek-ai/dsh-settings': '^0.1.0-rc.8',
+        '@deepseek-ai/schemastery': '^3.18.1',
+        '@types/react': '~18.3.1',
+        react: '^18.2.0',
+        'react-dom': '^18.2.0',
+        tsdown: '^0.22.2',
+        typescript: '^6.0.3',
+      },
     }, null, 2)}\n`)
+    writeText(join(dir, 'tsconfig.json'), clientTsconfig())
+    writeText(join(dir, 'tsdown.config.ts'), clientBuildConfig(name))
   }
   writeText(join(dir, 'dshx.yml'), [
     `id: ${name}`,
@@ -146,29 +251,46 @@ export function cmdInit(args: string[], options: CliOptions, root: string): numb
   ].join('\n'))
   writeText(join(dir, 'cordis.yml'), [
     '# portable overlay: relative name only. --patch resolves against the profile',
-    '# directory, so boot through `dshx start` / `dshx verify`, not raw pnpm dsh.',
+    '# directory, so cold-boot through `dshx start` / `dshx verify-boot`, not raw pnpm dsh.',
     '- insert:',
     `    - id: ${name}`,
     `      name: './${entry}'`,
     '',
   ].join('\n'))
+  const clientNotes = options.kind === 'client' ? [
+    '',
+    'Install this out-of-tree package independently, then build the Host and browser halves:',
+    '',
+    '```sh',
+    `pnpm --dir my-plugins/${name} install --ignore-workspace`,
+    `pnpm --dir my-plugins/${name} build`,
+    '```',
+    '',
+    'The generated `tsdown.config.ts` uses dshx `externalClientBundle`; RC8\'s',
+    'repository-internal `packages/client/tsdown.client.ts` rejects `my-plugins/*`.',
+    '`dshx check` stays red until `lib/client.js` contains the lazy-CJS handoff.',
+  ] : []
   writeText(join(dir, 'README.md'), [
     `# ${name}`,
     '',
     'Scratch plugin. Load it from the repository root with:',
     '',
     '```sh',
-    `pnpm dshx check ${name}`,
-    `pnpm dshx verify ${name}`,
-    `pnpm dshx start web ${name}`,
+    `dshx check ${name}`,
+    `dshx verify-boot ${name}`,
+    `dshx start web ${name}`,
     '```',
+    ...clientNotes,
     '',
     'Read `tools/dshx/knowledge/start-here.md` before changing the contract.',
     '',
   ].join('\n'))
   const result = report('init', [
     finding('ok', 'scaffold', `created my-plugins/${name}`),
-    finding('info', 'next', `dshx check ${name} && dshx verify ${name}`),
+    ...options.kind === 'client'
+      ? [finding('warn', 'client-build-required', 'build lib/client.js with the RC8-compatible lazy-CJS handoff before check/verify-boot')]
+      : [],
+    finding('info', 'next', `dshx check ${name} && dshx verify-boot ${name}`),
   ], { dir, kind: options.kind, marker })
   printReport(result, options.json)
   return 0

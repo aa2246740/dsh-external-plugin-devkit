@@ -32,6 +32,18 @@ describe('parseCli', () => {
     assert.equal(parsed.options.port, 3091)
   })
 
+  it('applies --harness to every command before or after the command name', () => {
+    const after = parseCli(['check', 'demo', '--harness', '/tmp/rc8'])
+    assert.equal(after.command, 'check')
+    assert.deepEqual(after.args, ['demo'])
+    assert.equal(after.options.harness, '/tmp/rc8')
+
+    const before = parseCli(['--harness', '/tmp/rc8', 'doctor'])
+    assert.equal(before.command, 'doctor')
+    assert.deepEqual(before.args, [])
+    assert.equal(before.options.harness, '/tmp/rc8')
+  })
+
   it('parses setup and ship flags', () => {
     const setup = parseCli(['setup', '--dry-run', '--print-prompt', '--harness', '/tmp/h'])
     assert.equal(setup.command, 'setup')
@@ -43,5 +55,30 @@ describe('parseCli', () => {
     assert.deepEqual(ship.args, ['./pkg'])
     assert.equal(ship.options.restart, true)
     assert.equal(ship.options.profile, 'web')
+  })
+
+  it('parses lifecycle commands without leaking flags into arguments', () => {
+    const plan = parseCli(['activation-plan', 'demo', '--change', 'new-client', '--profile', 'web'])
+    assert.equal(plan.command, 'activation-plan')
+    assert.deepEqual(plan.args, ['demo'])
+    assert.equal(plan.options.change, 'new-client')
+    const verify = parseCli(['verify-boot', 'demo', '--keep'])
+    assert.equal(verify.command, 'verify-boot')
+    assert.deepEqual(verify.args, ['demo'])
+    assert.equal(verify.options.keep, true)
+  })
+
+  it('parses the user-preset lifecycle branch', () => {
+    const plan = parseCli(['activation-plan', 'dsh-creator-plus', '--change', 'preset'])
+    assert.equal(plan.options.change, 'preset')
+  })
+
+  it('parses bounded new-client activation flags without leaking them into arguments', () => {
+    const activation = parseCli(['activate-new-client', 'demo', '--profile', 'web', '--port', '43127', '--timeout', '12'])
+    assert.equal(activation.command, 'activate-new-client')
+    assert.deepEqual(activation.args, ['demo'])
+    assert.equal(activation.options.profile, 'web')
+    assert.equal(activation.options.port, 43127)
+    assert.equal(activation.options.timeoutMs, 12_000)
   })
 })

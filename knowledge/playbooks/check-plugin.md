@@ -1,7 +1,7 @@
 ---
 type: Playbook
 title: Static-check a scratch plugin
-description: 静态检查 scratch 插件的 named export、路径和 marker。通过不等于已 boot。
+description: 静态检查官方三种插件形态、路径、marker 和 client lazy-CJS 产物。通过不等于 cold boot 或 live activation。
 tags: [check, static, plugin]
 aliases: [check, "static check", "dshx check", "check fail"]
 status: stable
@@ -12,27 +12,28 @@ stale_after: 2026-11-17
 # 命令
 
 ```sh
-pnpm dshx check hello
-pnpm dshx check              # 扫 my-plugins/ 下每一个目录（含别人留下的 scratch）
+dshx check hello
+dshx check              # 扫 my-plugins/ 下每一个目录（含别人留下的 scratch）
 # 目录多于一个时请带名字，否则一次红会分不清是谁的
 ```
 
-这是静态合同，见 [plugin-forms](../contracts/plugin-forms.md)。**通过 ≠ 已 boot。** 真启动走 [verify-boot](verify-boot.md)。
+这是静态合同，见 [plugin-forms](../contracts/plugin-forms.md)。**通过 ≠ cold boot ≠ live activation。** 隔离启动走 [verify-boot](verify-boot.md)，现有 Host 生命周期走 [live activation](../contracts/live-activation.md)。
 
 # 它看什么
 
 | finding | 失败时 |
 |---|---|
-| `export-name` / `export-apply` | function/tool 没有 named-export `name` / `apply` |
-| `default-export` | 出现 `export default`。Loader smoke 在 default 换掉 named export 时仍可能绿 |
-| `export-inject` | 没有 `export const inject`（warn；空数组也要写） |
+| `export-apply` | function/tool/client namespace 没有 named `apply` |
+| `export-name` / `export-inject` | 可选 metadata；缺少是 info，不是错误 |
+| `default-export` | namespace function 出现 default；Loader 会优先 default 而丢掉兄弟 named metadata |
+| `object-form` / `class-form` | kind 与官方 default object/class 形状不匹配 |
 | `define-tool` | `kind=tool` 但源码没有 `defineTool` |
 | `inject-tools` | 工具插件没 `inject: ['tools']` |
 | `boot-marker` | `dshx.yml` 的 marker 字符串不在源码里 |
 | `portable-path` | 已提交的 `cordis.yml` 写成了机器绝对路径 |
 | `cordis-yml` | 已提交 overlay 不是顶层 YAML 数组 |
 | `entry` | entry 文件不存在 |
-| `client-entry` | `dsh.client` / `exports["./client"]` 指向的 `.js` 不存在（只有 `.mjs` 也会红） |
+| `client-entry` / `client-entry-format` | built `.js` 不存在，或没有 `window.__ModuleLoader__.load({ id, factory })` handoff；source TSX 会红 |
 
 # 常见负例
 

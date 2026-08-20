@@ -56,6 +56,17 @@ describe('OKF retrieval', () => {
     assert.ok(ids('PTC mode').includes('contracts/creator-mode'))
   })
 
+  it('retrieves the lifecycle contract before restart-oriented advice', () => {
+    const ids = (query: string) => searchBundle(query).map(hit => hit.doc.id)
+    assert.equal(ids('hot reload')[0], 'contracts/live-activation')
+    assert.equal(ids('热重载')[0], 'contracts/live-activation')
+    assert.equal(ids('热插拔')[0], 'contracts/live-activation')
+    assert.ok(ids('HMR').includes('contracts/live-activation'))
+    assert.ok(ids('不重启').includes('contracts/live-activation'))
+    assert.equal(ids('插件装了没生效')[0], 'pitfalls/installed-is-not-live')
+    assert.ok(ids('client reload').includes('pitfalls/new-client-entry-needs-page-reload'))
+  })
+
   it('keeps retrieval fixtures green', () => {
     const retrieval = runRetrievalFixtures()
     assert.deepEqual(retrieval.errors, [])

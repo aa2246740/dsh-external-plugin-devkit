@@ -1,50 +1,55 @@
-# dshx — standing orders for agents
+# dshx — repository standing orders
 
-You are developing DeepSeek Harness plugins **outside** Creator Mode.
+This project develops file-backed DeepSeek Harness plugins outside Creator Mode. Official DSH source and published docs outrank this repository.
 
-## You have a knowledge bundle
+## Read by pointer
 
-Path: `tools/dshx/knowledge/` (OKF v0.2). Official docs were digested and shattered; do not paste whole `docs/` files into context.
+The OKF bundle is knowledge/. Start with:
 
-Explore it yourself. Do not guess contracts from memory.
+~~~sh
+dshx kb cat start-here
+dshx kb cat maps/symptoms
+dshx kb search <topic>
+dshx kb cat <id-from-search>
+~~~
 
-```sh
-pnpm dshx setup --print-prompt
-pnpm dshx kb
-pnpm dshx kb cat start-here
-pnpm dshx kb cat maps/symptoms
-pnpm dshx kb ls contracts
-pnpm dshx kb search <topic>
-pnpm dshx kb cat <id-from-search>
-```
+A search snippet is only an id pointer. Read the matched document and its official sources before changing a contract.
 
-`kb search` is only for finding an id. You **must** `kb cat` the hit. Search snippets are not the contract.
+Before any install, ship, HMR, refresh, or restart advice, read knowledge/contracts/live-activation.md and classify the changed surface:
 
-Open `knowledge/index.md`, then follow links. When a concept lists `resource` or `sources`, read those official files next. Skills and stale READMEs are not the runtime contract.
+- patch: watched config-tree reconciliation; no Host restart.
+- manifest: next-boot profile/bundle composition; Host restart required.
+- client: existing page entry client HMR; no Host restart or page reload.
+- new-client: Host patch can reconcile live; browser page reload required.
+- server: restart current supervised Host unless exact module HMR is configured and tested.
+- artifact: bytes only; activation undecided.
 
-## Use this CLI for restart and proof
+## Use evidence-scoped commands
 
-```sh
-pnpm dshx check <name>
-pnpm dshx verify <name>     # dump-config exit 0 is not enough
-pnpm dshx ship <dir>        # file: packages; add-only does not recopy lib/
-pnpm dshx start web <name>
-pnpm dshx stop | restart
-pnpm dshx doctor
-pnpm dshx which
-pnpm dshx session list
-```
+~~~sh
+dshx check <name>
+dshx verify-boot <name>                         # isolated cold boot only
+dshx activation-plan <name> --change <branch>  # read-only lifecycle plan
+dshx sync-artifact <dir>                       # ship/recopy aliases; not activation
+dshx start web <name>
+dshx status
+dshx restart-supervised                        # current owned Web Host only
+dshx stop
+~~~
 
-Never `kill` the `dsh` host from inside a Harness session. That bricks the session as permanently running.
+verify-boot must never stop an existing Host. sync-artifact must report ARTIFACT_SYNCED; LIVE_ACTIVATION_UNPROVEN. restart-supervised must refuse stale last-host state and headless task reconstruction.
 
-## Deliverables are files
+Report only observed layers: source built, artifact synced, next-boot registered, Host tree active, client loaded, visual/behavior verified.
 
-Write to `my-plugins/<name>/`. Keep `cordis.yml` portable (relative `name`). `dshx` generates the absolute `--patch` file under `.dshx/overlays/`. Do not commit `.dshx/`, `.env`, or secrets.
+## Deliverables and forms
 
-`cordis_define` / `cordis_run` are process memory. They are not a shippable plugin.
+Scratch work belongs in my-plugins/<name>/; .dshx/ is generated state and must not be committed. A namespace function named-exports apply with optional name/inject and no default. Official object/class forms default-export their plugin and set kind: object|class. Client packages serve built lazy-CJS lib/client.js, never source TSX.
 
-## Authority
+## Guardrails
 
-See `knowledge/contracts/authority.md`. Prefer `defineTool` names, `vendor/cordis` types, and `profile.ts` over tutorials when they disagree.
-
-Model timeout / "stopped after two retries" is official `dsh-llm-retry` (`kb cat contracts/llm-retry`), not a reason to patch Harness core.
+- Never kill/restart DSH from inside a Harness session.
+- Never mount the same plugin through both bundle and user-patch rows.
+- Never call dump-config, HTTP 200, package install, or artifact copy a live activation proof.
+- Never treat cordis_define / cordis_run process memory as delivery.
+- Never commit .env, secrets, .dshx/, or machine-absolute paths.
+- Do not patch Harness core to change an unrelated runtime policy.

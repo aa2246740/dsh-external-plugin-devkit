@@ -23,21 +23,43 @@ export function checkPlugin(plugin: PluginManifest, repoRoot: string): Finding[]
   const hasInject = /export\s+const\s+inject\s*=/.test(source)
   const hasApply = /export\s+function\s+apply\s*\(/.test(source) || /export\s+async\s+function\s+apply\s*\(/.test(source)
   const hasDefault = /export\s+default\s+/.test(source)
+  const hasDefaultObject = /export\s+default\s*\{/.test(source)
+  const hasDefaultClass = /export\s+default\s+class\b/.test(source)
 
   if (plugin.kind === 'function' || plugin.kind === 'tool' || plugin.kind === 'client') {
-    if (hasName) findings.push(finding('ok', 'export-name', 'named export `name`', { path: rel }))
-    else findings.push(finding('error', 'export-name', 'function plugin must named-export `name`', { path: rel }))
+    if (hasName) findings.push(finding('ok', 'export-name', 'optional named export `name` is present', { path: rel }))
+    else findings.push(finding('info', 'export-name', '`name` is optional for a function plugin', { path: rel }))
     if (hasInject) findings.push(finding('ok', 'export-inject', 'named export `inject`', { path: rel }))
-    else findings.push(finding('warn', 'export-inject', 'no `export const inject` — add `export const inject = []` even when empty', { path: rel }))
+    else findings.push(finding('info', 'export-inject', '`inject` is optional when the plugin requires no services', { path: rel }))
     if (hasApply) findings.push(finding('ok', 'export-apply', 'named export `apply`', { path: rel }))
     else findings.push(finding('error', 'export-apply', 'function plugin must named-export `apply`', { path: rel }))
     if (hasDefault) {
       findings.push(finding('error', 'default-export', 'function plugin must not default-export; Loader smoke stays green if default replaces named exports', {
         path: rel,
-        hint: 'use export const name / inject / apply only',
+        hint: 'for namespace-function form, export apply (plus optional name/inject) and no default; choose kind object/class for official default forms',
       }))
     } else {
       findings.push(finding('ok', 'default-export', 'no default export'))
+    }
+  }
+
+  if (plugin.kind === 'object') {
+    if (!hasDefaultObject) {
+      findings.push(finding('error', 'object-form', 'kind=object must default-export an object with apply(ctx, config)', { path: rel }))
+    } else if (!/\bapply\s*(?:\(|:)/.test(source)) {
+      findings.push(finding('error', 'object-form', 'default object has no apply method', { path: rel }))
+    } else {
+      findings.push(finding('ok', 'object-form', 'official default object plugin form', { path: rel }))
+    }
+  }
+
+  if (plugin.kind === 'class') {
+    if (!hasDefaultClass) {
+      findings.push(finding('error', 'class-form', 'kind=class must default-export a constructor/service class', { path: rel }))
+    } else if (!/\bconstructor\s*\(/.test(source)) {
+      findings.push(finding('error', 'class-form', 'default class has no constructor(ctx, config)', { path: rel }))
+    } else {
+      findings.push(finding('ok', 'class-form', 'official default class plugin form', { path: rel }))
     }
   }
 
@@ -59,7 +81,7 @@ export function checkPlugin(plugin: PluginManifest, repoRoot: string): Finding[]
       findings.push(finding('error', 'boot-marker', `dshx.yml marker not found in source: ${plugin.marker}`, { path: rel }))
     }
   } else {
-    findings.push(finding('warn', 'boot-marker', 'no console.log marker; dshx verify cannot prove apply() ran', {
+    findings.push(finding('warn', 'boot-marker', 'no console.log marker; dshx verify-boot cannot prove apply() ran', {
       path: rel,
       hint: "add console.log('[my-plugins/<id>] loaded') and put the same string in dshx.yml marker",
     }))

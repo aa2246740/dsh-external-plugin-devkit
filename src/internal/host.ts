@@ -62,25 +62,34 @@ export interface StartSpec {
   extraArgs?: string[]
 }
 
-export function startHost(root: string, spec: StartSpec): HostState {
-  const existing = currentHost(root)
-  if (existing) {
-    throw new Error(`dshx already supervises pid ${existing.pid} on port ${existing.port}. run dshx stop or dshx restart`)
-  }
-  const logFile = hostLogPath(root, spec.profile)
-  ensureDir(dirname(logFile))
-  writeText(logFile, '')
-  const { cmd, prefix } = dshBin(root)
-  const args = [...prefix]
+/** Build only the official dsh arguments for a supervised Host. */
+export function dshHostArgs(spec: StartSpec): string[] {
+  const args: string[] = []
   if (spec.profile === 'web') {
+    // The web subcommand stops launcher-option parsing at the first app-owned
+    // flag. Keep --patch before --no-open/--port or RC8 forwards it to the web
+    // app, which rejects it as an unknown option.
     args.push('web')
     if (spec.overlay) args.push('--patch', spec.overlay)
-    args.push('--port', String(spec.port))
+    args.push('--no-open', '--port', String(spec.port))
   } else {
     args.push('--profile', 'headless')
     if (spec.overlay) args.push('--patch', spec.overlay)
     args.push(...spec.extraArgs ?? [])
   }
+  return args
+}
+
+export function startHost(root: string, spec: StartSpec): HostState {
+  const existing = currentHost(root)
+  if (existing) {
+    throw new Error(`dshx already supervises pid ${existing.pid} on port ${existing.port}. classify the change first; use restart-supervised only when that branch requires it`)
+  }
+  const logFile = hostLogPath(root, spec.profile)
+  ensureDir(dirname(logFile))
+  writeText(logFile, '')
+  const { cmd, prefix } = dshBin(root)
+  const args = [...prefix, ...dshHostArgs(spec)]
   const fd = openSync(logFile, 'a')
   const child = spawn(cmd, args, {
     cwd: root,

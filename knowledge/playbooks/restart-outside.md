@@ -1,48 +1,38 @@
 ---
 type: Playbook
-title: Restart the host from outside
-description: 插件/配置生效需要重启时，用 dshx stop/start/restart，不要从会话里杀 PID。
-tags: [restart, host]
-aliases: ["restart", "stop", "kill host", "外面重启", "already supervising", "already supervises", "dshx stop", "dshx restart"]
+title: Restart only the current supervised Host
+description: 生命周期分支明确需要重启时，只从进程外重启当前 dshx-owned Web PID；不复活 stale state，不重构 headless task。
+tags: [restart, host, supervisor]
+aliases: [restart, stop, kill host, 外面重启, already supervising, already supervises, dshx stop, dshx restart, restart-supervised]
 status: stable
-generated: { by: dshx/grok-4.6, at: 2026-08-17T12:30:00Z }
-stale_after: 2026-11-17
+verified_against: { tag: dsh-v0.1.0-rc.8, sha: 141eb6fef83422698aef7a981029e843e8161534 }
 sources:
-  - id: disc-387
-    resource: https://github.com/deepseek-ai/deepseek-harness/discussions/387
-    title: Agent kills host
+  - id: cli-ref
+    resource: apps/cli/reference/README.md
+    title: Graceful process disposal
 ---
 
-# 为什么
+# 先问是否需要
 
-Agent 在 Creator / Standard 里对宿主做 `kill` 后：
+先读 [live activation](../contracts/live-activation.md)。只有 manifest / server 分支默认需要 Host restart。安全规则“只能从外面重启”不等于“每次改插件都要重启”。
 
-- `:3080` 掉线
-- 最后落盘事件停在那次 `tool/call`
-- 浏览器停在 Stop generating
-- 外面把 `dsh web` 拉起来后该会话仍显示 running
+# 命令
 
-`workspace-write` **不拦**杀进程。这是 [host-suicide](../pitfalls/host-suicide.md)。
+~~~sh
+dshx status
+dshx restart-supervised
+~~~
 
-# 怎么做
+restart 是兼容别名。命令只接受当前由 dshx 监督且仍存活的 Web PID，并复用其 profile、plugin 和 port：
 
-```sh
-pnpm dshx status
-pnpm dshx restart              # 复用上次 plugin / port
-pnpm dshx stop
-pnpm dshx start web hello
-```
+- 没有 live owned PID：拒绝；不会从 last-host.json 猜目标。
+- 传入另一个 plugin/profile：拒绝；改目标要显式 stop 后 start。
+- headless：拒绝；one-shot task 无法可靠重构。
 
-`dshx` 把 pid 记在 `.dshx/host.json`（gitignored），SIGTERM，必要时 SIGKILL。这发生在 DSH 进程外，会话不会变成「自己杀自己」。
+# 为什么不能在会话内杀
 
-`dshx restart` 先打印 `stopped`（旧 pid），再打印新的 `start` / `spawned`。不要因为第二条横幅写着 `dshx start` 就以为没停旧进程。
+Harness 会话内 kill 宿主会让最后一次 tool/call 留在 running/orphan 状态；外面再拉起进程也不会修复那条会话。见 [host-suicide](../pitfalls/host-suicide.md)。
 
-# 已经在监督
+# 完成标准
 
-第二次 `dshx start` 若本工具已经 supervises 一个 pid，会报 `already-supervising`，提示 `dshx stop` 或 `dshx restart`。`--force` **不会**接管你已经在监督的宿主。
-
-不要先看默认 3080 是否被别人占用再决定停不停：监督中的 workshop 端口可能是 3091。先 `dshx status`。
-
-# 重启之后
-
-旧 session 看不到新 generation。开 **新会话** 看工具列表。被杀掉的那次会话不要 Continue。
+记录旧 PID 被停止、新 PID 启动，并重新验证目标 Host 行和真实行为。仅看到 restart 命令退出 0 不算插件验收。

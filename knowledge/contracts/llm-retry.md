@@ -1,13 +1,14 @@
 ---
 type: Runtime Contract
 title: Provider-owned LLM retry budget
-description: 自动重试由 shipped dsh-llm-retry 执行；默认 maxRetries 为 2，只覆盖瞬时码。
+description: 自动重试由 shipped dsh-llm-retry 执行；RC8 默认 maxRetries 为 5，只覆盖瞬时码。
 tags: [llm, retry, timeout]
-aliases: [retry, retries, maxRetries, retryPolicy, dsh-llm-retry, 重试, 自动重试, two retries]
+aliases: [retry, retries, maxRetries, retryPolicy, dsh-llm-retry, 重试, 自动重试, five retries, two retries]
 status: stable
 resource: packages/llm/llm/src/retry-policy.ts
 generated: { by: dshx/grok-4.6, at: 2026-08-17T14:00:00Z }
 stale_after: 2026-11-17
+verified_against: { tag: dsh-v0.1.0-rc.8, sha: 141eb6fef83422698aef7a981029e843e8161534, date: 2026-08-20 }
 sources:
   - id: policy
     resource: packages/llm/llm/src/retry-policy.ts
@@ -31,7 +32,7 @@ sources:
 `resolveRetryPolicy(undefined)` 的官方默认：[^policy]
 
 - `mode: 'normal'`
-- `maxRetries: 2`（第一次失败之后还能再试 **两次**）
+- `maxRetries: 5`（第一次失败之后还能再试 **五次**，最多六次请求）
 - `retryableCodes`: `EMPTY_RESPONSE` `RATE_LIMIT` `SERVER` `TIMEOUT` `TRANSPORT`
 - backoff：500ms 起，上限 10s，jitter 0.1
 
@@ -41,7 +42,7 @@ sources:
 
 `dsh-llm-retry` 在同一 `turn` / `step` / `provider` / `policyKey` 上数已写入的 `llm/retry` 事件。`previousRetry >= maxRetries` 就 `next()`，把失败交给后面的 listener，**不再自动试**。[^plugin]
 
-因此「超时两次然后停」是合同，不是登录插件或 UI 的独立 bug。见 [two-retry-stop](/pitfalls/two-retry-stop.md)。
+因此 RC8 的默认预算耗尽点是五次 retry，不再是 rc.7 的两次。若观察到两次后停，先检查 provider override、旧 Host/旧包或错误码是否不在 retryable 集合，不能把它写成 RC8 默认。见 [retry-budget-exhausted](/pitfalls/two-retry-stop.md)。
 
 # 插件能改什么
 

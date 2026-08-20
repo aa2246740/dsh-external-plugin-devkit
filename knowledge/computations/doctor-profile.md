@@ -20,7 +20,7 @@ stale_after: 2026-11-17
 # Computation
 
 ```
-pnpm dshx doctor [--profile @profile] --json
+dshx doctor [--profile @profile] --json
 ```
 
 `leftover-bundle`、`duplicate-id` 或 `stale-file-copy` 为 error 则不得宣称 profile 健康。干净时 leftover / duplicate / orphan 会打 **ok**，不是省略。`:3080` 在听且不是本工具监督时为 **warn**，措辞与 `dshx status` 相同。本计算不是官方 `dsh doctor`。

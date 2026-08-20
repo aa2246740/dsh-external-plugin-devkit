@@ -19,7 +19,7 @@ stale_after: 2026-11-17
 # Computation
 
 ```
-pnpm dshx kb lint
+dshx kb lint
 ```
 
 `kb lint` 会跑 `RETRIEVAL_FIXTURES`。Agent 不得改查询词来让 lint 变绿；缺概念就补概念和 `aliases`。

@@ -37,8 +37,8 @@ sources:
 | 能力 | Creator 里 | 外部 `dshx` |
 |---|---|---|
 | 持久化 | `define`/`run` 只在进程内存，重启即无 | 写 `my-plugins/` + composition 文件 |
-| 重启宿主 | Agent 一 `kill` 就自杀，会话卡 running | `dshx stop` / `restart` 在进程外 |
-| 自主验证 | dump-config 不挂 Loader；inspect 只看当前 session | `dshx verify` 真 boot + marker |
+| 必要时重启宿主 | Agent 一 `kill` 就自杀，会话卡 running | 先 lifecycle 分类；只在 manifest/server 分支从进程外 `restart-supervised` |
+| 自主验证 | dump-config 不挂 Loader；inspect 只看当前 session | `verify-boot` 验隔离 cold boot；activation branch 验当前 Host/client |
 
 # 正确分工
 

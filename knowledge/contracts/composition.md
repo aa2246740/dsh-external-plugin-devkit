@@ -40,10 +40,12 @@ sources:
 
 二者不是同一物。`dsh plugin add` 成功后会把声明了 `dsh.bundle` 的依赖提升进 bundles。原先手写的 `insert` 不会自动删，于是 [duplicate loader id](../pitfalls/duplicate-loader-id.md)。
 
+Host 启动时读取并展开 bundle 层；运行中的 user-patch watcher 复用这份已捕获的 bundle patches，只重读 profile/home `cordis.patch.yml`。所以 manifest / bundle 文件变更是 **next boot**，用户 patch 行才是同进程热重组面。见 [live activation](live-activation.md)。
+
 # 看树
 
 ```sh
 pnpm dsh --profile web --dump-default-config   # 只 bundle
 pnpm dsh --profile web --dump-config           # 再叠用户层
-pnpm dshx dump hello                           # 带 scratch overlay，并警告这不是 boot
+dshx dump hello                           # 带 scratch overlay，并警告这不是 boot
 ```

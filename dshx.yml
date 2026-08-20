@@ -1,0 +1,5 @@
+id: dshx-creator-plus
+entry: src/creator-plus/index.js
+marker: "[dshx/creator-plus] loaded"
+kind: function
+profile: web

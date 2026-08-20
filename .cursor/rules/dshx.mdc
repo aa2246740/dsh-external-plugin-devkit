@@ -1,32 +1,19 @@
 ---
-description: External DSH plugin workshop (dshx + OKF knowledge bundle)
+description: External DSH plugin lifecycle and dshx evidence rules
 alwaysApply: true
 ---
 
-# External plugin workshop
+# dshx external plugin work
 
-You have an OKF v0.2 knowledge bundle at `tools/dshx/knowledge/`. Official docs are digested and shattered — do not dump whole `docs/` files into context.
+Use tools/dshx/knowledge/ by pointer: kb search finds an id; kb cat reads the contract. Before install/ship/HMR/reload/restart work, read contracts/live-activation and select exactly one branch with dshx activation-plan <plugin> --change patch|manifest|client|new-client|server|artifact.
 
-Start with `pnpm dshx kb` or `tools/dshx/knowledge/index.md` → `start-here.md` → `maps/symptoms.md`, then follow links. Search with `pnpm dshx kb search <topic>`, then **immediately** `pnpm dshx kb cat <id>`. Search snippets are not the contract. Do not invent plugin contracts from memory.
+- patch: watched config reconciliation, no Host restart.
+- manifest: next-boot bundle state, Host restart.
+- existing client: built lib/client.js HMR, no Host restart/page reload.
+- new client: Host can stay up; reload/reopen the browser page.
+- server: restart the current supervised Host unless exact module HMR is tested.
+- artifact: synchronization only; activation unproven.
 
-Develop scratch plugins under `my-plugins/` with `pnpm dshx`. This is outside Creator Mode on purpose.
+Required evidence flow: check → optional isolated verify-boot → optional sync-artifact → selected activation branch → Host/browser behavior proof. verify-boot may not stop a live Host. ship --restart is forbidden. restart-supervised targets only the current dshx-owned Web PID.
 
-## Required loop
-
-1. Read the bundle (`dshx kb`, then `kb cat maps/symptoms` when debugging a symptom).
-2. `dshx init` / edit files.
-3. `dshx check`.
-4. `dshx verify` — dump-config exit 0 is not a boot proof.
-5. Restart only with `dshx restart` / `stop` / `start`.
-6. `file:` profile packages: `dshx ship <dir>`. `plugin add file:` "Already up to date" does not recopy `lib/`.
-7. Session 400 / stuck running → `dshx session list`, then a new chat.
-
-## Forbidden
-
-- Killing the `dsh` host from inside a Harness session.
-- Treating `cordis_define` / `cordis_run` as a deliverable.
-- Continuing a session that already 400s on orphan `tool_call`.
-- Committing `.env`, `.dshx/`, or machine-absolute plugin paths.
-- Patching Harness core to change the default two-retry LLM budget.
-
-Official `dsh doctor` does not exist. `dshx doctor` is this workspace's command only.
+Never kill DSH from a Harness session, duplicate-mount a plugin, serve client source TSX, treat dump-config as live proof, or commit .env/.dshx/absolute machine paths.

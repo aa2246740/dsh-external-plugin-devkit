@@ -1,28 +1,36 @@
 ---
 type: Playbook
-title: "Ship a file: plugin into the profile"
-description: "用 dshx ship 强制重拷 file: 包。add 显示 Already up to date 不等于 lib 已更新。"
-tags: [ship, file, deliver]
-aliases: ["dshx ship", "ship", recopy, "file: ship"]
+title: Synchronize a local package artifact
+description: "sync-artifact 处理官方 link: 本地开发和旧式 file: 重拷，只证明内容 hash；绝不隐式重启或宣称 live。"
+tags: [ship, sync, file, link, artifact]
+aliases: [dshx ship, dshx sync-artifact, ship, recopy, "file: ship", artifact sync]
 status: stable
-generated: { by: dshx/grok-4.6, at: 2026-08-18T12:00:00Z }
-stale_after: 2026-11-18
+verified_against: { tag: dsh-v0.1.0-rc.8, sha: 141eb6fef83422698aef7a981029e843e8161534 }
+sources:
+  - id: plugin-cli
+    resource: apps/cli/src/plugin.ts
+    title: Official local plugin installation
 ---
 
 # 命令
 
-```sh
-pnpm dshx ship /abs/path/to/pkg
-pnpm dshx ship dsh-oauth-login          # profile 里已有的 file: 名
-pnpm dshx recopy ./dsh-files-panel --restart
-```
+~~~sh
+dshx sync-artifact /absolute/path/to/package
+dshx ship /absolute/path/to/package       # compatibility alias
+~~~
 
-# 它做什么
+# 行为
 
-1. `dsh plugin --profile <p> remove <name>`
-2. `dsh plugin --profile <p> add file:<abs>`
-3. 核对 `$DSH_HOME/profiles/<p>/node_modules/<name>` 的 version / `lib` 是否新于源
+- 尚未安装的本地目录走官方 local-path add，预期 profile 记录 link: dependency。
+- 已有 link: 指向同一源目录时不 remove/add；直接核对 package 和 lib/ 内容。
+- 旧式 file: dependency 才 remove + add 强制重拷。失败会尝试恢复旧 dependency，并恢复原 dsh.profile.bundles 顺序。
+- lib/ 用内容 hash 核验，不再用容易误判的 mtime。
+- 成功固定结束为 ARTIFACT_SYNCED; LIVE_ACTIVATION_UNPROVEN。
 
-`--restart` 只在核验通过后从外面重启。不要在 Creator 会话里 kill。
+ship --restart 已禁用。下一步必须单独运行 activation-plan --change patch|manifest|preset|client|new-client|server|artifact。
 
-细节见 [file-copy-stale](../pitfalls/file-copy-stale.md)。
+# 完成标准
+
+profile package 内容与源产物一致，且没有改变既有 bundle precedence。当前 Host 和浏览器是否已生效仍是独立验收。
+
+旧 pnpm file: 不重拷现象见 [file-copy-stale](../pitfalls/file-copy-stale.md)；安装不等于 live 见 [installed-is-not-live](../pitfalls/installed-is-not-live.md)。

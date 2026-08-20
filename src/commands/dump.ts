@@ -26,7 +26,7 @@ export function cmdDump(args: string[], options: CliOptions, root: string): numb
     dumped.code === 0
       ? finding('ok', 'dump-config', `dump-config exited 0 with ${entries.length} rows`)
       : finding('error', 'dump-config', `dump-config exited ${dumped.code}`),
-    finding('warn', 'not-boot', 'dump-config does not mount the Loader. exit 0 is not a boot proof. use dshx verify.'),
+    finding('warn', 'not-boot', 'dump-config does not mount the Loader. exit 0 is not a boot proof. use dshx verify-boot for an isolated cold boot.'),
   ]
   if (dups.length > 0) {
     findings.push(finding('error', 'duplicate-id', `composed tree repeats id: ${dups.join(', ')}`))

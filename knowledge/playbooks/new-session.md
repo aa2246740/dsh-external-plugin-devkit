@@ -19,8 +19,8 @@ sources:
 # 识别
 
 ```sh
-pnpm dshx session list
-pnpm dshx session inspect <id>
+dshx session list
+dshx session inspect <id>
 ```
 
 `orphan tool_call` = 日志里 `tool/call` 没有对应 `tool/result`，且回合可能已经 `turn/end reason:error`。
