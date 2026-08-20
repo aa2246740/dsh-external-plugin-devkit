@@ -42,6 +42,7 @@ describe('OKF retrieval', () => {
     assert.ok(ids('already supervising').includes('playbooks/restart-outside'))
     assert.equal(ids('stop')[0], 'playbooks/restart-outside')
     assert.equal(ids('doctor')[0], 'computations/doctor-profile')
+    assert.equal(ids('--keep')[0], 'playbooks/verify-boot')
     assert.ok(ids('3091').includes('references/dshx-cli'))
     assert.ok(ids('busy port').includes('references/dshx-cli'))
     assert.equal(ids('--force')[0], 'references/dshx-cli')
