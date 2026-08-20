@@ -2,7 +2,7 @@
 
 **CLI: dshx** — an out-of-process plugin workshop for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness).
 
-dshx helps Cursor, Claude Code, Codex, Grok, and humans build file-backed plugins without confusing session memory, artifact delivery, live Host activation, and browser activation. Its optional Creator Mode+ bridge exposes only fixed safe dshx operations inside the official WebUI; the external CLI remains the supervisor.
+dshx helps Cursor, Claude Code, Codex, Grok, and humans build file-backed plugins without confusing session memory, artifact delivery, live Host activation, and browser activation. Its optional Creator Mode+ bridge exposes only fixed safe dshx operations inside the official WebUI; the external CLI remains the supervisor. Client builds and checks reject direct `ctx.<service>` reads missing from the entry-level Cordis `inject` before activation.
 
 This project is unofficial. It is not dsh, not a Harness fork, and not a plugin pack. Official dsh doctor does not exist; dshx doctor is this workshop's diagnostic command.
 
@@ -144,7 +144,7 @@ Run dshx help for flags and examples.
 - Object: default export with apply and kind: object.
 - Class/service: default-exported constructor and kind: class.
 - Tool: inject tools and register through defineTool.
-- Client: exports["./client"] points to built lib/client.js. The artifact must call window.__ModuleLoader__.load({ id, factory }); source TSX is not a runnable browser entry. On RC8, out-of-tree `my-plugins/*` use dshx `externalClientBundle`; the official `clientBundle()` manifest lookup is intentionally limited to `packages/*/*`.
+- Client: exports["./client"] points to built lib/client.js. The artifact must call window.__ModuleLoader__.load({ id, factory }); source TSX is not a runnable browser entry. Direct `ctx.<service>` reads belong in the entry-level Cordis `export const inject`; `package.json` `dsh.client.inject` is a different package-metadata field. On RC8, out-of-tree `my-plugins/*` use dshx `externalClientBundle`; the official `clientBundle()` manifest lookup is intentionally limited to `packages/*/*`.
 
 init --kind client creates the source and the correct lib/client.js export target, then clearly leaves check red until a compatible client artifact is built.
 

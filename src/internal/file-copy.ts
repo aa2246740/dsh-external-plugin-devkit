@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { join, relative, resolve } from 'node:path'
+import { inspectClientCordisInject, resolveClientSource } from './client-cordis-inject.js'
 import { finding, loadJson } from './io.ts'
 import type { Finding, ProfileName } from './types.ts'
 import { profileDir, resolveDshHome } from './paths.ts'
@@ -143,6 +144,29 @@ export function clientEntryFindings(pluginDir: string): Finding[] {
     }
     findings.push(...clientStringArrayFindings('inject', declaration.inject, pkgPath))
     findings.push(...clientStringArrayFindings('external', declaration.external, pkgPath, CLIENT_BASELINE))
+  }
+
+  const clientSource = resolveClientSource(pluginDir)
+  if (clientSource && !existsSync(clientSource.path)) {
+    findings.push(finding('error', 'client-cordis-inject', 'declared client source entry is missing', {
+      path: clientSource.path,
+      hint: 'keep clientEntry pointed at the source file used to build lib/client.js',
+    }))
+  } else if (clientSource) {
+    const result = inspectClientCordisInject(clientSource.path)
+    if (!result.staticInject) {
+      findings.push(finding('error', 'client-cordis-inject', 'client entry must export a static string-literal Cordis `inject` array', {
+        path: clientSource.path,
+        hint: "use `export const inject = ['slots', ...]`; package.json dsh.client.inject is a different package-metadata field",
+      }))
+    } else if (result.missing.length > 0) {
+      findings.push(finding('error', 'client-cordis-inject', `client entry reads undeclared Cordis services: ${result.missing.join(', ')}`, {
+        path: clientSource.path,
+        hint: `add ${result.missing.map(name => JSON.stringify(name)).join(', ')} to the entry-level export const inject; do not add service names to package.json dsh.client.inject`,
+      }))
+    } else {
+      findings.push(finding('ok', 'client-cordis-inject', 'direct Cordis service reads are declared by the client entry'))
+    }
   }
 
   const buildConfigPath = join(pluginDir, 'tsdown.config.ts')

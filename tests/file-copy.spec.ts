@@ -75,6 +75,31 @@ export function apply() { console.log('[my-plugins/panel] loaded') }
     assert.equal(findings.some(item => item.level === 'error'), false, JSON.stringify(findings))
   })
 
+  it('rejects a client entry that reads an undeclared Cordis service', () => {
+    const root = mkdtempSync(join(tmpdir(), 'dshx-client-inject-'))
+    const dir = join(root, 'my-plugins', 'locale-panel')
+    writeText(join(dir, 'dshx.yml'), 'id: locale-panel\nentry: src/locale-panel.ts\nmarker: "[locale-panel] loaded"\nkind: client\n')
+    writeText(join(dir, 'src/locale-panel.ts'), `export const inject = []
+export function apply() { console.log('[locale-panel] loaded') }
+`)
+    writeText(join(dir, 'src/client/index.tsx'), `export const inject = ['slots']
+export function apply(ctx) {
+  ctx.locale.register('locale-panel', { en: {} })
+}
+`)
+    writeText(join(dir, 'package.json'), `${JSON.stringify({
+      name: 'locale-panel',
+      exports: { './client': './lib/client.js' },
+      dsh: { client: { platform: 'web', inject: ['@deepseek-ai/dsh-client-locale'] } },
+    }, null, 2)}\n`)
+    writeText(join(dir, 'lib/client.js'), 'window.__ModuleLoader__.load({ id: "locale-panel", factory: (require) => ({ apply() {} }) });\n')
+    const findings = checkPlugin(loadPlugin(root, 'locale-panel'), root)
+    assert.ok(
+      findings.some(item => item.code === 'client-cordis-inject' && item.level === 'error'),
+      JSON.stringify(findings, null, 2),
+    )
+  })
+
   it('rejects RC8 internal clientBundle and a mismatched lazy-CJS id', () => {
     const tmp = mkdtempSync(join(tmpdir(), 'dshx-client-rc8-'))
     writeText(join(tmp, 'package.json'), `${JSON.stringify({

@@ -84,12 +84,19 @@ SOURCE_BUILT check
   -> browser reload remains separate
 ```
 
+其中 `SOURCE_BUILT check` 包含 `client-cordis-inject`：client entry 每个直接
+`ctx.<service>` 读取都必须由 entry-level `export const inject` 声明。
+`package.json` 的 `dsh.client.inject` 是 package metadata，不满足 Cordis 服务依赖。
+
 若 `exitCode != 0`，会话必须停止这条分支并报告 blocker，不得自己手改
 `profile/package.json`、`cordis.patch.yml`，不得补跑 `pnpm install`，也不得重启宿主。
 新插入的 patch 行在 Host manifest 无法证明时会回滚；已有同名同包行只会在 link
 可解析之后做一次语义重触发。若旧 Agent 已让 Host 在安装前尝试解析同一 bare
 package，Loader 可能保留负解析缓存；命令会明确命名这个 scar，由外部 supervisor
 一次性重启并复验，Creator Mode+ 不得自行重启或无限重试。正常的新流程没有这次重启。
+
+`CLIENT_MANIFEST_PRESENT` 只说明当前 Host 提供了 bundle。刷新后的页面没有实际加载
+package id 和功能之前，Creator Mode+ 只能报告“已注册”，不能报告“可用”或“完成”。
 
 # RC8 兼容结论
 

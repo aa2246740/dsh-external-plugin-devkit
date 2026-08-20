@@ -45,9 +45,21 @@ tsdown: no packages/*/*/package.json declares the name <id>
 - React、Cordis 和其他共享模块保持同一运行时 identity；
 - CSS Modules、全局 CSS 与 `?inline` CSS 由插件拥有并可随 fiber 清理；
 - 未声明的 `@deepseek-ai/*` runtime import 失败关闭，避免把服务 identity 私自打包进去。
+- client entry 直接读取的 `ctx.<service>` 必须出现在该入口导出的 Cordis `inject` 中；构建和 `dshx check` 都会在产物进入 Host 前拒绝缺项。
 
 它是 dshx 的非官方兼容层，不是对官方私有 build helper 的重新命名。每次
 DSH RC 升级都要重新对照官方 preset、`platform.ts` 和真实 WebUI。
+
+# 两个 inject 不可互换
+
+`export const inject = ['locale']` 是 Cordis 运行时服务依赖，决定插件读取
+`ctx.locale` 是否合法。`package.json` 中的 `dsh.client.inject` 是 client package
+之间的信息边，只用于 manifest/HMR 元数据；把 `locale` 或提供 locale 的包名只写到
+这里，仍会在 Loader apply 阶段报 `cannot get property "locale" without inject`。
+
+`externalClientBundle()` 在构建配置求值时检查标准 client source，`dshx check`
+在激活前重复检查。诊断会明确要求修改 entry-level `export const inject`，而不是
+修改 package manifest。
 
 # 最小构建合同
 

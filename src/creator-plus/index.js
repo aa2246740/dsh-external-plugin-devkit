@@ -52,7 +52,7 @@ export function apply(ctx) {
 
   ctx.tools.register({
     name: 'dshx_check',
-    description: 'Run the external-plugin static and built-client handoff checks. Passing proves SOURCE_BUILT only, not live activation.',
+    description: 'Run external-plugin static checks, including client Cordis service inject, and verify the built-client handoff. Passing proves SOURCE_BUILT only, not live activation.',
     parameters: {
       type: 'object',
       properties: { name: { type: 'string', description: 'Plugin id under my-plugins' } },

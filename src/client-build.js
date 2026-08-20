@@ -14,6 +14,7 @@ import { readFile } from 'node:fs/promises'
 import { isBuiltin } from 'node:module'
 import { basename, dirname, resolve } from 'node:path'
 import { transform } from 'lightningcss'
+import { assertClientCordisInject } from './internal/client-cordis-inject.js'
 import {
   PLATFORM_MODULES,
   PRELOADED_CLIENT_EXTERNALS,
@@ -200,6 +201,8 @@ export function externalClientBundle(id, libEntry, options = {}) {
   const packageRoot = resolve(options.packageRoot ?? process.cwd())
   const manifest = packageManifest(packageRoot)
   const declaration = clientDeclaration(id, manifest)
+  const clientEntry = options.clientEntry ?? 'src/client/index.ts'
+  assertClientCordisInject(packageRoot, clientEntry)
   const requested = new Set([
     ...PLATFORM_MODULES,
     ...PRELOADED_CLIENT_EXTERNALS,
@@ -224,7 +227,7 @@ export function externalClientBundle(id, libEntry, options = {}) {
     },
   }, {
     name: `${id}/client`,
-    entry: { client: options.clientEntry ?? 'src/client/index.ts' },
+    entry: { client: clientEntry },
     outDir: 'lib',
     format: 'cjs',
     platform: 'browser',

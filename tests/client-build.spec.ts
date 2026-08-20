@@ -46,4 +46,18 @@ describe('externalClientBundle', () => {
       /repeats implicit baseline module/,
     )
   })
+
+  it('fails before bundling when the client reads an undeclared Cordis service', () => {
+    const root = packageRoot({ name: 'external-demo', dsh: { client: { platform: 'web' } } })
+    writeText(join(root, 'src/client/index.tsx'), `export const inject = ['slots']
+export function apply(ctx) { ctx.locale.register('demo', { en: {} }) }
+`)
+    assert.throws(
+      () => externalClientBundle('external-demo', ['lib/types/index.js'], {
+        packageRoot: root,
+        clientEntry: 'src/client/index.tsx',
+      }),
+      /entry-level export const inject.*package\.json dsh\.client\.inject/u,
+    )
+  })
 })

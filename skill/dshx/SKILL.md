@@ -84,7 +84,7 @@ Read only the selected branch:
 1. Read the relevant contract with `kb cat`; a `kb search` snippet is only an id pointer.
 2. Edit `my-plugins/<name>/` or the named package. Keep committed `cordis.yml` portable.
 3. For a client package, read `kb cat contracts/client-build`. On RC8, an out-of-tree package must build with dshx `externalClientBundle`; do not import the repository-internal official `clientBundle()` or move the plugin under `packages/`.
-4. Run `check <name>`. Completion: no static contract errors; a client package also has a built lazy-CJS `lib/client.js` handoff.
+4. Run `check <name>`. Completion: no static contract errors; a client package also passes `client-cordis-inject` and has a built lazy-CJS `lib/client.js` handoff.
 5. Run `verify-boot <name>` only when an isolated cold boot is needed. Completion: marker and Web HTTP pass. It refuses to stop an existing supervised Host and does not prove current-host activation.
 6. If package bytes must reach a profile, run `sync-artifact <dir>` (`ship` is a compatibility alias). Completion: content hash matches; activation remains unproven.
 7. Execute the previously selected activation branch. For `new-client`, use only `activate-new-client`; restart only when a different branch requires it.
@@ -96,7 +96,7 @@ Read only the selected branch:
 - Object: default-export `{ apply, name?, inject? }` and set `kind: object`.
 - Class/service: default-export the constructor and set `kind: class`.
 - Tool: inject `tools` and register with `defineTool`.
-- Client: `exports["./client"]` must target built `lib/client.js` containing `window.__ModuleLoader__.load({ id, factory })`; source TSX is not a served client artifact. RC8 external packages use dshx `externalClientBundle`, while official `packages/client/tsdown.client.ts` remains the in-repository workspace preset.
+- Client: `exports["./client"]` must target built `lib/client.js` containing `window.__ModuleLoader__.load({ id, factory })`; source TSX is not a served client artifact. Every direct `ctx.<service>` read must appear in the client entry's Cordis `export const inject`; `package.json` `dsh.client.inject` is unrelated package metadata. RC8 external packages use dshx `externalClientBundle`, while official `packages/client/tsdown.client.ts` remains the in-repository workspace preset.
 
 ## Hard guardrails
 
