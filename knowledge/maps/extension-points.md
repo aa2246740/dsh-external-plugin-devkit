@@ -21,6 +21,7 @@ sources:
 |---|---|---|
 | 模型面工具 | `inject: ['tools']` + `ctx.tools.register(defineTool(...))` | `docs/cookbook/adding-a-tool.md` |
 | Skill | `ctx.skills.registerProvider` / `register` | `docs/subsystems/skills.md` |
+| Codex `$name` 调用 | `agent/pre-step` 扫描 `$kebab-name` + `renderSkillContent` | [codex-skill](/contracts/codex-skill.md)、`examples/codex-skill` |
 | Native hook | `ctx.on` | `docs/cookbook/extension-cookbook.md` |
 | LLM adapter | `ctx.llm.registerAdapter` | [llm-adapter](/contracts/llm-adapter.md)、`docs/cookbook/adding-an-llm-adapter.md` |
 | UI / Chat 节点 | `session/event` 或 `ConversationNodeDefinition` + slots | `docs/cookbook/adding-a-conversation-node.md` |
