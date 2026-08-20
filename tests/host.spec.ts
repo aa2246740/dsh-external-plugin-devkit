@@ -3,7 +3,7 @@ import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, it } from 'node:test'
-import { cmdRestart, cmdVerify } from '../src/commands/host.ts'
+import { cmdRestart, cmdStop, cmdVerify } from '../src/commands/host.ts'
 import { dshHostArgs, pidAlive, startHost, writeHostState } from '../src/internal/host.ts'
 import { parseCli, writeText } from '../src/internal/io.ts'
 
@@ -82,5 +82,24 @@ describe('startHost', () => {
     const { options } = parseCli(['restart-supervised', '--json'])
     const code = await silence(() => cmdRestart([], options, root))
     assert.equal(code, 1)
+  })
+
+  it('manual stop and restart refuse a live Host adopted from the official launcher', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'dshx-host-'))
+    writeHostState(root, {
+      pid: process.pid,
+      profile: 'web',
+      port: 43127,
+      overlay: '',
+      logFile: join(root, '.dshx/logs/web.log'),
+      startedAt: new Date().toISOString(),
+      command: [],
+      ownership: 'adopted',
+    })
+    const stop = parseCli(['stop', '--json']).options
+    const restart = parseCli(['restart-supervised', '--json']).options
+    assert.equal(await silence(() => cmdStop([], stop, root)), 1)
+    assert.equal(await silence(() => cmdRestart([], restart, root)), 1)
+    assert.equal(pidAlive(process.pid), true)
   })
 })

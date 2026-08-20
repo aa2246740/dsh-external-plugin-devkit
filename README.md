@@ -2,7 +2,7 @@
 
 **CLI: dshx** — an out-of-process plugin workshop for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness).
 
-dshx helps Cursor, Claude Code, Codex, Grok, and humans build file-backed plugins without confusing session memory, artifact delivery, live Host activation, and browser activation. Its optional Creator Mode+ bridge exposes only fixed safe dshx operations inside the official WebUI; the external CLI remains the supervisor. Client builds and checks reject direct `ctx.<service>` reads missing from the entry-level Cordis `inject` before activation.
+dshx helps Cursor, Claude Code, Codex, Grok, and humans build file-backed plugins without confusing session memory, artifact delivery, live Host activation, and browser activation. Its optional Creator Mode+ bridge exposes only fixed safe dshx operations inside the official WebUI. Bridge v2 gives every session a durable plugin claim; the external Guardian can quarantine a causal plugin, restore the Web Host once, recover an official client-Loader boot failure, and steer the incident back to that exact session. Client builds and checks reject direct `ctx.<service>` reads missing from the entry-level Cordis `inject` before activation.
 
 This project is unofficial. It is not dsh, not a Harness fork, and not a plugin pack. Official dsh doctor does not exist; dshx doctor is this workshop's diagnostic command.
 
@@ -52,7 +52,8 @@ The authoritative explanation and official source pointers are in [knowledge/con
 ## Optional Creator Mode+
 
 Creator Mode+ makes this package itself a preset-scoped DSH plugin through the
-`dsh-external-plugin-devkit/creator-plus` export. It supports the official DSH
+`dsh-external-plugin-devkit` package root. The old `/creator-plus` row is migrated
+on managed upgrade so the package's browser sentry enters the RC8 client graph. It supports the official DSH
 browser WebUI and public Cordis/client extension points. App-shell IPC, native
 menus, window chrome, and wrapper-specific refresh behavior are outside the
 compatibility boundary.
@@ -70,15 +71,43 @@ DSHX_HARNESS="$PWD" pnpm --dir tools/dshx install:creator-plus -- --upgrade
 
 Open or refresh the official WebUI only if its preset roster was already cached,
 select **Creator Mode+**, and start a new or still-blank session. No Host restart
-is required for preset discovery. The bridge exposes only `dshx_scaffold`,
-`dshx_check`, `dshx_activation_plan`, `dshx_activate_new_client`, and
+is required for preset discovery. The bridge exposes only `dshx_claim_plugin`,
+`dshx_scaffold`, `dshx_check`, `dshx_activation_plan`, `dshx_activate_new_client`, and
 `dshx_status`; it exposes no arbitrary
 shell/argv/path operation and no start, stop, or restart operation.
+The inherited coding shell is not an external supervisor: DSHX detects
+`DSH_SHELL=1` and rejects raw mutating/process commands launched from a model
+shell. This prevents an old or mistaken Creator session from starting a second
+Host even if it ignores the skill text.
+
+Every Creator+ session-start arms the detached Guardian with the trusted DSH
+session id and current Host identity. Once a plugin id is known, call
+`dshx_claim_plugin` before editing. Any number of sessions may work on different
+plugins concurrently; the same plugin is exclusive to one session, and only the
+short watched-patch activation section is globally serialized.
 
 `dshx_activate_new_client` is a bounded mutation, not process control. It accepts
 only one `my-plugins` id, takes the current Web port from the running Host, then
 orders official profile linking before watched-patch activation and current-Host
 manifest proof. It leaves browser reload and visible UI verification separate.
+
+If that transaction kills or wedges the Web Host, Guardian restores the exact
+pre-mutation patch state or disables the existing row, avoids racing an App shell
+that already restored the port, and starts the same Web target at most once. A
+second failure inside 30 seconds opens a fuse. On session resume, Creator+ steers
+the preserved incident back to its owning session. Creator+ never installs a
+Host signal handler. Explicit DSHX stop/restart disarms before signaling an owned
+Host, while an adopted App launcher's exit disarms recovery and also ends any
+Guardian replacement still tied to that App lifetime. See
+[the Guardian contract](knowledge/contracts/creator-guardian.md).
+
+If the Host stays healthy but the official Web boot page reports **Failed to load
+plugins**, a tiny same-origin client sentry sends the failed Loader ids to a fixed
+Host route. The Host stamps its own pid/parent/port; DSHX quarantines only an exact
+active/recent transaction or a uniquely claimed watched-patch plugin, waits until
+the live manifest proves that entry absent, and then permits one page reload. An
+unknown, stale, or ambiguous report changes no plugin row. Arbitrary render bugs,
+visual defects, and functional defects remain outside automatic recovery.
 
 RC8 adds optional Codex and Claude Code subagent Profile Bundles. Creator Mode+
 inherits their disabled tool rows from Standard, but never installs or enables
@@ -116,7 +145,7 @@ dshx status
 dshx restart-supervised
 ~~~
 
-restart-supervised only restarts the current dshx-owned Web PID. It will not resurrect stale last-host state or reconstruct a headless task.
+restart-supervised only restarts the current dshx-owned Web PID. It will not resurrect stale last-host state or reconstruct a headless task. It also refuses a live Host adopted from the official CLI or App shell; only the failure-only Guardian path may replace an adopted Host after it has failed.
 
 ## Command surface
 
@@ -131,6 +160,7 @@ sync-artifact            Local link or legacy file: artifact synchronization
 start / stop             Explicit workshop Host control
 restart-supervised       Restart the current owned Web Host only
 status / logs            Supervisor and launcher-log state
+creator                  Bridge-v2 internal claims/recovery protocol
 doctor                   Profile/workshop diagnostics; unofficial
 session                  Inspect session scars
 which                    Resolve checkout and installed skill paths
@@ -168,6 +198,7 @@ Package installation, dump-config, HTTP 200, and a cold-boot marker do not subst
 ## Safety
 
 - Never kill or restart DSH from inside a Harness session.
+- Creator+ Guardian is the narrow exception in architecture, not in model authority: it is an external deterministic recovery daemon, and no model-facing tool receives process control.
 - Never mount the same plugin through both bundle and user-patch rows.
 - Never commit .env, .dshx/, secrets, or machine-absolute plugin paths.
 - Original Creator Mode cordis_define / cordis_run packages are process-memory probes, not profile-plugin delivery. Creator Mode+ is a separate user preset backed by file-based dshx operations.

@@ -145,11 +145,11 @@ export function planWatchedPatch(current: string | undefined, id: string, packag
   return { action: 'inserted', after: `${source.trimEnd()}\n${insertion}` }
 }
 
-function disabledRetriggerPatch(current: string, id: string): string {
+export function disabledWatchedPatch(current: string, id: string): string {
   return `${current.trimEnd()}\n- id: ${yamlScalar(id)}\n  disabled: true\n`
 }
 
-function writeWatchedPatch(path: string, content: string): void {
+export function writeWatchedPatch(path: string, content: string): void {
   mkdirSync(dirname(path), { recursive: true })
   const temporary = join(dirname(path), `.${randomUUID()}.dshx-activate.tmp`)
   const mode = existsSync(path) ? statSync(path).mode & 0o777 : 0o600
@@ -249,6 +249,26 @@ export async function verifyClientInHostManifest(id: string, port: number, timeo
   throw new Error(`current Web Host on ${manifestUrl} did not activate ${id}: ${last}`)
 }
 
+/** Wait until the live Host graph no longer serves one quarantined client entry. */
+export async function waitForClientAbsent(id: string, port: number, timeoutMs: number): Promise<boolean> {
+  const manifestUrl = `http://127.0.0.1:${port}/`
+  const deadline = Date.now() + timeoutMs
+  do {
+    try {
+      const remaining = Math.max(1, deadline - Date.now())
+      const response = await fetch(manifestUrl, { signal: AbortSignal.timeout(Math.min(remaining, 2_000)) })
+      if (response.ok) {
+        const boot = parseBootManifest(await response.text())
+        if (!boot.entries?.some(candidate => candidate.id === id)) return true
+      }
+    } catch {
+      // Keep polling: a page reload is safe only after a healthy Host proves absence.
+    }
+    if (Date.now() < deadline) await delay(125)
+  } while (Date.now() < deadline)
+  return false
+}
+
 /**
  * Safely activate a built, plain external client package in this Web profile.
  * Ordering is contractual: validate -> official profile link -> prove link ->
@@ -335,7 +355,7 @@ export async function activateNewClient(
     // Apply a bounded disabled generation first, wait beyond Chokidar's atomic
     // write window, and always restore the user's exact bytes before proving
     // the Host. No temporary control row survives this block.
-    writeWatchedPatch(patchPath, disabledRetriggerPatch(patchPlan.after, plugin.id))
+    writeWatchedPatch(patchPath, disabledWatchedPatch(patchPlan.after, plugin.id))
     try {
       const settle = dependencies.settleWatchedPatch ?? (async () => { await delay(1_500) })
       await settle({ patchPath, id: plugin.id })

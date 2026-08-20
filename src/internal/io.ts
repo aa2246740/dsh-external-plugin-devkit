@@ -72,6 +72,7 @@ const COMMAND_FLAGS: Record<string, ReadonlySet<string>> = {
   'verify-boot': new Set(['--json', '--profile', '--port', '--timeout', '--keep', '--task']),
   'activation-plan': new Set(['--json', '--profile', '--change']),
   'activate-new-client': new Set(['--json', '--profile', '--port', '--timeout']),
+  creator: new Set(['--json']),
   doctor: new Set(['--json', '--profile']),
   session: new Set(['--json']),
   which: new Set(['--json']),
@@ -83,6 +84,19 @@ const COMMAND_FLAGS: Record<string, ReadonlySet<string>> = {
   help: new Set(['--json']),
   loop: new Set(['--json']),
   version: new Set(['--json']),
+}
+
+const DSH_MANAGED_SHELL_READ_COMMANDS = new Set([
+  'help', 'version', 'loop', 'kb', 'okf', 'check', 'dump', 'status', 'logs',
+  'activation-plan', 'doctor', 'session', 'which', 'experiment',
+])
+
+/**
+ * A DSH model shell is not the external supervisor. Keep mutating/process
+ * commands behind fixed Creator+ tools or a genuinely external terminal.
+ */
+export function dshManagedShellAllows(command: string, env: NodeJS.ProcessEnv = process.env): boolean {
+  return env.DSH_SHELL !== '1' || DSH_MANAGED_SHELL_READ_COMMANDS.has(command)
 }
 
 function findCommand(argv: string[]): { command: string; index: number } {

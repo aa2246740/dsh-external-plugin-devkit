@@ -43,6 +43,7 @@ export const HELP = `dshx — DeepSeek Harness 进程外插件工作台
   restart-supervised            只重启当前 supervised Web PID
   restart                       restart-supervised 兼容别名
   status / logs                 监督状态和 launcher log
+  creator                       Bridge v2 内部协议：watch/claim/recovery/disarm；无模型任意 argv
   doctor                        profile/workshop 诊断；不是官方 dsh doctor
   session list|inspect [id]
   which
@@ -51,6 +52,8 @@ export const HELP = `dshx — DeepSeek Harness 进程外插件工作台
 关键行为
   verify-boot 遇到正在监督的 Host 会拒绝，绝不偷偷 stop。
   restart-supervised 没有 live owned PID 时会拒绝，绝不复活 last-host.json。
+  adopted 官方/App Host 不能被 stop/restart-supervised 手工控制；Guardian 只在真实失败后恢复一次。
+  Creator+ session-start 自动武装 Guardian；不同插件可并行，同插件只允许一个 session 认领。
   sync-artifact 成功只输出 ARTIFACT_SYNCED; LIVE_ACTIVATION_UNPROVEN。
   ship --restart 已禁用；先 activation-plan，再在 manifest/server 分支显式 restart-supervised。
 

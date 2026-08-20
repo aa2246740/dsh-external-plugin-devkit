@@ -19,6 +19,7 @@ okf_version: "0.2"
 * [OKF practice](maps/okf-practice.md) - 为什么拆散、index 怎么走、search 之后必须 cat
 * [Why external](why-external.md) - Creator Mode 为什么写不好可交付插件
 * [Creator Mode+ safe bridge](contracts/creator-mode-plus.md) - dshx 作为受限 preset 插件时的 WebUI 与 supervisor 边界
+* [Creator+ Guardian recovery](contracts/creator-guardian.md) - 多会话认领、事故归因、隔离复活与原 session steering
 * [Live activation matrix](contracts/live-activation.md) - 先区分 patch / manifest / preset / client / new-client / server / artifact
 * [RC8 external client build](contracts/client-build.md) - 官方 workspace helper 与外部 `my-plugins/*` 的边界
 * [Recommended loop](playbooks/external-loop.md) - `dshx` 闭环

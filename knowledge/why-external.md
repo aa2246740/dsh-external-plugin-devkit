@@ -37,7 +37,7 @@ sources:
 | 能力 | Creator 里 | 外部 `dshx` |
 |---|---|---|
 | 持久化 | `define`/`run` 只在进程内存，重启即无 | 写 `my-plugins/` + composition 文件 |
-| 必要时重启宿主 | Agent 一 `kill` 就自杀，会话卡 running | 先 lifecycle 分类；只在 manifest/server 分支从进程外 `restart-supervised` |
+| 必要时重启宿主 | Agent 一 `kill` 就自杀，会话卡 running | 先 lifecycle 分类；正常变更只在 manifest/server 分支从进程外重启；Creator+ Guardian 可在真实故障后隔离并恢复一次 |
 | 自主验证 | dump-config 不挂 Loader；inspect 只看当前 session | `verify-boot` 验隔离 cold boot；activation branch 验当前 Host/client |
 
 # 正确分工
@@ -45,6 +45,10 @@ sources:
 - **Creator / inspect**：看当前运行时挂了什么（当前 session）。
 - **外部 Agent + dshx**：写文件、检查合同、生成绝对 `--patch`、启动、等 marker、失败读日志、从外面重启。
 - **新 session / headless**：验证合成后的 agent，或逃离 pairing 伤疤。
+
+Creator Mode+ 仍不把进程控制交给模型。它只把可信 session/plugin 归因写入外部事务，
+由 [Creator+ Guardian](contracts/creator-guardian.md) 在 Host 已经失败之后执行固定隔离、
+一次恢复与原 session steering。
 
 详见 [creator-mode](contracts/creator-mode.md) 与 [external-loop](playbooks/external-loop.md)。
 
