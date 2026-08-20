@@ -1,8 +1,35 @@
-# codex-skill
+# Codex-style `$skill` plugin
 
-Codex-style `$skill` invocation for DeepSeek Harness.
+This plugin is the Codex-matching half of skill invocation:
 
-Copy this directory to `<harness>/my-plugins/codex-skill`, or:
+| Prefix | Codex | Official DSH | This plugin |
+|---|---|---|---|
+| `$name` | invoke skill | nothing | invoke skill |
+| `/name` | built-in command | invoke skill | still official `/name` |
+| `@` | pick a skill, insert `$name` | files / Cordis | optional extra source, see below |
+| Type `$` | skill picker | no `$` in `TriggerChar` | not possible from a plugin |
+
+`$` is Codex's skill prefix. `/` is Codex's command prefix. Matching Codex means **`$` invokes skills**. It does not mean "both prefixes". OpenAI closed the `/skill` request as by design.
+
+`$1` / `$2` stay placeholders. A skill name must start with a letter, then lowercase letters, digits, or hyphen groups (`$editing-cordis-compositions`).
+
+## What this plugin can do
+
+Copy it into `my-plugins/codex-skill` and start it as a function plugin. The next user-source turn that contains `$skill-name` injects the same `<skill_content>` block official `/name` uses.
+
+It cannot:
+
+- unregister official `/name` (official `dsh-tool-skill` is always loaded)
+- open a `$` composer menu (`TriggerChar` is only `'/' | '@'`)
+- decorate `$name` as a mention chip (conversation `TEXT_REF_RE` is `/@` only)
+
+Those two UI pieces need the optional core patch in `patches/dollar-trigger.md`.
+
+The `src/client/index.tsx` source is an extra `@` picker that inserts `$name`. It is **not** activated by this function plugin's `cordis.yml`. Activate it only if you also have a client plugin / `dshx new-client` scaffold that imports this file and sets `externalClientBundle`. That is a different activation path (`--kind client` + page reload), not the default install below.
+
+## Install
+
+From a harness checkout that already has `tools/dshx`:
 
 ```sh
 cp -R tools/dshx/examples/codex-skill my-plugins/codex-skill
@@ -11,39 +38,17 @@ dshx activation-plan codex-skill --change patch
 dshx start web codex-skill
 ```
 
-Host half is a namespace function plugin (`apply`, no default export). Keep `cordis.yml` `name` relative.
-
-## What Codex actually does
-
-Codex does **not** treat `/skill-name` as a skill. OpenAI closed those bugs as by design:
-
-| Prefix | Codex | DSH today | This plugin |
-|---|---|---|---|
-| `$name` | Invoke skill | Nothing | **Adds** host injection |
-| `/command` | Built-in slash commands | `ctx.commands` | Unchanged |
-| `/skill-name` | Unrecognized command | Official `dsh-tool-skill` still injects | Unchanged (plugin cannot unregister it) |
-| `@` then pick a skill | Unified mention; inserts `$name` | Files / Cordis plugins | Optional client half inserts `$name` |
-| Type `$` for a skill-only picker | Yes | `TriggerChar` is `'/' \\| '@'` only | Needs the optional core patch |
-
-Matching Codex means: **`$` invokes skills, `/` stays commands.** Both prefixes at once is not Codex.
-
-## Host behavior (this example)
-
-Whitespace-bounded `$kebab-name` in a claimed user message loads that user-invocable skill and appends the same `<skill_content>` block official `/name` uses. Mid-sentence works. Paths, `$HOME`, `$1`, and `$ARGUMENTS` do not match.
+Then in a session:
 
 ```text
-$editing-cordex-compositions draft a preset
-please use $hidden-demo to answer this
+$editing-cordis-compositions
 ```
 
-Unknown names stay ordinary prose.
+Creator mode still uses `/editing-cordis-compositions` unless this plugin is loaded. After load, `$editing-cordis-compositions` injects the same skill body.
 
-## Client picker
+## Verify
 
-`src/client/index.tsx` is the optional browser half. RC8 cannot open a menu on `$` because detection only scans `/` and `@`. The client therefore registers an `@` source named `skill-dollar` that inserts `$name ` — the Codex unified-mention path.
-
-That half is **not** activated by the function `cordis.yml` row. Promote it with `dshx init … --kind client` (or copy the official client scaffold) and follow [add-new-client-plugin](../../knowledge/playbooks/add-new-client-plugin.md). After the optional [dollar-trigger patch](patches/dollar-trigger.md), the same catalog can also bind `trigger: '$'`.
-
-## Creator Mode
-
-Creator Mode is shipped preset `cordis`, not a separate runtime. It already has Standard tools plus `dsh-tool-cordis` and two preset skills. This plugin is file-backed and belongs in `my-plugins/`, not in `cordis_define` memory. See [creator-mode](../../knowledge/contracts/creator-mode.md) and [codex-skill](../../knowledge/contracts/codex-skill.md).
+```sh
+dshx check examples/codex-skill
+npm test -- tests/codex-skill.spec.ts
+```
