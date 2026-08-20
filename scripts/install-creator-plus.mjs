@@ -16,7 +16,8 @@ import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const DEFAULT_PACKAGE = 'dsh-external-plugin-devkit/creator-plus'
+const DEFAULT_PACKAGE = 'dsh-external-plugin-devkit'
+const LEGACY_PACKAGE = 'dsh-external-plugin-devkit/creator-plus'
 
 function isHarnessRoot(path) {
   return existsSync(join(path, 'apps/cli/src/bin.ts'))
@@ -52,6 +53,19 @@ function tightenTree(path) {
   chmodSync(path, info.mode & 0o111 ? 0o700 : 0o600)
 }
 
+function exactRowCount(text, row) {
+  let count = 0
+  let offset = 0
+  while (offset <= text.length) {
+    const index = text.indexOf(row, offset)
+    if (index < 0) break
+    const next = text[index + row.length]
+    if (next === undefined || next === '\n' || next === '\r') count += 1
+    offset = index + row.length
+  }
+  return count
+}
+
 function creatorComposition(standard) {
   let text = replaceOnce(
     standard,
@@ -74,48 +88,45 @@ function creatorComposition(standard) {
   return replaceOnce(
     text,
     `- id: tool-skill\n  name: '@deepseek-ai/dsh-tool-skill'`,
-    `- id: tool-skill\n  name: '@deepseek-ai/dsh-tool-skill'\n\n# Fixed dshx operations only; no shell, arbitrary argv, or process control.\n- id: dshx-creator-plus\n  name: ${DEFAULT_PACKAGE}`,
+    `- id: tool-skill\n  name: '@deepseek-ai/dsh-tool-skill'\n\n# Bridge v2: six fixed dshx tools plus external Guardian lifecycle hooks; no shell, arbitrary argv, or model process control.\n- id: dshx-creator-plus\n  name: ${DEFAULT_PACKAGE}`,
     'tool skill',
   )
 }
 
 function upgradeManagedAssets(target, root) {
   const composition = join(target, 'agent.cordis.yml')
-  const text = existsSync(composition) ? readFileSync(composition, 'utf8') : ''
+  let text = existsSync(composition) ? readFileSync(composition, 'utf8') : ''
   const managedRow = `- id: dshx-creator-plus\n  name: ${DEFAULT_PACKAGE}`
-  if (!text.includes(managedRow)) {
-    throw new Error(`Creator Mode+ at ${target} does not contain the managed dshx row; refusing an unsafe upgrade`)
+  const legacyRow = `- id: dshx-creator-plus\n  name: ${LEGACY_PACKAGE}`
+  const managedCount = exactRowCount(text, managedRow)
+  const legacyCount = exactRowCount(text, legacyRow)
+  if (managedCount === 0 && legacyCount === 1) {
+    text = text.replace(legacyRow, managedRow)
+  } else if (managedCount !== 1 || legacyCount !== 0) {
+    throw new Error(`Creator Mode+ at ${target} does not contain exactly one recognized managed dshx row; refusing an unsafe upgrade`)
   }
 
   const temporaryRoot = mkdtempSync(join(root, '.creator-plus-upgrade-'))
-  const stagedSkill = join(temporaryRoot, 'creator-mode-plus')
-  const stagedPreset = join(temporaryRoot, 'preset.yml')
-  const backupSkill = join(temporaryRoot, 'previous-skill')
-  const backupPreset = join(temporaryRoot, 'previous-preset.yml')
-  const targetSkill = join(target, 'skills/creator-mode-plus')
-  const targetPreset = join(target, 'preset.yml')
-  let skillBackedUp = false
-  let presetBackedUp = false
+  const staging = join(temporaryRoot, 'next')
+  const backup = join(temporaryRoot, 'previous')
+  let movedOriginal = false
   try {
-    cpSync(join(packageRoot, 'creator-plus/skills/creator-mode-plus'), stagedSkill, { recursive: true, errorOnExist: true })
-    cpSync(join(packageRoot, 'creator-plus/preset.yml'), stagedPreset, { errorOnExist: true })
-    tightenTree(stagedSkill)
-    tightenTree(stagedPreset)
-    if (existsSync(targetSkill)) {
-      renameSync(targetSkill, backupSkill)
-      skillBackedUp = true
-    }
-    if (existsSync(targetPreset)) {
-      renameSync(targetPreset, backupPreset)
-      presetBackedUp = true
-    }
-    renameSync(stagedSkill, targetSkill)
-    renameSync(stagedPreset, targetPreset)
+    cpSync(target, staging, { recursive: true, errorOnExist: true })
+    writeFileSync(join(staging, 'agent.cordis.yml'), text)
+    rmSync(join(staging, 'skills/creator-mode-plus'), { recursive: true, force: true })
+    cpSync(
+      join(packageRoot, 'creator-plus/skills/creator-mode-plus'),
+      join(staging, 'skills/creator-mode-plus'),
+      { recursive: true, errorOnExist: true },
+    )
+    cpSync(join(packageRoot, 'creator-plus/preset.yml'), join(staging, 'preset.yml'), { force: true })
+    tightenTree(join(staging, 'skills/creator-mode-plus'))
+    tightenTree(join(staging, 'preset.yml'))
+    renameSync(target, backup)
+    movedOriginal = true
+    renameSync(staging, target)
   } catch (error) {
-    rmSync(targetSkill, { recursive: true, force: true })
-    rmSync(targetPreset, { force: true })
-    if (skillBackedUp && existsSync(backupSkill)) renameSync(backupSkill, targetSkill)
-    if (presetBackedUp && existsSync(backupPreset)) renameSync(backupPreset, targetPreset)
+    if (movedOriginal && !existsSync(target) && existsSync(backup)) renameSync(backup, target)
     throw error
   } finally {
     rmSync(temporaryRoot, { recursive: true, force: true })

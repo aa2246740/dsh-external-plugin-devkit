@@ -1,7 +1,7 @@
 ---
 type: Runtime Contract
 title: Creator Mode+ safe bridge
-description: Creator Mode+ 是 user preset 加 dshx 固定工具桥；官方浏览器 WebUI 是兼容面，外部 CLI 才是 supervisor，DSH 会话不能控制自身进程。
+description: Creator Mode+ 是 user preset 加六个固定 dshx 工具；官方浏览器 WebUI 是兼容面，进程外 Guardian 负责失败恢复，DSH 会话不能控制自身进程。
 tags: [creator-mode-plus, preset, webui, supervisor, safety]
 aliases: [Creator Mode+, 创造模式+, dshx plugin, dshx preset, supervisor]
 status: stable
@@ -18,7 +18,10 @@ sources:
     title: Session preset generation
   - id: bridge-tools
     resource: tools/dshx/src/creator-plus/index.js
-    title: Fixed Creator Mode+ tool surface
+    title: Fixed Creator Mode+ tool surface and Host recovery route
+  - id: bridge-client
+    resource: tools/dshx/src/creator-plus/client.js
+    title: Official Loader failure sentry
   - id: new-client-command
     resource: tools/dshx/src/internal/new-client.ts
     title: Ordered bounded new-client activation
@@ -32,11 +35,11 @@ Creator Mode+ 不修改也不替换 shipped `cordis` preset。它是独立的用
 
 | 角色 | 可以做什么 | 不可以做什么 |
 |---|---|---|
-| Creator Mode+ 会话 | scaffold、check、activation-plan、activate-new-client、status | 任意 shell/argv/path；start/stop/restart DSH |
-| 外部 dshx CLI | 文件化构建、静态检查、隔离验证、受控 supervisor 操作 | 把离线结果冒充当前 Host/UI 证据 |
+| Creator Mode+ 会话 | claim-plugin、scaffold、check、activation-plan、activate-new-client、status | 任意 shell/argv/path；start/stop/restart DSH |
+| 外部 dshx + Guardian | 文件化构建、静态检查、事务日志、Host 恢复、官方 Loader 失败隔离 | 把 manifest/Loader 恢复冒充视觉或功能正确 |
 | 用户 | 批准有影响的激活、重启和回滚 | 不承担插件内部运行时职责 |
 
-这里的 supervisor 是 DSH 进程之外的 dshx/宿主操作者，不是模型会话，也不等于“用户本人一直手工盯着”。用户只负责授权有影响的动作。
+这里的 supervisor 是 DSH 进程之外的 dshx/Guardian，不是模型会话，也不等于“用户本人一直手工盯着”。用户只负责授权正常流程中有影响的动作；已武装 Guardian 的故障恢复是固定、带 fuse 的既定协议。
 
 # 兼容面
 
@@ -51,22 +54,31 @@ Creator Mode+ 不修改也不替换 shipped `cordis` preset。它是独立的用
 official WebUI
   -> user preset roster
   -> new/blank Creator Mode+ session
-  -> one of five fixed dshx tools
+  -> bridge v2 arms external Guardian with exact session identity
+  -> claim one plugin for this session
+  -> one of six fixed dshx tools
   -> child dshx CLI with bounded output
   -> file-backed plugin and layered evidence
 
-external supervisor
-  -> only the lifecycle branch that was planned
-  -> optional browser reload / Host restart / rollback
+external dshx / Guardian
+  -> normal path follows only the planned lifecycle branch
+  -> Host failure path quarantines the causal transaction and recovers once
+  -> official client-Loader failure path quarantines one exact row before one reload
+  -> incident is steered back to the exact persisted session
 ```
 
 # 激活合同
 
-1. profile 只把 `dsh-external-plugin-devkit` 安装为普通依赖；它不是 root bundle。
+1. profile 只把 `dsh-external-plugin-devkit` 安装为普通依赖；Creator+ preset 从 package
+   root 挂载固定 Host bridge，使同包的 browser sentry 能进入官方 client graph。
 2. installer 从当前 shipped Standard 整体复制出用户 preset，精确注入 persona、skill 和固定工具行；拒绝覆盖已有用户 preset。
 3. roster 发现 preset 不需要 Host restart；已开始会话不换 generation，必须用新会话或仍为空白的会话。
 4. 新 client 首次进入页面 graph 时刷新页面；已有 client bundle 后续更新走同页 HMR。
 5. 只按 `SOURCE_BUILT`、`PRESET_ROSTER_VISIBLE`、`PRESET_SESSION_ACTIVE`、`CLIENT_LOADED`、`VISUAL_BEHAVIOR_VERIFIED` 等实际观察层报告。
+
+多会话并发、同插件独占、精确事务快照、crash-loop fuse、正常退出与 recovery
+steering 的唯一合同是 [Creator+ Guardian](creator-guardian.md)。这些恢复能力不改变
+页面刷新和证据分层规则。
 
 # 新 client 的唯一安全动作
 

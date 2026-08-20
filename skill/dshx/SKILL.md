@@ -4,14 +4,22 @@ description: >-
   Use the unofficial dshx CLI and its OKF bundle for DeepSeek Harness external
   plugin work. Trigger when the user says dshx, /dshx, dsh-external-plugin-devkit,
   my-plugins, Creator Mode delivery, plugin add/ship/check/verify, HMR, hot reload,
-  热重载, 热插拔, 不重启, or asks whether a DSH plugin needs a browser reload or
-  Host restart. Before any ship/restart advice, classify the changed surface with
-  contracts/live-activation. Not official dsh.
+  热重载, 热插拔, 不重启, Creator+ Guardian, 多个 Creator+, 自救, 自愈, or asks
+  whether a DSH plugin needs a browser reload or Host restart. Before any
+  ship/restart advice, classify the changed surface with contracts/live-activation.
+  Not official dsh.
 ---
 
 # dshx
 
-Use `dshx` for profile-scoped, file-backed plugins developed by an external agent or through the optional Creator Mode+ safe bridge. The CLI outside DSH is always the supervisor; Creator Mode+ exposes five fixed operations, including bounded new-client activation, but never process control. Do not transfer the original Creator Mode's in-memory lifecycle assumptions to external packages.
+Use `dshx` for profile-scoped, file-backed plugins developed by an external agent or through the optional Creator Mode+ safe bridge. The CLI and Guardian outside DSH are the supervisor; Creator Mode+ exposes six fixed operations, including plugin claims and bounded new-client activation, but never process control. Do not transfer the original Creator Mode's in-memory lifecycle assumptions to external packages.
+
+In Creator Mode+, session-start automatically arms the external Guardian. As soon
+as one plugin id is known, call `dshx_claim_plugin` before scaffold/edit/build/check.
+The bridge repeats the claim before every named operation as a fail-safe. Different
+sessions may work on different plugins concurrently; the same plugin fails closed
+for a second owner, and only live watched-patch activation is globally serialized.
+Read `kb cat contracts/creator-guardian` for attribution and recovery semantics.
 
 ## Resolve the checkout
 
@@ -81,7 +89,7 @@ Read only the selected branch:
 
 ## Develop and prove
 
-1. Read the relevant contract with `kb cat`; a `kb search` snippet is only an id pointer.
+1. Read the relevant contract with `kb cat`; a `kb search` snippet is only an id pointer. In Creator Mode+, claim the chosen plugin before changing it.
 2. Edit `my-plugins/<name>/` or the named package. Keep committed `cordis.yml` portable.
 3. For a client package, read `kb cat contracts/client-build`. On RC8, an out-of-tree package must build with dshx `externalClientBundle`; do not import the repository-internal official `clientBundle()` or move the plugin under `packages/`.
 4. Run `check <name>`. Completion: no static contract errors; a client package also passes `client-cordis-inject` and has a built lazy-CJS `lib/client.js` handoff.
@@ -101,6 +109,10 @@ Read only the selected branch:
 ## Hard guardrails
 
 - Never kill or restart `dsh` from inside a Harness session.
+- A raw `dshx` process launched by a DSH-managed shell (`DSH_SHELL=1`) is still inside the Host boundary. DSHX rejects its mutating/process commands; use the fixed Creator+ tools or an external terminal. Never unset managed environment markers to bypass this guard.
+- If a `[Creator+ Guardian incident ...]` steering message arrives, pause the prior task, inspect its confidence/plugin/rollback/log evidence, repair the preserved source, and run `dshx_check` before retrying the same activation branch.
+- Guardian may quarantine and restore a failed Web Host once from outside DSH. Its same-origin browser sentry may also quarantine one uniquely attributed official Loader `FAILED` entry and reload only after the live manifest proves it absent. Neither path makes process control model-facing or proves visual/functional correctness.
+- Manual `stop` / `restart-supervised` must refuse an adopted official Host; normal launcher exit disarms Guardian.
 - Never bypass a failed `activate-new-client` by manually editing profile `package.json` or `cordis.patch.yml`; fix the reported blocker and retry the bounded command.
 - `restart-supervised` may restart only the currently live dshx-owned Web Host. It must not resurrect stale `last-host.json` or reconstruct a headless task.
 - Never mount the same plugin through both a bundle and a user-patch insert.

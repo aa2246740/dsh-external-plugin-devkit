@@ -11,7 +11,13 @@ export function readHostState(root: string): HostState | undefined {
   const path = hostStatePath(root)
   if (!existsSync(path)) return undefined
   try {
-    return loadJson<HostState>(path)
+    const state = loadJson<HostState>(path)
+    return {
+      ...state,
+      overlay: state.overlay ?? '',
+      command: state.command ?? [],
+      ownership: state.ownership ?? 'spawned',
+    }
   } catch {
     return undefined
   }
@@ -36,14 +42,15 @@ export function pidAlive(pid: number): boolean {
 }
 
 export async function portOpen(port: number, host = '127.0.0.1'): Promise<boolean> {
+  const ac = new AbortController()
+  const timer = setTimeout(() => ac.abort(), 800)
   try {
-    const ac = new AbortController()
-    const timer = setTimeout(() => ac.abort(), 800)
     await fetch(`http://${host}:${port}/`, { signal: ac.signal })
-    clearTimeout(timer)
     return true
   } catch {
     return false
+  } finally {
+    clearTimeout(timer)
   }
 }
 
@@ -109,6 +116,7 @@ export function startHost(root: string, spec: StartSpec): HostState {
     logFile,
     startedAt: new Date().toISOString(),
     command: [cmd, ...args],
+    ownership: 'spawned',
   }
   writeHostState(root, state)
   writeText(lastHostPath(root), `${JSON.stringify({
@@ -116,17 +124,20 @@ export function startHost(root: string, spec: StartSpec): HostState {
     profile: state.profile,
     port: state.port,
     plugin: state.plugin,
+    overlay: state.overlay,
+    ownership: state.ownership,
     logFile: state.logFile,
     startedAt: state.startedAt,
   }, null, 2)}\n`)
   return state
 }
 
-export function readLastHost(root: string): Pick<HostState, 'profile' | 'port' | 'plugin' | 'logFile'> | undefined {
+export function readLastHost(root: string): Pick<HostState, 'profile' | 'port' | 'plugin' | 'overlay' | 'ownership' | 'logFile'> | undefined {
   const path = lastHostPath(root)
   if (!existsSync(path)) return undefined
   try {
-    return loadJson(path)
+    const state = loadJson<Pick<HostState, 'profile' | 'port' | 'plugin' | 'overlay' | 'ownership' | 'logFile'>>(path)
+    return { ...state, overlay: state.overlay ?? '', ownership: state.ownership ?? 'spawned' }
   } catch {
     return undefined
   }

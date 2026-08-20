@@ -40,6 +40,10 @@ sources:
 
 `dshx sync-artifact` / `ship` 只证明产物已同步。它不证明当前 Host 已挂载插件，也不证明浏览器已加载客户端。
 
+Creator+ Guardian 只改变失败后的外部恢复能力，不改变下面任何 activation 分支：
+它不能把 artifact 变成 live、不能让新 client 免刷新，也不能把 Host 恢复冒充 UI 验收。
+并发认领与恢复顺序见 [creator-guardian](creator-guardian.md)。
+
 # 七种状态不可互换
 
 | 变更面 | 官方机制 | 当前 Host | 已打开页面 | 应做什么 |

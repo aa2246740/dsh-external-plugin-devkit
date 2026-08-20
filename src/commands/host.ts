@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs'
 import { dumpConfig, parseDumpEntries } from '../internal/dsh.ts'
 import { currentHost, followLog, logContains, portOpen, readLastHost, readLogTail, startHost, stopHost, waitForHttp, waitForLog } from '../internal/host.ts'
+import { armGuardian, disarmGuardian, ensureGuardian, guardianCreatorSnapshot } from '../internal/guardian.ts'
 import { finding, printReport, report } from '../internal/io.ts'
 import { writeOverlay } from '../internal/overlay.ts'
 import { hostLogPath } from '../internal/paths.ts'
@@ -32,6 +33,7 @@ export async function cmdStart(args: string[], options: CliOptions, root: string
     }
     const { plugin, overlay } = preparePlugin(root, pluginArg)
     if (profile === 'headless') {
+      disarmGuardian(root)
       const task = options.task ?? rest.join(' ')
       if (!task.trim()) {
         printReport(report('start', [finding('error', 'usage', 'headless needs a task: dshx start headless <plugin> --task "..."')]), options.json)
@@ -57,8 +59,17 @@ export async function cmdStart(args: string[], options: CliOptions, root: string
       return 1
     }
     const state = startHost(root, { profile, port: options.port, overlay, plugin: plugin?.id })
+    armGuardian(root, state)
+    try {
+      await ensureGuardian(root)
+    } catch (error) {
+      disarmGuardian(root)
+      await stopHost(root)
+      throw new Error(`Web Host was stopped because its external Guardian did not start: ${error instanceof Error ? error.message : String(error)}`)
+    }
     printReport(report('start', [
       finding('ok', 'spawned', `supervising pid ${state.pid} on 127.0.0.1:${state.port}`),
+      finding('ok', 'guardian', 'external dshx Guardian is running'),
       finding('info', 'next', 'dshx logs --follow; use activation-plan before deciding reload/restart'),
     ], { logFile: state.logFile, overlay: state.overlay, url: `http://127.0.0.1:${state.port}/` }), options.json)
     return 0
@@ -70,6 +81,13 @@ export async function cmdStart(args: string[], options: CliOptions, root: string
 
 export async function cmdStop(_args: string[], options: CliOptions, root: string): Promise<number> {
   const live = currentHost(root)
+  if (live?.ownership === 'adopted') {
+    printReport(report('stop', [finding('error', 'adopted-host', `refusing to stop adopted Host pid ${live.pid}`, {
+      hint: 'this process belongs to the official launcher or App shell. stop that launcher itself; dshx Guardian may recover it only after a detected failure',
+    })]), options.json)
+    return 1
+  }
+  disarmGuardian(root, Date.now(), 15_000)
   const state = await stopHost(root)
   if (!state) {
     printReport(report('stop', [finding('info', 'idle', 'no supervised host')]), options.json)
@@ -91,6 +109,12 @@ export async function cmdRestart(args: string[], options: CliOptions, root: stri
     })]), options.json)
     return 1
   }
+  if (live.ownership === 'adopted') {
+    printReport(report('restart-supervised', [finding('error', 'adopted-host', `refusing to restart adopted Host pid ${live.pid}`, {
+      hint: 'this process belongs to the official launcher or App shell. restart that launcher externally; Guardian recovery is reserved for detected failure',
+    })]), options.json)
+    return 1
+  }
   if (args.length > 0) {
     printReport(report('restart-supervised', [finding('error', 'target-change', 'restart-supervised restarts the current owned host only', {
       hint: 'to change profile/plugin, run dshx stop and then an explicit dshx start',
@@ -103,6 +127,7 @@ export async function cmdRestart(args: string[], options: CliOptions, root: stri
     })]), options.json)
     return 1
   }
+  disarmGuardian(root, Date.now(), 15_000)
   const stopped = await stopHost(root)
   printReport(report('restart-supervised', [
     finding('ok', 'stopped', `signaled owned pid ${stopped?.pid ?? live.pid}; starting the same target again`),
@@ -147,7 +172,17 @@ export async function cmdStatus(_args: string[], options: CliOptions, root: stri
         : finding('info', 'last-port', `last workshop host was 127.0.0.1:${last.port}${last.plugin ? ` (${last.plugin})` : ''} and is now closed`))
     }
   }
-  printReport(report('status', findings, state), options.json)
+  const creator = guardianCreatorSnapshot(root)
+  findings.push(creator.guardian.running
+    ? finding('ok', 'guardian', `external Guardian pid ${creator.guardian.state?.pid ?? '(unknown)'}`)
+    : finding('info', 'guardian', 'external Guardian is not running'))
+  if (creator.claims.length > 0) {
+    findings.push(finding('info', 'creator-claims', `${creator.claims.length} active Creator+ plugin claim(s)`))
+  }
+  if (creator.quarantines.length > 0) {
+    findings.push(finding('warn', 'creator-quarantine', `${creator.quarantines.length} plugin quarantine(s) await a checked retry`))
+  }
+  printReport(report('status', findings, { host: state, creator }), options.json)
   return 0
 }
 

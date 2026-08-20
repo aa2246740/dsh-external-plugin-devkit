@@ -202,6 +202,62 @@ export function experimentStatePath(root: string): string {
   return join(stateDir(root), 'experiment.json')
 }
 
+export function creatorStateDir(root: string): string {
+  return join(stateDir(root), 'creator-plus')
+}
+
+export function creatorClaimsPath(root: string): string {
+  return join(creatorStateDir(root), 'claims.json')
+}
+
+export function creatorClaimsLockPath(root: string): string {
+  return join(creatorStateDir(root), 'claims.lock')
+}
+
+export function creatorActiveTransactionPath(root: string): string {
+  return join(creatorStateDir(root), 'active-transaction.json')
+}
+
+export function creatorTransactionsDir(root: string): string {
+  return join(creatorStateDir(root), 'transactions')
+}
+
+export function creatorActivationLockPath(root: string): string {
+  return join(creatorStateDir(root), 'activation.lock')
+}
+
+export function creatorQuarantinesPath(root: string): string {
+  return join(creatorStateDir(root), 'quarantines.json')
+}
+
+export function creatorIncidentsPath(root: string): string {
+  return join(creatorStateDir(root), 'incidents.json')
+}
+
+export function creatorIncidentsLockPath(root: string): string {
+  return join(creatorStateDir(root), 'incidents.lock')
+}
+
+export function guardianControlPath(root: string): string {
+  return join(creatorStateDir(root), 'guardian-control.json')
+}
+
+export function guardianStatePath(root: string): string {
+  return join(creatorStateDir(root), 'guardian-state.json')
+}
+
+export function guardianStartLockPath(root: string): string {
+  return join(creatorStateDir(root), 'guardian-start.lock')
+}
+
+export function guardianControlLockPath(root: string): string {
+  return join(creatorStateDir(root), 'guardian-control.lock')
+}
+
+export function guardianLogPath(root: string): string {
+  return join(creatorStateDir(root), 'guardian.log')
+}
+
 export function experimentsDir(): string {
   return join(dshxPackageRoot(), 'experiments')
 }

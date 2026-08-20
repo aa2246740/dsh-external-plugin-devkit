@@ -19,10 +19,17 @@ Before any install, ship, HMR, refresh, or restart advice, read knowledge/contra
 
 - patch: watched config-tree reconciliation; no Host restart.
 - manifest: next-boot profile/bundle composition; Host restart required.
+- preset: user preset discovery; no Host restart, verify in a new/blank session.
 - client: existing page entry client HMR; no Host restart or page reload.
 - new-client: Host patch can reconcile live; browser page reload required.
 - server: restart current supervised Host unless exact module HMR is configured and tested.
 - artifact: bytes only; activation undecided.
+
+When working through Creator Mode+, also read
+`knowledge/contracts/creator-guardian.md`. As soon as the plugin id is known,
+call `dshx_claim_plugin` before scaffold/edit/build/check. Different sessions may
+own different plugins concurrently; the same plugin is exclusive, and only the
+short live activation transaction is globally serialized.
 
 ## Use evidence-scoped commands
 
@@ -48,6 +55,9 @@ Scratch work belongs in my-plugins/<name>/; .dshx/ is generated state and must n
 ## Guardrails
 
 - Never kill/restart DSH from inside a Harness session.
+- Treat Guardian recovery steering as a stop-and-repair interrupt: inspect the named incident and quarantined plugin, fix and check it, then retry the original activation branch. Never undo quarantine and repeat unchanged bytes.
+- The external Guardian may recover a failed Host once. The fixed same-origin sentry may recover an official client-Loader failure only after unique attribution, quarantine, and manifest-absence proof. Neither path grants model process control or proves visual/functional behavior.
+- `stop` and `restart-supervised` must refuse a Host adopted from an official launcher or App shell.
 - Never mount the same plugin through both bundle and user-patch rows.
 - Never call dump-config, HTTP 200, package install, or artifact copy a live activation proof.
 - Never treat cordis_define / cordis_run process memory as delivery.

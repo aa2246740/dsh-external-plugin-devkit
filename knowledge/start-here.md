@@ -61,6 +61,7 @@ dshx which
 6. 模型超时 / retry 预算耗尽 → [symptoms](maps/symptoms.md) → [llm-retry](contracts/llm-retry.md)；RC8 默认五次，不要沿用 rc.7 的两次记忆，也不要先改 Harness 核心。
 7. 只要一次性任务、不要 Web UI → [headless-boot](playbooks/headless-boot.md)。
 8. `dshx check` 因插件形态 / 绝对路径 / client artifact 红了 → [check-plugin](playbooks/check-plugin.md)；RC8 外部 client 的 workspace manifest 报错 → [client-build](contracts/client-build.md)。
+9. 多个 Creator+ 并行，或插件让 Host/官方 Web Loader 失败 → [creator-guardian](contracts/creator-guardian.md)；不同插件并行、同插件独占，唯一归因后隔离并恢复一次。
 
 # 权威顺序
 

@@ -20,7 +20,7 @@ dshx kb search retry
 dshx kb cat contracts/llm-retry
 ```
 
-实现：`tools/dshx/src/cli.ts`。状态：`.dshx/`（gitignored）——`host.json`、`last-host.json`、`logs/`、`overlays/`。
+实现：`tools/dshx/src/cli.ts`。状态：`.dshx/`（gitignored）——`host.json`、`last-host.json`、`logs/`、`overlays/`，以及 `creator-plus/` 下的 claims、transactions、quarantines、incidents 与 Guardian heartbeat/control。
 
 `--harness <path>` 对所有命令生效，可以在命令名前或后。显式 flag 验证成功后
 直接选定 checkout；没有 flag 时，env/config/cwd 三种发现必须指向同一根，冲突
@@ -43,6 +43,12 @@ dshx kb cat contracts/llm-retry
 - `verify-boot`（`verify` alias）：隔离 cold boot；已有 supervised Host 时拒绝，绝不自动 stop。
 - `sync-artifact`（`ship` / `recopy` alias）：link/file artifact，同步完成仍为 `LIVE_ACTIVATION_UNPROVEN`。
 - `restart-supervised`（`restart` alias）：只重启当前 live dshx-owned Web PID；无 live PID、换目标、headless 均拒绝。
+- `creator watch/claim/release/recovery/disarm/client-failure`：bridge v2 内部结构化协议。`client-failure` 只接受固定 Host bridge 写入环境的有界 browser report；模型只通过六个固定工具间接使用，不能提交任意 argv。`dshx status` 可读 Guardian、claims 与 quarantines。
+
+`dshx start web` 会启动外部 Guardian。Creator+ session-start 还可以领养由官方 CLI/App
+启动的 Web Host并武装 Guardian，但 `stop` / `restart-supervised` 拒绝手工控制这个
+adopted PID。真实故障的固定恢复、正常退出 disarm 与 crash-loop fuse 见
+[creator-guardian](../contracts/creator-guardian.md)。
 
 RC8 的原始 `dsh web` 默认打开浏览器。`dshx start web` 与 `verify-boot` 作为
 自动化 supervisor 始终加 `--no-open`；是否刷新现有页面仍由 lifecycle 分支决定。
@@ -50,7 +56,7 @@ RC8 的原始 `dsh web` 默认打开浏览器。`dshx start web` 与 `verify-boo
 # 非目标
 
 - 不修改 Harness 核心
-- 不提供同会话 400 自愈
+- 不修复孤儿 tool-call 400，也不把浏览器纯 client exception 当成 Host 自愈
 - 不替代官方 dump / plugin / cancel
 - 不把社区 doctor 装进默认 profile
 - 不在这次开发里写产品插件案例（用户稍后给真实案例）

@@ -1,8 +1,18 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { parseCli } from '../src/internal/io.ts'
+import { dshManagedShellAllows, parseCli } from '../src/internal/io.ts'
 
 describe('parseCli', () => {
+  it('keeps Host and live-profile mutation out of DSH-managed model shells', () => {
+    const managed = { DSH_SHELL: '1' }
+    assert.equal(dshManagedShellAllows('status', managed), true)
+    assert.equal(dshManagedShellAllows('check', managed), true)
+    assert.equal(dshManagedShellAllows('start', managed), false)
+    assert.equal(dshManagedShellAllows('restart-supervised', managed), false)
+    assert.equal(dshManagedShellAllows('activate-new-client', managed), false)
+    assert.equal(dshManagedShellAllows('sync-artifact', managed), false)
+    assert.equal(dshManagedShellAllows('start', {}), true)
+  })
   it('treats kb search --keep as a query, not verify --keep', () => {
     const parsed = parseCli(['kb', 'search', '--keep'])
     assert.equal(parsed.command, 'kb')

@@ -31,6 +31,7 @@
 * [Turn error](turn-error.md) - CLOSED `reason:error` 不会自愈
 * [Creator Mode](creator-mode.md) - preset `cordis`
 * [Creator Mode+](creator-mode-plus.md) - user preset + fixed dshx bridge; WebUI boundary and supervisor ownership
+* [Creator+ Guardian](creator-guardian.md) - session claims, concurrent ownership, culprit attribution, quarantine, restart fuse, and recovery steering
 
 # LLM（观察实验里搜索为零的那一块）
 
