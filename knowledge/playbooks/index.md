@@ -4,6 +4,7 @@
 * [Explore the knowledge base](explore-kb.md) - index → symptoms → cat；search 之后必须 cat
 * [First-time setup](setup-workshop.md) - 一句话 prompt / `dshx setup`
 * [Init a plugin](init-plugin.md) - 脚手架
+* [Install Codex-style $skill](codex-skill.md) - `examples/codex-skill` 的 patch 激活
 * [Build an RC8 external client](../contracts/client-build.md) - `my-plugins/*` 使用 dshx `externalClientBundle`
 * [Add a settings card](settings-card.md) - rc.7 官方设置卡片
 * [Check a plugin](check-plugin.md) - 静态合同；default export / 绝对路径会红

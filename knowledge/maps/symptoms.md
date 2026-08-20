@@ -75,4 +75,6 @@ stale_after: 2026-11-17
 | 设置里多了一行导航、本该只是插件配置 | [settings-card](/contracts/settings-card.md) | 不要用 `settings.section` 冒充配置卡 |
 | verify 成功后还想看日志 / 留宿主 | [verify-boot](/playbooks/verify-boot.md) | `--keep`，然后 `dshx logs` / `stop` |
 | 要挂模型面工具 | [define-tool](/contracts/define-tool.md) | [events](/contracts/events.md) |
+| 想用 Codex 那样的 `$skill`，不喜欢 `/skill` | [codex-skill](/contracts/codex-skill.md) | [codex-skill playbook](/playbooks/codex-skill.md)、`examples/codex-skill` |
+| 打 `$` 没有 skill 菜单 | [codex-skill](/contracts/codex-skill.md) | `examples/codex-skill/patches/dollar-trigger.md`；rc.8 `TriggerChar` 只有 `/` 和 `@` |
 | 官方文档太长，不知从哪读 | [okf-practice](/maps/okf-practice.md) | [official-sources](/maps/official-sources.md) |

@@ -31,6 +31,7 @@ stale_after: 2026-11-17
 | `apps/cli/src/dump-config.ts` | [dump-config](/contracts/dump-config.md) |
 | `apps/cli/src/profile-boot.ts`、`plugin.ts`、Web/client HMR | [live-activation](/contracts/live-activation.md) |
 | Creator preset + tool-cordis | [creator-mode](/contracts/creator-mode.md)、[tool-cordis](/contracts/tool-cordis.md) |
+| `packages/skill/tool-skill/src/index.ts`、`packages/client/ui-skill`、`ui-input-trigger` | [codex-skill](/contracts/codex-skill.md) |
 | `packages/client/tsdown.client.ts`、`packages/client/web/src/{platform,boot}.ts` | [client-build](/contracts/client-build.md)、[live-activation](/contracts/live-activation.md) |
 
 # 仍应打开的权威清单

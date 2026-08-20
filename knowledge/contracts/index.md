@@ -30,6 +30,7 @@
 * [Persistence](persistence.md) - 中断回合与 JSONL
 * [Turn error](turn-error.md) - CLOSED `reason:error` 不会自愈
 * [Creator Mode](creator-mode.md) - preset `cordis`
+* [Codex-style $skill](codex-skill.md) - `$name` host gesture; `/` stays commands
 * [Creator Mode+](creator-mode-plus.md) - user preset + fixed dshx bridge; WebUI boundary and supervisor ownership
 * [Creator+ Guardian](creator-guardian.md) - session claims, concurrent ownership, culprit attribution, quarantine, restart fuse, and recovery steering
 

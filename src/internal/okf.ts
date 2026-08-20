@@ -77,6 +77,7 @@ const SYNONYM_GROUPS: string[][] = [
   ['hmr', 'hot reload', 'hot-reload', '热重载', '热插拔', 'live activation', '不重启'],
   ['manifest', 'package.json', 'dsh.profile.bundles', 'next boot', '下次启动'],
   ['client reload', 'page reload', 'refresh page', '页面刷新', '重开页面'],
+  ['$skill', 'dollar skill', 'codex skill', '美元符号', 'skill-dollar', 'slash skill'],
 ]
 
 export const RETRIEVAL_FIXTURES: RetrievalFixture[] = [
@@ -136,6 +137,9 @@ export const RETRIEVAL_FIXTURES: RetrievalFixture[] = [
   { query: 'cordis.patch.yml', mustInclude: 'contracts/live-activation' },
   { query: 'manifest', mustInclude: 'contracts/live-activation' },
   { query: 'restart', mustInclude: 'contracts/live-activation' },
+  { query: '$skill', mustInclude: 'contracts/codex-skill', first: 'contracts/codex-skill' },
+  { query: 'dollar skill', mustInclude: 'contracts/codex-skill', first: 'contracts/codex-skill' },
+  { query: '美元符号', mustInclude: 'contracts/codex-skill' },
 ]
 
 function walkMd(dir: string, acc: string[] = []): string[] {

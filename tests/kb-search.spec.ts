@@ -54,6 +54,8 @@ describe('OKF retrieval', () => {
     assert.ok(ids('DSHX_HARNESS').includes('playbooks/setup-workshop'))
     assert.equal(ids('settings.plugin.item')[0], 'contracts/settings-card')
     assert.ok(ids('PTC mode').includes('contracts/creator-mode'))
+    assert.equal(ids('$skill')[0], 'contracts/codex-skill')
+    assert.equal(ids('dollar skill')[0], 'contracts/codex-skill')
   })
 
   it('retrieves the lifecycle contract before restart-oriented advice', () => {

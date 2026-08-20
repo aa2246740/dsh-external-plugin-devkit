@@ -117,6 +117,8 @@ new session.
 
 ## Development flow
 
+`examples/codex-skill` is a file-backed host plugin that adds Codex-style `$name` skill invocation. Copy it to `my-plugins/codex-skill` and activate on the patch branch. Codex does not invoke skills with `/`. See `dshx kb cat contracts/codex-skill`.
+
 ~~~sh
 dshx kb cat start-here
 dshx init demo --kind function

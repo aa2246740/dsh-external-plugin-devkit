@@ -1,0 +1,5 @@
+id: codex-skill
+entry: src/codex-skill.ts
+marker: "[my-plugins/codex-skill] loaded"
+kind: function
+profile: web
