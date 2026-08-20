@@ -71,6 +71,7 @@ const COMMAND_FLAGS: Record<string, ReadonlySet<string>> = {
   verify: new Set(['--json', '--profile', '--port', '--timeout', '--keep', '--task']),
   'verify-boot': new Set(['--json', '--profile', '--port', '--timeout', '--keep', '--task']),
   'activation-plan': new Set(['--json', '--profile', '--change']),
+  'activate-new-client': new Set(['--json', '--profile', '--port', '--timeout']),
   doctor: new Set(['--json', '--profile']),
   session: new Set(['--json']),
   which: new Set(['--json']),

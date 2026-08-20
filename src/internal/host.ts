@@ -66,9 +66,12 @@ export interface StartSpec {
 export function dshHostArgs(spec: StartSpec): string[] {
   const args: string[] = []
   if (spec.profile === 'web') {
-    args.push('web', '--no-open')
+    // The web subcommand stops launcher-option parsing at the first app-owned
+    // flag. Keep --patch before --no-open/--port or RC8 forwards it to the web
+    // app, which rejects it as an unknown option.
+    args.push('web')
     if (spec.overlay) args.push('--patch', spec.overlay)
-    args.push('--port', String(spec.port))
+    args.push('--no-open', '--port', String(spec.port))
   } else {
     args.push('--profile', 'headless')
     if (spec.overlay) args.push('--patch', spec.overlay)

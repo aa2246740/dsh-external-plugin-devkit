@@ -79,6 +79,50 @@ function creatorComposition(standard) {
   )
 }
 
+function upgradeManagedAssets(target, root) {
+  const composition = join(target, 'agent.cordis.yml')
+  const text = existsSync(composition) ? readFileSync(composition, 'utf8') : ''
+  const managedRow = `- id: dshx-creator-plus\n  name: ${DEFAULT_PACKAGE}`
+  if (!text.includes(managedRow)) {
+    throw new Error(`Creator Mode+ at ${target} does not contain the managed dshx row; refusing an unsafe upgrade`)
+  }
+
+  const temporaryRoot = mkdtempSync(join(root, '.creator-plus-upgrade-'))
+  const stagedSkill = join(temporaryRoot, 'creator-mode-plus')
+  const stagedPreset = join(temporaryRoot, 'preset.yml')
+  const backupSkill = join(temporaryRoot, 'previous-skill')
+  const backupPreset = join(temporaryRoot, 'previous-preset.yml')
+  const targetSkill = join(target, 'skills/creator-mode-plus')
+  const targetPreset = join(target, 'preset.yml')
+  let skillBackedUp = false
+  let presetBackedUp = false
+  try {
+    cpSync(join(packageRoot, 'creator-plus/skills/creator-mode-plus'), stagedSkill, { recursive: true, errorOnExist: true })
+    cpSync(join(packageRoot, 'creator-plus/preset.yml'), stagedPreset, { errorOnExist: true })
+    tightenTree(stagedSkill)
+    tightenTree(stagedPreset)
+    if (existsSync(targetSkill)) {
+      renameSync(targetSkill, backupSkill)
+      skillBackedUp = true
+    }
+    if (existsSync(targetPreset)) {
+      renameSync(targetPreset, backupPreset)
+      presetBackedUp = true
+    }
+    renameSync(stagedSkill, targetSkill)
+    renameSync(stagedPreset, targetPreset)
+  } catch (error) {
+    rmSync(targetSkill, { recursive: true, force: true })
+    rmSync(targetPreset, { force: true })
+    if (skillBackedUp && existsSync(backupSkill)) renameSync(backupSkill, targetSkill)
+    if (presetBackedUp && existsSync(backupPreset)) renameSync(backupPreset, targetPreset)
+    throw error
+  } finally {
+    rmSync(temporaryRoot, { recursive: true, force: true })
+  }
+  return target
+}
+
 export function installCreatorPlus(options = {}) {
   const harnessRoot = resolve(
     options.harnessRoot
@@ -93,7 +137,8 @@ export function installCreatorPlus(options = {}) {
   const root = join(dshHome, '.agent-presets')
   const target = join(root, 'creator-plus')
   if (existsSync(target)) {
-    throw new Error(`Creator Mode+ already exists at ${target}; refusing to overwrite a user preset`)
+    if (options.upgrade === true) return upgradeManagedAssets(target, root)
+    throw new Error(`Creator Mode+ already exists at ${target}; refusing to overwrite a user preset (pass --upgrade to replace only managed skill/metadata assets)`)
   }
 
   const source = join(harnessRoot, 'apps/cli/config/agent-presets/standard')
@@ -117,8 +162,9 @@ export function installCreatorPlus(options = {}) {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   try {
-    const target = installCreatorPlus()
-    process.stdout.write(`Creator Mode+ installed at ${target}\n`)
+    const upgrade = process.argv.includes('--upgrade')
+    const target = installCreatorPlus({ upgrade })
+    process.stdout.write(`Creator Mode+ ${upgrade ? 'updated' : 'installed'} at ${target}\n`)
   } catch (error) {
     process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`)
     process.exitCode = 2

@@ -17,8 +17,11 @@ sources:
     resource: packages/preset/agent-presets/src/session.ts
     title: Session preset generation
   - id: bridge-tools
-    resource: tools/dshx/src/creator-plus/index.ts
+    resource: tools/dshx/src/creator-plus/index.js
     title: Fixed Creator Mode+ tool surface
+  - id: new-client-command
+    resource: tools/dshx/src/internal/new-client.ts
+    title: Ordered bounded new-client activation
 ---
 
 # 与原版创造模式的关系
@@ -29,7 +32,7 @@ Creator Mode+ 不修改也不替换 shipped `cordis` preset。它是独立的用
 
 | 角色 | 可以做什么 | 不可以做什么 |
 |---|---|---|
-| Creator Mode+ 会话 | scaffold、check、activation-plan、status | 任意 shell/argv/path；start/stop/restart DSH |
+| Creator Mode+ 会话 | scaffold、check、activation-plan、activate-new-client、status | 任意 shell/argv/path；start/stop/restart DSH |
 | 外部 dshx CLI | 文件化构建、静态检查、隔离验证、受控 supervisor 操作 | 把离线结果冒充当前 Host/UI 证据 |
 | 用户 | 批准有影响的激活、重启和回滚 | 不承担插件内部运行时职责 |
 
@@ -48,7 +51,7 @@ Creator Mode+ 不修改也不替换 shipped `cordis` preset。它是独立的用
 official WebUI
   -> user preset roster
   -> new/blank Creator Mode+ session
-  -> one of four fixed dshx tools
+  -> one of five fixed dshx tools
   -> child dshx CLI with bounded output
   -> file-backed plugin and layered evidence
 
@@ -64,6 +67,29 @@ external supervisor
 3. roster 发现 preset 不需要 Host restart；已开始会话不换 generation，必须用新会话或仍为空白的会话。
 4. 新 client 首次进入页面 graph 时刷新页面；已有 client bundle 后续更新走同页 HMR。
 5. 只按 `SOURCE_BUILT`、`PRESET_ROSTER_VISIBLE`、`PRESET_SESSION_ACTIVE`、`CLIENT_LOADED`、`VISUAL_BEHAVIOR_VERIFIED` 等实际观察层报告。
+
+# 新 client 的唯一安全动作
+
+Creator Mode+ 在 `dshx_check` 通过且用户已批准挂载后，只调用
+`dshx_activate_new_client({ name })`。该固定工具不接受路径、profile、port、argv 或
+shell 字符串；bridge 从当前 Web Host 进程读取端口，并按以下不可交换的顺序执行：
+
+```text
+SOURCE_BUILT check
+  -> official dsh plugin link into profile
+  -> prove package + lib/client.js resolve from profile
+  -> insert or retrigger stable watched-patch row
+  -> poll this Host boot manifest and served client.js
+  -> return HOST_TREE_ACTIVE + CLIENT_MANIFEST_PRESENT
+  -> browser reload remains separate
+```
+
+若 `exitCode != 0`，会话必须停止这条分支并报告 blocker，不得自己手改
+`profile/package.json`、`cordis.patch.yml`，不得补跑 `pnpm install`，也不得重启宿主。
+新插入的 patch 行在 Host manifest 无法证明时会回滚；已有同名同包行只会在 link
+可解析之后做一次语义重触发。若旧 Agent 已让 Host 在安装前尝试解析同一 bare
+package，Loader 可能保留负解析缓存；命令会明确命名这个 scar，由外部 supervisor
+一次性重启并复验，Creator Mode+ 不得自行重启或无限重试。正常的新流程没有这次重启。
 
 # RC8 兼容结论
 

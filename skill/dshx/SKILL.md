@@ -11,7 +11,7 @@ description: >-
 
 # dshx
 
-Use `dshx` for profile-scoped, file-backed plugins developed by an external agent or through the optional Creator Mode+ safe bridge. The CLI outside DSH is always the supervisor; Creator Mode+ exposes fixed scaffold/check/plan/status tools but never process control. Do not transfer the original Creator Mode's in-memory lifecycle assumptions to external packages.
+Use `dshx` for profile-scoped, file-backed plugins developed by an external agent or through the optional Creator Mode+ safe bridge. The CLI outside DSH is always the supervisor; Creator Mode+ exposes five fixed operations, including bounded new-client activation, but never process control. Do not transfer the original Creator Mode's in-memory lifecycle assumptions to external packages.
 
 ## Resolve the checkout
 
@@ -62,6 +62,14 @@ Choose exactly one changed-surface branch:
 
 `sync-artifact` / `ship` must end at `ARTIFACT_SYNCED; LIVE_ACTIVATION_UNPROVEN`. Never turn that result into an activation claim.
 
+For `new-client`, do not hand-edit the profile manifest and watched patch as separate steps. After `check` passes and activation is approved, run:
+
+```sh
+./scripts/dshx.sh activate-new-client <plugin> --profile web --port <current-web-port>
+```
+
+The command owns the safe order: official profile link, resolvability proof, watched-patch insert/retrigger, current Host manifest proof. Exit 0 proves through `CLIENT_MANIFEST_PRESENT`, not `CLIENT_LOADED`; reload the page and verify UI separately. A nonzero exit is a stop condition, not permission to improvise. If it explicitly names a cached pre-install resolution failure from an earlier bad sequence, the external supervisor may perform one controlled restart; this is recovery for the scar, not the normal new-client branch.
+
 Read only the selected branch:
 
 - `patch` → `kb cat playbooks/hot-config-entry`
@@ -79,7 +87,7 @@ Read only the selected branch:
 4. Run `check <name>`. Completion: no static contract errors; a client package also has a built lazy-CJS `lib/client.js` handoff.
 5. Run `verify-boot <name>` only when an isolated cold boot is needed. Completion: marker and Web HTTP pass. It refuses to stop an existing supervised Host and does not prove current-host activation.
 6. If package bytes must reach a profile, run `sync-artifact <dir>` (`ship` is a compatibility alias). Completion: content hash matches; activation remains unproven.
-7. Execute the previously selected activation branch. Restart only when that branch requires it.
+7. Execute the previously selected activation branch. For `new-client`, use only `activate-new-client`; restart only when a different branch requires it.
 8. Report evidence by layer: `SOURCE_BUILT`, `ARTIFACT_SYNCED`, `NEXT_BOOT_REGISTERED`, `HOST_TREE_ACTIVE`, `CLIENT_LOADED`, `VISUAL_BEHAVIOR_VERIFIED`. Omit unobserved layers.
 
 ## Plugin-form checks
@@ -93,6 +101,7 @@ Read only the selected branch:
 ## Hard guardrails
 
 - Never kill or restart `dsh` from inside a Harness session.
+- Never bypass a failed `activate-new-client` by manually editing profile `package.json` or `cordis.patch.yml`; fix the reported blocker and retry the bounded command.
 - `restart-supervised` may restart only the currently live dshx-owned Web Host. It must not resurrect stale `last-host.json` or reconstruct a headless task.
 - Never mount the same plugin through both a bundle and a user-patch insert.
 - Never treat `dump-config` as a boot or live-Loader proof.

@@ -1,6 +1,6 @@
 {
   "name": "dsh-external-plugin-devkit",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Out-of-process DeepSeek Harness plugin devkit with an optional WebUI-first Creator Mode+ bridge.",
   "type": "module",
   "license": "MIT",

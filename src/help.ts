@@ -3,6 +3,7 @@ export const HELP = `dshx — DeepSeek Harness 进程外插件工作台
 先判生命周期，不要把“热重载”当成一个动作
   dshx kb cat contracts/live-activation
   dshx activation-plan <plugin> --change patch|manifest|preset|client|new-client|server|artifact
+  dshx activate-new-client <plugin> --profile web --port <current-web-port>
 
 分支
   patch       真实 profile/home cordis.patch.yml 被监听；Host 同 PID 热重组
@@ -19,7 +20,7 @@ export const HELP = `dshx — DeepSeek Harness 进程外插件工作台
   3. check <name>
   4. 需要隔离冷启动证明时 verify-boot <name>
   5. 需要 profile 产物时 sync-artifact <dir>
-  6. 按 activation-plan 的单一分支激活
+  6. 按 activation-plan 的单一分支激活；new-client 只用 activate-new-client
   7. 分层报告：artifact / next-boot / Host tree / client / visual behavior
 
 命令
@@ -30,6 +31,7 @@ export const HELP = `dshx — DeepSeek Harness 进程外插件工作台
   init <name>                   --kind function|tool|client|object|class
   check [name]                  静态合同；client 必须是 built lazy-CJS lib/client.js
   activation-plan <target>      只读 inventory；--change 选择生命周期分支
+  activate-new-client <plugin>  固定顺序 link → watched patch → 当前 Host manifest；不重启、不刷新页面
   overlay [name]                生成一次性绝对 --patch 文件；该文件不受 user-patch watcher 监听
   dump [name]                   离线合成；退出 0 不是 boot/live 证明
   verify-boot [name]            隔离冷启动：check + dump + marker + HTTP
@@ -96,7 +98,7 @@ export const LOOP = `外部插件开发闭环
    patch      → kb cat playbooks/hot-config-entry
    preset     → kb cat playbooks/activate-user-preset
    client     → kb cat playbooks/update-existing-client-bundle
-   new-client → kb cat playbooks/add-new-client-plugin
+   new-client → activate-new-client <plugin> --profile web --port <当前端口>
    server     → kb cat playbooks/restart-server-plugin
    manifest   → 下一次 Host boot 后验证
 

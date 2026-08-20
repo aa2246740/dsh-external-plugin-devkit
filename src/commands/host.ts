@@ -207,8 +207,14 @@ export async function cmdVerify(args: string[], options: CliOptions, root: strin
     printReport(report(command, findings), options.json)
     return 1
   }
-  const overlay = writeOverlay(root, plugin)
-  const dumped = dumpConfig(root, options.profile, [overlay])
+  // A target already registered in the real profile/home patch must not be
+  // inserted a second time by the cold-boot overlay. Boot the disk-composed
+  // row itself in that case; otherwise add the isolated overlay as before.
+  const profileDump = dumpConfig(root, options.profile)
+  const profileEntries = profileDump.code === 0 ? parseDumpEntries(profileDump.stdout) : []
+  const alreadyComposed = profileEntries.some(entry => entry.id === plugin.id)
+  const overlay = alreadyComposed ? undefined : writeOverlay(root, plugin)
+  const dumped = alreadyComposed ? profileDump : dumpConfig(root, options.profile, [overlay!])
   const entries = dumped.code === 0 ? parseDumpEntries(dumped.stdout) : []
   findings.push(dumped.code === 0
     ? finding('ok', 'dump-config', 'dump-config exited 0')
@@ -218,6 +224,7 @@ export async function cmdVerify(args: string[], options: CliOptions, root: strin
     ? finding('ok', 'dump-id', `composed tree contains id ${plugin.id}`)
     : finding('error', 'dump-id', `id ${plugin.id} missing from dump-config`))
   findings.push(finding('info', 'dump-limit', 'dump-config does not import plugins; a clean composition is only a precondition for isolated cold boot'))
+  if (alreadyComposed) findings.push(finding('info', 'overlay-skipped', `id ${plugin.id} is already in the profile composition; skipped duplicate verify overlay`))
 
   if (findings.some(item => item.level === 'error')) {
     findings.push(finding('info', 'boot-skipped', 'isolated cold boot skipped because offline composition failed'))

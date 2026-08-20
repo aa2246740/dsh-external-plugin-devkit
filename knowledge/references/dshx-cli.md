@@ -3,7 +3,7 @@ type: Reference
 title: dshx command surface
 description: 外部插件工作台的命令、状态目录与非目标。
 tags: [dshx, cli]
-aliases: [dshx, cli, kb catalog, kb search, catalog, which, "dshx status", status, unsupervised, "busy port", "already in use", "3091", "--force", "--port", "--harness", "port-3080", "host-supervised", "activation-plan", "verify-boot", "sync-artifact", "restart-supervised"]
+aliases: [dshx, cli, kb catalog, kb search, catalog, which, "dshx status", status, unsupervised, "busy port", "already in use", "3091", "--force", "--port", "--harness", "port-3080", "host-supervised", "activation-plan", "activate-new-client", "verify-boot", "sync-artifact", "restart-supervised"]
 status: stable
 resource: tools/dshx/src/cli.ts
 generated: { by: dshx/grok-4.6, at: 2026-08-17T12:30:00Z }
@@ -39,6 +39,7 @@ dshx kb cat contracts/llm-retry
 # 生命周期命令
 
 - `activation-plan <target> --change ...`：只读磁盘 inventory 和分支计划，不宣称 live Loader 状态。
+- `activate-new-client <name> --profile web --port <当前端口>`：只接受 `my-plugins` 目标；先 link/解析，再写或重触发 watched patch，最后验证当前 Host manifest 与 served client。无 restart、无浏览器控制；成功仍要求刷新后另验 `CLIENT_LOADED`。
 - `verify-boot`（`verify` alias）：隔离 cold boot；已有 supervised Host 时拒绝，绝不自动 stop。
 - `sync-artifact`（`ship` / `recopy` alias）：link/file artifact，同步完成仍为 `LIVE_ACTIVATION_UNPROVEN`。
 - `restart-supervised`（`restart` alias）：只重启当前 live dshx-owned Web PID；无 live PID、换目标、headless 均拒绝。

@@ -25,6 +25,14 @@ describe('startHost', () => {
       '--port',
       '3091',
     ])
+    assert.deepEqual(dshHostArgs({ profile: 'web', port: 3091, overlay: '/tmp/demo.patch.yml' }), [
+      'web',
+      '--patch',
+      '/tmp/demo.patch.yml',
+      '--no-open',
+      '--port',
+      '3091',
+    ])
   })
 
   it('refuses a second supervised host', () => {

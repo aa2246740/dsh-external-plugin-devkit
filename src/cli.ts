@@ -13,6 +13,7 @@ import { cmdExperiment } from './commands/experiment.ts'
 import { cmdSetup } from './commands/setup.ts'
 import { cmdShip } from './commands/ship.ts'
 import { cmdActivationPlan } from './commands/activation.ts'
+import { cmdActivateNewClient } from './commands/new-client.ts'
 import { finding, parseCli, printReport, report } from './internal/io.ts'
 import { logObserve } from './internal/observe.ts'
 import { findRepoRoot } from './internal/paths.ts'
@@ -79,6 +80,8 @@ async function main(): Promise<number> {
       return cmdVerify(args, options, root)
     case 'activation-plan':
       return cmdActivationPlan(args, options, root)
+    case 'activate-new-client':
+      return cmdActivateNewClient(args, options, root)
     case 'doctor':
       return cmdDoctor(args, options, root)
     case 'session':

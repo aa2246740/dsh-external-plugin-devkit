@@ -1,6 +1,6 @@
 /** Creator Mode+ model tools backed by fixed dshx operations. */
 
-import { runDshx } from './runner.js'
+import { currentWebPort, runDshx } from './runner.js'
 
 export const name = 'dshx-creator-plus'
 export const inject = ['tools']
@@ -87,6 +87,25 @@ export function apply(ctx) {
       ], exec.signal)
     },
     presentCall: args => ({ card: 'generic', title: `dshx plan ${args.change}`, kind: 'read', rawInput: args }),
+  })
+
+  ctx.tools.register({
+    name: 'dshx_activate_new_client',
+    description: 'Safely activate one already-built my-plugins Web client: validate it, install its profile link before touching the watched patch, hot-mount the Host row, and prove the current Host boot manifest. It never reloads the browser or restarts DSH.',
+    parameters: {
+      type: 'object',
+      properties: { name: { type: 'string', description: 'Plugin id under my-plugins' } },
+      required: ['name'],
+      additionalProperties: false,
+    },
+    timeoutMs: 90_000,
+    output,
+    execute(args, exec) {
+      return runDshx([
+        'activate-new-client', pluginId(args.name), '--profile', 'web', '--port', String(currentWebPort()),
+      ], exec.signal)
+    },
+    presentCall: args => ({ card: 'generic', title: `dshx activate ${args.name}`, kind: 'edit', rawInput: args.name }),
   })
 
   ctx.tools.register({

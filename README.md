@@ -63,13 +63,22 @@ pnpm dsh plugin --profile web add link:./tools/dshx
 
 # Refuses to overwrite an existing user preset.
 DSHX_HARNESS="$PWD" pnpm --dir tools/dshx install:creator-plus
+
+# Future dshx updates: preserve agent.cordis.yml and replace only managed skill/metadata.
+DSHX_HARNESS="$PWD" pnpm --dir tools/dshx install:creator-plus -- --upgrade
 ~~~
 
 Open or refresh the official WebUI only if its preset roster was already cached,
 select **Creator Mode+**, and start a new or still-blank session. No Host restart
 is required for preset discovery. The bridge exposes only `dshx_scaffold`,
-`dshx_check`, `dshx_activation_plan`, and `dshx_status`; it exposes no arbitrary
+`dshx_check`, `dshx_activation_plan`, `dshx_activate_new_client`, and
+`dshx_status`; it exposes no arbitrary
 shell/argv/path operation and no start, stop, or restart operation.
+
+`dshx_activate_new_client` is a bounded mutation, not process control. It accepts
+only one `my-plugins` id, takes the current Web port from the running Host, then
+orders official profile linking before watched-patch activation and current-Host
+manifest proof. It leaves browser reload and visible UI verification separate.
 
 RC8 adds optional Codex and Claude Code subagent Profile Bundles. Creator Mode+
 inherits their disabled tool rows from Standard, but never installs or enables
@@ -117,6 +126,7 @@ init                     Scaffold function, tool, client, object, or class form
 check                    Static plugin/path/client-artifact checks
 verify-boot              Isolated cold boot: dump + marker + HTTP
 activation-plan          Read-only lifecycle inventory and changed-surface plan
+activate-new-client      Link, hot-mount, and prove a new Web client; no restart/reload
 sync-artifact            Local link or legacy file: artifact synchronization
 start / stop             Explicit workshop Host control
 restart-supervised       Restart the current owned Web Host only

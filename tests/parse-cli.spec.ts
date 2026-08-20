@@ -72,4 +72,13 @@ describe('parseCli', () => {
     const plan = parseCli(['activation-plan', 'dsh-creator-plus', '--change', 'preset'])
     assert.equal(plan.options.change, 'preset')
   })
+
+  it('parses bounded new-client activation flags without leaking them into arguments', () => {
+    const activation = parseCli(['activate-new-client', 'demo', '--profile', 'web', '--port', '43127', '--timeout', '12'])
+    assert.equal(activation.command, 'activate-new-client')
+    assert.deepEqual(activation.args, ['demo'])
+    assert.equal(activation.options.profile, 'web')
+    assert.equal(activation.options.port, 43127)
+    assert.equal(activation.options.timeoutMs, 12_000)
+  })
 })

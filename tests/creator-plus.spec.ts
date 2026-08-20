@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import { afterEach, describe, it } from 'node:test'
 import { installCreatorPlus } from '../scripts/install-creator-plus.mjs'
 import { apply } from '../src/creator-plus/index.js'
-import { resolveHarnessRoot, runDshx } from '../src/creator-plus/runner.js'
+import { currentWebPort, resolveHarnessRoot, runDshx } from '../src/creator-plus/runner.js'
 
 const temporaryRoots: string[] = []
 
@@ -41,7 +41,7 @@ afterEach(() => {
 })
 
 describe('Creator Mode+ bridge', () => {
-  it('registers only the four fixed non-process-control tools', () => {
+  it('registers only fixed non-process-control tools, including bounded new-client activation', () => {
     const tools: Array<Record<string, unknown>> = []
     apply({ tools: { register(tool: Record<string, unknown>) { tools.push(tool) } } })
 
@@ -49,6 +49,7 @@ describe('Creator Mode+ bridge', () => {
       'dshx_scaffold',
       'dshx_check',
       'dshx_activation_plan',
+      'dshx_activate_new_client',
       'dshx_status',
     ])
     assert.equal(tools.some(tool => /start|stop|restart|shell|command/.test(String(tool.name))), false)
@@ -57,6 +58,17 @@ describe('Creator Mode+ bridge', () => {
       /lower-case kebab-case/,
     )
     assert.throws(() => runDshx(['restart']), /fixed command allowlist/)
+    assert.throws(
+      () => runDshx(['activate-new-client', 'demo', '--profile', 'web', '--port', 'not-a-port']),
+      /fixed command allowlist/,
+    )
+  })
+
+  it('derives only the current official WebUI port for the activation bridge', () => {
+    assert.equal(currentWebPort(['node', 'bin.ts', 'web', '--port', '43127', '--no-open']), 43127)
+    assert.equal(currentWebPort(['node', 'bin.ts', '--profile', 'web']), 3080)
+    assert.throws(() => currentWebPort(['node', 'bin.ts', 'headless']), /Web profile/)
+    assert.throws(() => currentWebPort(['node', 'bin.ts', 'web', '--port', '0']), /valid TCP port/)
   })
 
   it('resolves an explicit checkout and walks upward', () => {
@@ -95,5 +107,20 @@ describe('Creator Mode+ bridge', () => {
     assert.equal(existsSync(join(target, 'skills/creator-mode-plus/SKILL.md')), true)
     assert.match(readFileSync(join(target, 'preset.yml'), 'utf8'), /Creator Mode\+/)
     assert.throws(() => installCreatorPlus({ harnessRoot, dshHome }), /refusing to overwrite/)
+  })
+
+  it('upgrades only Creator Mode+ managed assets and preserves the user composition', () => {
+    const harnessRoot = harnessAt(temporaryDirectory('dshx-creator-upgrade-harness-'))
+    const dshHome = temporaryDirectory('dshx-creator-upgrade-home-')
+    const target = installCreatorPlus({ harnessRoot, dshHome })
+    const compositionPath = join(target, 'agent.cordis.yml')
+    const skillPath = join(target, 'skills/creator-mode-plus/SKILL.md')
+    writeFileSync(compositionPath, `${readFileSync(compositionPath, 'utf8')}\n# user-preserved\n`)
+    writeFileSync(skillPath, '# stale managed skill\n')
+
+    assert.equal(installCreatorPlus({ harnessRoot, dshHome, upgrade: true }), target)
+    assert.match(readFileSync(compositionPath, 'utf8'), /# user-preserved/)
+    assert.match(readFileSync(skillPath, 'utf8'), /dshx_activate_new_client/)
+    assert.match(readFileSync(join(target, 'preset.yml'), 'utf8'), /固定热激活动作/)
   })
 })

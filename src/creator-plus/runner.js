@@ -14,9 +14,31 @@ const CHANGES = new Set(['patch', 'manifest', 'preset', 'client', 'new-client', 
 function isAllowedArgs(args) {
   if (args.length === 1) return args[0] === 'status'
   if (args.length === 2) return args[0] === 'check' && PLUGIN_ID.test(args[1])
+  if (args.length === 6 && args[0] === 'activate-new-client' && PLUGIN_ID.test(args[1])) {
+    return args[2] === '--profile'
+      && args[3] === 'web'
+      && args[4] === '--port'
+      && /^\d{1,5}$/.test(args[5])
+      && Number(args[5]) >= 1
+      && Number(args[5]) <= 65_535
+  }
   if (args.length !== 4 || !PLUGIN_ID.test(args[1])) return false
   if (args[0] === 'init') return args[2] === '--kind' && KINDS.has(args[3])
   return args[0] === 'activation-plan' && args[2] === '--change' && CHANGES.has(args[3])
+}
+
+/** Resolve the current official Web profile's loopback port without accepting model input. */
+export function currentWebPort(argv = process.argv) {
+  const webAlias = argv.includes('web')
+  const profileIndex = argv.lastIndexOf('--profile')
+  const webProfile = profileIndex >= 0 && argv[profileIndex + 1] === 'web'
+  if (!webAlias && !webProfile) throw new Error('dshx/creator-plus: activation requires the current Web profile')
+  const portIndex = argv.lastIndexOf('--port')
+  const value = portIndex >= 0 ? Number(argv[portIndex + 1]) : 3080
+  if (!Number.isInteger(value) || value < 1 || value > 65_535) {
+    throw new Error('dshx/creator-plus: current Web profile does not expose a valid TCP port')
+  }
+  return value
 }
 
 function isHarnessRoot(path) {
@@ -123,6 +145,7 @@ export function runDshx(args, signal) {
         exitCode: code ?? 1,
         stdout: stdout.trim(),
         stderr: stderr.trim(),
+        ...args[0] === 'activate-new-client' ? { hostPid: process.pid, hostPort: Number(args[5]) } : {},
       })
     })
   })
