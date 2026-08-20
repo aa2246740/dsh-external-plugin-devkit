@@ -15,13 +15,13 @@ sources:
 
 # 算法
 
-1. `pnpm dshx kb` 或读 `tools/dshx/knowledge/index.md`
+1. `dshx kb` 或读 `tools/dshx/knowledge/index.md`
 2. 打开 [start-here](../start-here.md)
 3. 有具体现象就打开 [symptoms](../maps/symptoms.md)，不要先盲搜 `docs/`
-4. `pnpm dshx kb search <词>` 只用来找 id
-5. **立刻** `pnpm dshx kb cat <id>`。停在 search snippet 上 = 没读合同
+4. `dshx kb search <词>` 只用来找 id
+5. **立刻** `dshx kb cat <id>`。停在 search snippet 上 = 没读合同
 6. 需要原文时跟随该篇 `resource` 和 `sources` 进仓库文件
-7. 改完 bundle 后 `pnpm dshx kb lint`（含检索夹具：`retry` / `timeout` 必须能中）
+7. 改完 bundle 后 `dshx kb lint`（含检索夹具：`retry` / `timeout` 必须能中）
 
 # 链接规则
 

@@ -22,4 +22,6 @@ stale_after: 2026-11-17
 - `session/` 持久化、投影
 - `credentials/` / `settings/` 密钥与设置（不要提交）
 
-scratch 插件放 `my-plugins/`，不要进 workspace graph。
+scratch 插件放 `my-plugins/`，不要进 workspace graph。RC8 官方 client build helper
+也只发现 `packages/*/*`；外部前端插件走 [client-build](../contracts/client-build.md)，
+不要为了让内部 helper 看见它而移动目录或扩大官方 glob。

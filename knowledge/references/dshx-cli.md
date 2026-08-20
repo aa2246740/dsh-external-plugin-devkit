@@ -3,7 +3,7 @@ type: Reference
 title: dshx command surface
 description: 外部插件工作台的命令、状态目录与非目标。
 tags: [dshx, cli]
-aliases: [dshx, cli, kb catalog, kb search, catalog, which, "dshx status", status, unsupervised, "busy port", "already in use", "3091", "--force", "--port", "port-3080", "host-supervised", "activation-plan", "verify-boot", "sync-artifact", "restart-supervised"]
+aliases: [dshx, cli, kb catalog, kb search, catalog, which, "dshx status", status, unsupervised, "busy port", "already in use", "3091", "--force", "--port", "--harness", "port-3080", "host-supervised", "activation-plan", "verify-boot", "sync-artifact", "restart-supervised"]
 status: stable
 resource: tools/dshx/src/cli.ts
 generated: { by: dshx/grok-4.6, at: 2026-08-17T12:30:00Z }
@@ -13,14 +13,18 @@ stale_after: 2026-11-17
 # 入口
 
 ```sh
-pnpm dshx help
-pnpm dshx kb
-pnpm dshx kb catalog
-pnpm dshx kb search retry
-pnpm dshx kb cat contracts/llm-retry
+dshx help
+dshx kb
+dshx kb catalog
+dshx kb search retry
+dshx kb cat contracts/llm-retry
 ```
 
 实现：`tools/dshx/src/cli.ts`。状态：`.dshx/`（gitignored）——`host.json`、`last-host.json`、`logs/`、`overlays/`。
+
+`--harness <path>` 对所有命令生效，可以在命令名前或后。显式 flag 验证成功后
+直接选定 checkout；没有 flag 时，env/config/cwd 三种发现必须指向同一根，冲突
+就失败关闭。用 `dshx which --harness <path>` 明示一次切换，不要依赖当前目录猜。
 
 `dshx status` 分得清：正在监督的宿主、上次 workshop 端口、以及「3080 在听但不是我们的」。默认 3080 被别人占（busy port / already in use）时，`start` / `verify-boot` 应换 `--port 3091`，不要 `--force`，也不要在 Harness 会话里杀进程。
 
@@ -38,6 +42,9 @@ pnpm dshx kb cat contracts/llm-retry
 - `verify-boot`（`verify` alias）：隔离 cold boot；已有 supervised Host 时拒绝，绝不自动 stop。
 - `sync-artifact`（`ship` / `recopy` alias）：link/file artifact，同步完成仍为 `LIVE_ACTIVATION_UNPROVEN`。
 - `restart-supervised`（`restart` alias）：只重启当前 live dshx-owned Web PID；无 live PID、换目标、headless 均拒绝。
+
+RC8 的原始 `dsh web` 默认打开浏览器。`dshx start web` 与 `verify-boot` 作为
+自动化 supervisor 始终加 `--no-open`；是否刷新现有页面仍由 lifecycle 分支决定。
 
 # 非目标
 

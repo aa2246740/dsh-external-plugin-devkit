@@ -24,7 +24,7 @@ export const HELP = `dshx — DeepSeek Harness 进程外插件工作台
 
 命令
   help
-  setup                         安装 launcher/skill 并记住唯一 Harness checkout；不启停 DSH
+  setup                         安装用户 launcher/skill 并记住 Harness checkout；不改核心、不启停 DSH
   kb                            ls / catalog / cat / search / lint / digest
   loop                          打印本闭环
   init <name>                   --kind function|tool|client|object|class
@@ -61,7 +61,7 @@ export const HELP = `dshx — DeepSeek Harness 进程外插件工作台
   --force                        init 覆盖脚手架；start/verify 不应用来抢陌生端口
   --kind function|tool|client|object|class
   --change patch|manifest|preset|client|new-client|server|artifact
-  --harness <path>
+  --harness <path>              所有命令的 checkout 消歧器；显式值优先
   --dry-run / --print-prompt
   --task "..."
 
@@ -75,21 +75,21 @@ export const HELP = `dshx — DeepSeek Harness 进程外插件工作台
 export const LOOP = `外部插件开发闭环
 
 1. 读生命周期总合同
-   pnpm dshx kb cat contracts/live-activation
+   dshx kb cat contracts/live-activation
 
 2. 明确改动面并只选一个分支
-   pnpm dshx activation-plan <plugin> --change patch|manifest|preset|client|new-client|server|artifact
+   dshx activation-plan <plugin> --change patch|manifest|preset|client|new-client|server|artifact
 
 3. 写和静态检查
-   pnpm dshx init <name> --kind function|tool|client|object|class
-   pnpm dshx check <name>
+   dshx init <name> --kind function|tool|client|object|class
+   dshx check <name>
 
 4. 可选：隔离冷启动证明
-   pnpm dshx verify-boot <name>
+   dshx verify-boot <name>
    它不验证现有 Host，也不会停现有 Host。
 
 5. 可选：同步 profile 产物
-   pnpm dshx sync-artifact <dir>
+   dshx sync-artifact <dir>
    到此只有 ARTIFACT_SYNCED; LIVE_ACTIVATION_UNPROVEN。
 
 6. 执行已选分支

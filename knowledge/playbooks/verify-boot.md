@@ -12,10 +12,10 @@ stale_after: 2026-11-17
 # 命令
 
 ```sh
-pnpm dshx verify-boot hello
-pnpm dshx verify-boot hello --keep          # 成功后不关它刚启动的 Host
-pnpm dshx verify-boot hello --port 3091     # 默认 3080 被占时换这个，不要 --force
-pnpm dshx verify-boot hello --timeout 90
+dshx verify-boot hello
+dshx verify-boot hello --keep          # 成功后不关它刚启动的 Host
+dshx verify-boot hello --port 3091     # 默认 3080 被占时换这个，不要 --force
+dshx verify-boot hello --timeout 90
 ```
 
 # 它断言什么
@@ -35,8 +35,8 @@ pnpm dshx verify-boot hello --timeout 90
 # 失败时
 
 ```sh
-pnpm dshx logs --grep Error
-pnpm dshx doctor
+dshx logs --grep Error
+dshx doctor
 ```
 
 不要把 dump 退出 0 写成成功。

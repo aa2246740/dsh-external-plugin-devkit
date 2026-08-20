@@ -24,9 +24,9 @@ sources:
 # 修复
 
 ```sh
-pnpm dshx ship /abs/path/to/pkg
+dshx ship /abs/path/to/pkg
 # preferred spelling
-pnpm dshx sync-artifact /abs/path/to/pkg
+dshx sync-artifact /abs/path/to/pkg
 ```
 
 新本地安装优先走官方 local path，由 pnpm 记录 `link:`，源码/产物直接可见。只有遗留 `file:` copy 才需要 remove + add；dshx 会恢复 bundle 顺序并用 `lib/` 内容 hash 核对。`dshx doctor` 把落后的 file: 包装成 `stale-file-copy`。

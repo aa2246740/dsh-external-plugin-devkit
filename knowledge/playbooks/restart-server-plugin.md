@@ -5,7 +5,7 @@ description: Web 默认只保证配置 patch 热重组；server module 更新除
 tags: [server, module, restart, hmr]
 aliases: [server plugin, server module, restart host, 服务端插件, module HMR]
 status: stable
-verified_against: { tag: dsh-v0.1.0-rc.7, sha: 99f6f02fecdb7dff40c3fbc9470f5907c29f74ca }
+verified_against: { tag: dsh-v0.1.0-rc.8, sha: 141eb6fef83422698aef7a981029e843e8161534 }
 sources:
   - id: web-bundle
     resource: packages/bundle/web-app/cordis.patch.yml

@@ -12,7 +12,7 @@ stale_after: 2026-11-19
 # 命令
 
 ```sh
-pnpm dshx init my-feature --kind client
+dshx init my-feature --kind client
 ```
 
 生成 Host named-export + `installSettingsSection`，以及 `src/client/index.tsx` 里对 `settings.plugin.item` 的注册。合同见 [settings-card](../contracts/settings-card.md)，原文 `docs/cookbook/adding-a-settings-card.md`。

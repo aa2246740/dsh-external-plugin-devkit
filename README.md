@@ -16,17 +16,23 @@ git clone https://github.com/aa2246740/dsh-external-plugin-devkit.git tools/dshx
 node --import tsx/esm tools/dshx/src/cli.ts setup --harness "$PWD"
 ~~~
 
-setup installs the root launcher and dshx skill into Agent homes already present on the machine, then records the selected checkout in ~/.config/dshx/harness. It does not start or stop DSH.
+setup installs a user launcher at `~/.local/bin/dshx` and the dshx skill into Agent homes already present on the machine, then records the selected checkout in `~/.config/dshx/harness`. It does not edit Harness `package.json`, start DSH, or stop DSH.
+
+Every command accepts `--harness <path>`. An explicit flag is the only
+checkout override. Without it, `DSHX_HARNESS`, `~/.config/dshx/harness`, and
+the checkout found by walking upward are treated as independent evidence; all
+discovered roots must agree. This prevents a command run inside an old clone
+from silently mutating a newer one.
 
 Prompt for another Agent:
 
-> Install https://github.com/aa2246740/dsh-external-plugin-devkit at &lt;harness&gt;/tools/dshx, run dshx setup for that checkout, then run dshx which and dshx doctor. If more than one Harness checkout resolves, stop and ask. Do not start or kill DSH and do not hardcode another machine's path.
+> Install https://github.com/aa2246740/dsh-external-plugin-devkit at &lt;harness&gt;/tools/dshx, run `dshx setup --harness &lt;harness&gt;`, then run `dshx which --harness &lt;harness&gt;` and `dshx doctor --harness &lt;harness&gt;`. Without an explicit flag, stop if checkout discovery conflicts. Do not start or kill DSH and do not hardcode another machine's path.
 
 ## Start with the lifecycle contract
 
 ~~~sh
-pnpm dshx kb cat contracts/live-activation
-pnpm dshx activation-plan <plugin> --change patch
+dshx kb cat contracts/live-activation
+dshx activation-plan <plugin> --change patch
 ~~~
 
 There is no universal “hot reload” operation:
@@ -65,19 +71,25 @@ is required for preset discovery. The bridge exposes only `dshx_scaffold`,
 `dshx_check`, `dshx_activation_plan`, and `dshx_status`; it exposes no arbitrary
 shell/argv/path operation and no start, stop, or restart operation.
 
+RC8 adds optional Codex and Claude Code subagent Profile Bundles. Creator Mode+
+inherits their disabled tool rows from Standard, but never installs or enables
+them automatically: installing a provider is a `manifest` change and needs a
+Profile restart; enabling its copied preset row is a `preset` change and needs a
+new session.
+
 ## Development flow
 
 ~~~sh
-pnpm dshx kb cat start-here
-pnpm dshx init demo --kind function
-pnpm dshx check demo
-pnpm dshx verify-boot demo
+dshx kb cat start-here
+dshx init demo --kind function
+dshx check demo
+dshx verify-boot demo
 
 # For a packaged plugin whose bytes must reach the profile:
-pnpm dshx sync-artifact /absolute/path/to/package
+dshx sync-artifact /absolute/path/to/package
 
 # Then select the actual changed surface:
-pnpm dshx activation-plan demo --change patch
+dshx activation-plan demo --change patch
 ~~~
 
 verify-boot is an isolated cold-boot computation. It refuses to stop a live dshx-supervised Host and does not prove current-host activation.
@@ -91,8 +103,8 @@ ARTIFACT_SYNCED; LIVE_ACTIVATION_UNPROVEN
 The old ship --restart chain is intentionally rejected. Restart only after activation-plan selects a manifest/server branch:
 
 ~~~sh
-pnpm dshx status
-pnpm dshx restart-supervised
+dshx status
+dshx restart-supervised
 ~~~
 
 restart-supervised only restarts the current dshx-owned Web PID. It will not resurrect stale last-host state or reconstruct a headless task.
@@ -114,7 +126,7 @@ session                  Inspect session scars
 which                    Resolve checkout and installed skill paths
 ~~~
 
-Run pnpm dshx help for flags and examples.
+Run dshx help for flags and examples.
 
 ## Plugin forms
 
@@ -122,7 +134,7 @@ Run pnpm dshx help for flags and examples.
 - Object: default export with apply and kind: object.
 - Class/service: default-exported constructor and kind: class.
 - Tool: inject tools and register through defineTool.
-- Client: exports["./client"] points to built lib/client.js. The artifact must call window.__ModuleLoader__.load({ id, factory }); source TSX is not a runnable browser entry.
+- Client: exports["./client"] points to built lib/client.js. The artifact must call window.__ModuleLoader__.load({ id, factory }); source TSX is not a runnable browser entry. On RC8, out-of-tree `my-plugins/*` use dshx `externalClientBundle`; the official `clientBundle()` manifest lookup is intentionally limited to `packages/*/*`.
 
 init --kind client creates the source and the correct lib/client.js export target, then clearly leaves check red until a compatible client artifact is built.
 
@@ -153,7 +165,7 @@ Package installation, dump-config, HTTP 200, and a cold-boot marker do not subst
 
 ## Knowledge bundle
 
-[knowledge/](knowledge/) is an OKF v0.2 digest pinned to official DeepSeek Harness dsh-v0.1.0-rc.7 source for the lifecycle update. Search returns an id; always cat the hit before using it as a contract.
+[knowledge/](knowledge/) is an OKF v0.2 digest pinned to official DeepSeek Harness dsh-v0.1.0-rc.8 source for the lifecycle and external-client update. Search returns an id; always cat the hit before using it as a contract.
 
 Repository standing orders are in [AGENTS.md](AGENTS.md), and the portable Agent skill is [skill/dshx/SKILL.md](skill/dshx/SKILL.md).
 

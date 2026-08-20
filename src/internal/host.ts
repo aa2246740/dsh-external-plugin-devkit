@@ -62,6 +62,21 @@ export interface StartSpec {
   extraArgs?: string[]
 }
 
+/** Build only the official dsh arguments for a supervised Host. */
+export function dshHostArgs(spec: StartSpec): string[] {
+  const args: string[] = []
+  if (spec.profile === 'web') {
+    args.push('web', '--no-open')
+    if (spec.overlay) args.push('--patch', spec.overlay)
+    args.push('--port', String(spec.port))
+  } else {
+    args.push('--profile', 'headless')
+    if (spec.overlay) args.push('--patch', spec.overlay)
+    args.push(...spec.extraArgs ?? [])
+  }
+  return args
+}
+
 export function startHost(root: string, spec: StartSpec): HostState {
   const existing = currentHost(root)
   if (existing) {
@@ -71,16 +86,7 @@ export function startHost(root: string, spec: StartSpec): HostState {
   ensureDir(dirname(logFile))
   writeText(logFile, '')
   const { cmd, prefix } = dshBin(root)
-  const args = [...prefix]
-  if (spec.profile === 'web') {
-    args.push('web')
-    if (spec.overlay) args.push('--patch', spec.overlay)
-    args.push('--port', String(spec.port))
-  } else {
-    args.push('--profile', 'headless')
-    if (spec.overlay) args.push('--patch', spec.overlay)
-    args.push(...spec.extraArgs ?? [])
-  }
+  const args = [...prefix, ...dshHostArgs(spec)]
   const fd = openSync(logFile, 'a')
   const child = spawn(cmd, args, {
     cwd: root,

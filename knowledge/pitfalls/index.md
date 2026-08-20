@@ -4,7 +4,7 @@
 
 * [Orphan tool_call](orphan-tool-call.md) - 同一会话永久 400
 * [Host suicide](host-suicide.md) - 会话内杀宿主
-* [Two-retry stop](two-retry-stop.md) - 两次 TIMEOUT 后停是官方默认
+* [Retry budget exhausted](two-retry-stop.md) - RC8 默认五次；文件 id 保留兼容旧“两次后停”查询
 * [Duplicate loader id](duplicate-loader-id.md) - plugin add 后 dump 查不出
 * [Leftover bundles](leftover-bundles.md) - plugin remove 失败
 * [dump false negative](dump-false-negative.md)

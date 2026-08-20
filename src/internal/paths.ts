@@ -144,8 +144,8 @@ export function resolveHarness(options: {
   return { ok: true, root: only!.root, source: only!.source, candidates }
 }
 
-export function findRepoRoot(start = process.cwd()): string {
-  const resolved = resolveHarness({ start, requireDshx: true })
+export function findRepoRoot(start = process.cwd(), flag?: string): string {
+  const resolved = resolveHarness({ start, flag, requireDshx: true })
   if (!resolved.ok || !resolved.root) {
     throw new Error(resolved.message ?? 'cannot find a DeepSeek Harness checkout')
   }

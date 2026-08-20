@@ -43,7 +43,7 @@ async function main(): Promise<number> {
 
   let root: string
   try {
-    root = findRepoRoot()
+    root = findRepoRoot(process.cwd(), options.harness)
   } catch (error) {
     printReport(report(command, [finding('error', 'root', error instanceof Error ? error.message : String(error))]), options.json)
     return 1

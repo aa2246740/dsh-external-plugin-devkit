@@ -12,12 +12,12 @@ stale_after: 2026-11-17
 # 命令
 
 ```sh
-pnpm dshx init my-feature
-pnpm dshx init my-tool --kind tool
-pnpm dshx init my-panel --kind client
-pnpm dshx init my-object --kind object
-pnpm dshx init my-service --kind class
-pnpm dshx init my-feature --force    # 覆盖已有脚手架文件
+dshx init my-feature
+dshx init my-tool --kind tool
+dshx init my-panel --kind client
+dshx init my-object --kind object
+dshx init my-service --kind class
+dshx init my-feature --force    # 覆盖已有脚手架文件
 ```
 
 目录已存在且没有 `--force` 时，`init` 报 `already exists`，不会改文件。
@@ -40,7 +40,7 @@ my-plugins/<name>/
 - tool：`inject: ['tools']` + `defineTool`
 - object：default `{ apply, name?, inject? }` + `kind: object`
 - class/service：default constructor + `kind: class`
-- client：Host `installSettingsSection` + 浏览器 `settings.plugin.item`；package export 预设为 `lib/client.js`。源码 TSX **不能**直接作为 browser entry，必须构建 `window.__ModuleLoader__.load({ id, factory })` lazy-CJS 产物后 check 才会绿。见 [settings-card](settings-card.md)
+- client：Host `installSettingsSection` + 浏览器 `settings.plugin.item`；package export 预设为 `lib/client.js`。源码 TSX **不能**直接作为 browser entry。RC8 脚手架使用 dshx `externalClientBundle` 构建 `window.__ModuleLoader__.load({ id, factory })` lazy-CJS 产物；不要导入只发现 `packages/*/*` 的官方 workspace helper。见 [client-build](../contracts/client-build.md) 与 [settings-card](settings-card.md)
 - 保留 `console.log('[my-plugins/<name>] loaded')`，与 `dshx.yml` 的 `marker` 一致
 - 可调参数用 `Config` schema，不要写死
 - 注册走 `ctx.effect` / `ctx.on` / `ctx.tools.register`

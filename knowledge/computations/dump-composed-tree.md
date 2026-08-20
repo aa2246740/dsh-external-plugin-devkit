@@ -21,7 +21,7 @@ stale_after: 2026-11-17
 # Computation
 
 ```
-pnpm dshx dump @plugin [--profile @profile] --json
+dshx dump @plugin [--profile @profile] --json
 ```
 
 若提供 plugin，ids 必须包含该 id。duplicate_ids 必须为空。不得把 exit 0 解释成 boot 成功。

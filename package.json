@@ -1,6 +1,6 @@
 {
   "name": "dsh-external-plugin-devkit",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Out-of-process DeepSeek Harness plugin devkit with an optional WebUI-first Creator Mode+ bridge.",
   "type": "module",
   "license": "MIT",
@@ -17,6 +17,7 @@
     "dshx": "./src/cli.ts"
   },
   "exports": {
+    "./client-build": "./src/client-build.js",
     "./creator-plus": "./src/creator-plus/index.js",
     "./package.json": "./package.json"
   },
@@ -49,6 +50,7 @@
   ],
   "dependencies": {
     "js-yaml": "^4.2.0",
+    "lightningcss": "^1.32.0",
     "tsx": "^4.22.4"
   },
   "devDependencies": {

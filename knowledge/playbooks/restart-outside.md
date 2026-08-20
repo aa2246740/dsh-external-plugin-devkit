@@ -5,7 +5,7 @@ description: 生命周期分支明确需要重启时，只从进程外重启当�
 tags: [restart, host, supervisor]
 aliases: [restart, stop, kill host, 外面重启, already supervising, already supervises, dshx stop, dshx restart, restart-supervised]
 status: stable
-verified_against: { tag: dsh-v0.1.0-rc.7, sha: 99f6f02fecdb7dff40c3fbc9470f5907c29f74ca }
+verified_against: { tag: dsh-v0.1.0-rc.8, sha: 141eb6fef83422698aef7a981029e843e8161534 }
 sources:
   - id: cli-ref
     resource: apps/cli/reference/README.md
@@ -19,8 +19,8 @@ sources:
 # 命令
 
 ~~~sh
-pnpm dshx status
-pnpm dshx restart-supervised
+dshx status
+dshx restart-supervised
 ~~~
 
 restart 是兼容别名。命令只接受当前由 dshx 监督且仍存活的 Web PID，并复用其 profile、plugin 和 port：

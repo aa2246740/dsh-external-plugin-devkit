@@ -25,13 +25,13 @@ sources:
 仓库里已经放好一份 **OKF v0.2 bundle**：
 
 - 目录：`tools/dshx/knowledge/`
-- 浏览：`pnpm dshx kb`
-- 列目录：`pnpm dshx kb ls`
-- 目录卡片（只有 frontmatter）：`pnpm dshx kb catalog`
-- 读一篇：`pnpm dshx kb cat start-here`
-- 对现象：`pnpm dshx kb cat maps/symptoms`
-- 搜索：`pnpm dshx kb search retry` → **立刻** `pnpm dshx kb cat contracts/llm-retry`
-- 校验：`pnpm dshx kb lint`
+- 浏览：`dshx kb`
+- 列目录：`dshx kb ls`
+- 目录卡片（只有 frontmatter）：`dshx kb catalog`
+- 读一篇：`dshx kb cat start-here`
+- 对现象：`dshx kb cat maps/symptoms`
+- 搜索：`dshx kb search retry` → **立刻** `dshx kb cat contracts/llm-retry`
+- 校验：`dshx kb lint`
 
 按 Google OKF 的约定：先读 `index.md`，再顺着 markdown 链接走。`kb search` 只返回 id 和一句 description。**snippet 不是合同，命中后必须 `kb cat`。** 不要对整仓官方长文做无目的全文搜索来「猜」插件合同。组织方法见 [okf-practice](maps/okf-practice.md)。
 
@@ -44,9 +44,9 @@ sources:
 `dshx` 补的是 Creator Mode 缺的能力：落盘交付、生命周期分类、隔离 cold boot、受控宿主管理和会话伤疤诊断。
 
 ```sh
-pnpm dshx help
-pnpm dshx loop
-pnpm dshx which
+dshx help
+dshx loop
+dshx which
 ```
 
 工作台源码在 `tools/dshx/`。它 **不是** `@deepseek-ai/dsh` 的一部分，也 **不是** 官方 `dsh doctor`（官方没有这个命令）。
@@ -58,9 +58,9 @@ pnpm dshx which
 3. 涉及 ship / HMR / refresh / restart → 先读 [live activation matrix](contracts/live-activation.md)，再运行 `activation-plan --change <branch>`。
 4. 想证明插件能独立冷启动 → `dshx verify-boot`；它不是现有 Host 的 live proof，也不会停现有 Host。
 5. 会话 400 / 卡 running → [新开会话](playbooks/new-session.md)，不要在伤疤上重试。
-6. 模型超时 / 两次后停 → [symptoms](maps/symptoms.md) → [llm-retry](contracts/llm-retry.md)，不要先改 Harness 核心。
+6. 模型超时 / retry 预算耗尽 → [symptoms](maps/symptoms.md) → [llm-retry](contracts/llm-retry.md)；RC8 默认五次，不要沿用 rc.7 的两次记忆，也不要先改 Harness 核心。
 7. 只要一次性任务、不要 Web UI → [headless-boot](playbooks/headless-boot.md)。
-8. `dshx check` 因插件形态 / 绝对路径 / client artifact 红了 → [check-plugin](playbooks/check-plugin.md)。
+8. `dshx check` 因插件形态 / 绝对路径 / client artifact 红了 → [check-plugin](playbooks/check-plugin.md)；RC8 外部 client 的 workspace manifest 报错 → [client-build](contracts/client-build.md)。
 
 # 权威顺序
 
@@ -76,5 +76,5 @@ pnpm dshx which
 
 - 理解为什么要出仓开发：[why-external](why-external.md)
 - 最小插件合同：[plugin-forms](contracts/plugin-forms.md)
-- rc.7 设置卡片：[settings-card](contracts/settings-card.md)
+- rc.7 起延续到 rc.8 的设置卡片：[settings-card](contracts/settings-card.md)
 - 开写：[init-plugin](playbooks/init-plugin.md)

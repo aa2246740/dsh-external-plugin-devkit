@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { mkdtempSync } from 'node:fs'
+import { mkdtempSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, it } from 'node:test'
@@ -33,9 +33,19 @@ describe('init scaffolds', () => {
   it('points client exports at lib/client.js and fails closed until it is built', () => {
     const root = mkdtempSync(join(tmpdir(), 'dshx-init-'))
     assert.equal(init(root, 'client-demo', 'client'), 0)
-    const pkg = loadJson<{ exports: Record<string, string> }>(join(root, 'my-plugins/client-demo/package.json'))
-    assert.equal(pkg.exports['./client'], './lib/client.js')
+    const pkg = loadJson<{
+      exports: Record<string, string | { default: string }>,
+      scripts: Record<string, string>,
+    }>(join(root, 'my-plugins/client-demo/package.json'))
+    assert.deepEqual(pkg.exports['./client'], {
+      types: './lib/types/client/index.d.ts',
+      default: './lib/client.js',
+    })
+    assert.equal(pkg.scripts.build, 'tsc -p tsconfig.json && tsdown')
+    assert.match(readFileSync(join(root, 'my-plugins/client-demo/tsdown.config.ts'), 'utf8'), /externalClientBundle/)
+    assert.match(readFileSync(join(root, 'my-plugins/client-demo/tsconfig.json'), 'utf8'), /tsconfig\.base\.client\.json/)
     const findings = checkPlugin(loadPlugin(root, 'client-demo'), root)
+    assert.ok(findings.some(item => item.code === 'rc8-external-client-build' && item.level === 'ok'), JSON.stringify(findings, null, 2))
     assert.ok(findings.some(item => item.code === 'client-entry' && item.level === 'error'), JSON.stringify(findings, null, 2))
   })
 })

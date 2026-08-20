@@ -5,7 +5,7 @@ description: dsh plugin add、bundle 清单或 artifact copy 成功只说明持�
 tags: [install, activation, bundle, ship]
 aliases: [插件装了没生效, installed not live, plugin add not active, artifact synced, LIVE_ACTIVATION_UNPROVEN]
 status: stable
-verified_against: { tag: dsh-v0.1.0-rc.7, sha: 99f6f02fecdb7dff40c3fbc9470f5907c29f74ca }
+verified_against: { tag: dsh-v0.1.0-rc.8, sha: 141eb6fef83422698aef7a981029e843e8161534 }
 sources:
   - id: plugin-cli
     resource: apps/cli/src/plugin.ts

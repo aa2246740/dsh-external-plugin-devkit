@@ -136,7 +136,8 @@ function applyFlag(token: string, argv: string[], index: number, options: CliOpt
 
 /**
  * Flags are command-scoped. `dshx kb search --keep` is a query, not verify's
- * `--keep`. Global `--json` still works. `--` ends option parsing.
+ * `--keep`. Global `--json` and the checkout disambiguator `--harness` work
+ * with every command. `--` ends option parsing.
  */
 export function parseCli(argv: string[]): { command: string; args: string[]; options: CliOptions } {
   const options: CliOptions = {
@@ -161,7 +162,7 @@ export function parseCli(argv: string[]): { command: string; args: string[]; opt
       rest.push(...argv.slice(i + 1))
       break
     }
-    if (token.startsWith('-') && allowed.has(token)) {
+    if (token.startsWith('-') && (allowed.has(token) || token === '--harness')) {
       i = applyFlag(token, argv, i, options)
       continue
     }

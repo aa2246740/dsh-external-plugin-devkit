@@ -9,7 +9,7 @@ generated: { by: dshx/grok-4.6, at: 2026-08-17T14:00:00Z }
 stale_after: 2026-11-17
 ---
 
-钉：合同对照官方 **0.1.0-rc.7**（tag `dsh-v0.1.0-rc.7`）。工作台 checkout 的 `package.json` 可能仍显示更早 rc；以官方 tag / npm `@deepseek-ai/dsh*` 为准。路径相对仓库根。
+钉：合同对照官方 **0.1.0-rc.8**（tag `dsh-v0.1.0-rc.8`，SHA `141eb6fef83422698aef7a981029e843e8161534`）。工作台 checkout 的 `package.json` 可能仍显示更早 rc；以官方 tag / npm `@deepseek-ai/dsh*` 为准。路径相对仓库根。
 
 **不要先把这些文件整篇读完。** 先走 [symptoms](symptoms.md) 或下面的「已拆成」列，需要逐条核对再打开原件。
 
@@ -31,6 +31,7 @@ stale_after: 2026-11-17
 | `apps/cli/src/dump-config.ts` | [dump-config](/contracts/dump-config.md) |
 | `apps/cli/src/profile-boot.ts`、`plugin.ts`、Web/client HMR | [live-activation](/contracts/live-activation.md) |
 | Creator preset + tool-cordis | [creator-mode](/contracts/creator-mode.md)、[tool-cordis](/contracts/tool-cordis.md) |
+| `packages/client/tsdown.client.ts`、`packages/client/web/src/{platform,boot}.ts` | [client-build](/contracts/client-build.md)、[live-activation](/contracts/live-activation.md) |
 
 # 仍应打开的权威清单
 
@@ -53,5 +54,6 @@ stale_after: 2026-11-17
 17. `packages/preset/agent-presets/README.md`、`packages/extensions/cordis-host-runner/README.md`
 18. Creator skills：只收 workflow；工具动词过时
 19. `packages/client/{modules,hmr,web}` 与 `vendor/hmr`：client graph/HMR 和 server module-HMR 边界
+20. `packages/subagent/{subagent-codex,subagent-claude-code}` 与 Creator composition skill：RC8 可选 Profile Bundle、权限和命名实例
 
 降权：`tool-cordis/README.md`、`examples/web-cordis`、Agent Note 2026-07-08、primer 的 mode 表、未进站点的 `docs/subsystems/extensions.md`。

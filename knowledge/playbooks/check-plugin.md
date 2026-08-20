@@ -12,8 +12,8 @@ stale_after: 2026-11-17
 # 命令
 
 ```sh
-pnpm dshx check hello
-pnpm dshx check              # 扫 my-plugins/ 下每一个目录（含别人留下的 scratch）
+dshx check hello
+dshx check              # 扫 my-plugins/ 下每一个目录（含别人留下的 scratch）
 # 目录多于一个时请带名字，否则一次红会分不清是谁的
 ```
 

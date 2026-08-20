@@ -22,8 +22,13 @@ node --import tsx/esm <harness>/tools/dshx/src/cli.ts setup --harness <harness>
 node --import tsx/esm <harness>/tools/dshx/src/cli.ts setup --dry-run
 ```
 
-`setup` 会：确认唯一 checkout、必要时 clone `tools/dshx`、写根目录 `dshx` 脚本、把 `skill/dshx` 链到已有的 Agent 家、写 `~/.config/dshx/harness`。日常 prompt 会先要求读取 `contracts/live-activation` 并分类，不再默认建议 restart。
+`setup` 会：确认 checkout、必要时 clone `tools/dshx`、把用户 launcher 写到 `~/.local/bin/dshx`、把 `skill/dshx` 链到已有的 Agent 家、写 `~/.config/dshx/harness`。它不改 Harness `package.json`。日常 prompt 会先要求读取 `contracts/live-activation` 并分类，不再默认建议 restart。
+
+`--harness <path>` 是全局显式消歧器，写在命令前后都可以。没有这个 flag
+时，`DSHX_HARNESS`、配置文件和 cwd 向上发现是并列证据，必须归一到同一根；
+不存在“env 自动压过 cwd”或“离哪个近就用哪个”的隐式优先级。
 
 **禁止**：启动或杀掉 `dsh`；在多个 checkout 之间猜；写死另一台机器的路径。
 
-多个 checkout：停下来问，或要求 `--harness`。
+多个 checkout 冲突：停下来问，或要求 `--harness`。一旦用户明确给出 flag，
+验证该路径后直接使用，不要继续被旧配置文件阻塞。

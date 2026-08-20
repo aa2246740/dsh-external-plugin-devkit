@@ -12,7 +12,7 @@ stale_after: 2026-11-17
 # 怎么用
 
 1. 在下表找到现象
-2. `pnpm dshx kb cat <id>`
+2. `dshx kb cat <id>`
 3. 需要原文再跟该篇 `sources`
 
 `kb search` 只是找 id。**snippet 不是合同。**
@@ -21,7 +21,8 @@ stale_after: 2026-11-17
 
 | 现象 | 先读 | 然后 |
 |---|---|---|
-| 超时两次后模型停了，没有再试提示 | [llm-retry](/contracts/llm-retry.md) | [two-retry-stop](/pitfalls/two-retry-stop.md)、[diagnose-model-ux](/playbooks/diagnose-model-ux.md) |
+| retry 预算用尽后模型停了，没有再试提示 | [llm-retry](/contracts/llm-retry.md) | [retry-budget-exhausted](/pitfalls/two-retry-stop.md)、[diagnose-model-ux](/playbooks/diagnose-model-ux.md) |
+| RC8 仍只重试两次 | [llm-retry](/contracts/llm-retry.md) | 查 provider override、旧 Host/旧包与实际错误码；RC8 默认是五次 |
 | 同一张工单里：先超时停、再 Continue 400 | 先 [llm-retry](/contracts/llm-retry.md)，再 [orphan-tool-call](/pitfalls/orphan-tool-call.md) | 两条合同，不是一个插件 bug |
 | stream 空闲很久然后 TIMEOUT | [llm-timeout](/contracts/llm-timeout.md) | [llm-error](/contracts/llm-error.md) |
 | 要接新模型 / provider | [llm-adapter](/contracts/llm-adapter.md) | [plugin-config](/contracts/plugin-config.md) |
@@ -68,6 +69,7 @@ stale_after: 2026-11-17
 | 别人 clone 后不知道怎么装 | [setup-workshop](/playbooks/setup-workshop.md) | `dshx setup --print-prompt` |
 | 目录已在、想覆盖脚手架 | [init-plugin](/playbooks/init-plugin.md) | `dshx init <name> --force` |
 | 要一块 Web 设置/slot 脚手架 | [init-plugin](/playbooks/init-plugin.md) | `dshx init <name> --kind client` |
+| RC8 外部 client 构建报 `no packages/*/*/package.json` | [client-build](/contracts/client-build.md) | 用生成的 `externalClientBundle`，不要改核心 glob 或移动插件 |
 | 插件配置要出现在设置 → 插件 | [settings-card](/contracts/settings-card.md) | [settings-card playbook](/playbooks/settings-card.md) |
 | 设置里多了一行导航、本该只是插件配置 | [settings-card](/contracts/settings-card.md) | 不要用 `settings.section` 冒充配置卡 |
 | verify 成功后还想看日志 / 留宿主 | [verify-boot](/playbooks/verify-boot.md) | `--keep`，然后 `dshx logs` / `stop` |

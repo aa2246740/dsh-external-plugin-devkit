@@ -47,5 +47,5 @@ Host 启动时读取并展开 bundle 层；运行中的 user-patch watcher 复�
 ```sh
 pnpm dsh --profile web --dump-default-config   # 只 bundle
 pnpm dsh --profile web --dump-config           # 再叠用户层
-pnpm dshx dump hello                           # 带 scratch overlay，并警告这不是 boot
+dshx dump hello                           # 带 scratch overlay，并警告这不是 boot
 ```

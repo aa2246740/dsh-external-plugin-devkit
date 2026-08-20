@@ -5,7 +5,7 @@ description: "sync-artifact 处理官方 link: 本地开发和旧式 file: 重�
 tags: [ship, sync, file, link, artifact]
 aliases: [dshx ship, dshx sync-artifact, ship, recopy, "file: ship", artifact sync]
 status: stable
-verified_against: { tag: dsh-v0.1.0-rc.7, sha: 99f6f02fecdb7dff40c3fbc9470f5907c29f74ca }
+verified_against: { tag: dsh-v0.1.0-rc.8, sha: 141eb6fef83422698aef7a981029e843e8161534 }
 sources:
   - id: plugin-cli
     resource: apps/cli/src/plugin.ts
@@ -15,8 +15,8 @@ sources:
 # 命令
 
 ~~~sh
-pnpm dshx sync-artifact /absolute/path/to/package
-pnpm dshx ship /absolute/path/to/package       # compatibility alias
+dshx sync-artifact /absolute/path/to/package
+dshx ship /absolute/path/to/package       # compatibility alias
 ~~~
 
 # 行为

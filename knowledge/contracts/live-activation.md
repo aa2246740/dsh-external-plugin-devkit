@@ -5,7 +5,7 @@ description: ship 只同步产物；配置热重组、bundle 下次启动、用�
 tags: [activation, hmr, hot-reload, plugin, lifecycle]
 aliases: [HMR, hot reload, hot-reload, 热重载, 热插拔, 不重启, live activation, cordis.patch.yml, client reload, bundle, manifest, user preset, Creator Mode, restart]
 status: stable
-verified_against: { tag: dsh-v0.1.0-rc.7, sha: 99f6f02fecdb7dff40c3fbc9470f5907c29f74ca, date: 2026-08-19 }
+verified_against: { tag: dsh-v0.1.0-rc.8, sha: 141eb6fef83422698aef7a981029e843e8161534, date: 2026-08-20 }
 sources:
   - id: profile-boot
     resource: apps/cli/src/profile-boot.ts
@@ -23,7 +23,7 @@ sources:
     resource: packages/client/hmr/src/client/index.ts
     title: Browser client HMR receiver
   - id: web-boot
-    resource: packages/client/web/src/boot.tsx
+    resource: packages/client/web/src/boot.ts
     title: Browser boot graph construction
   - id: preset-discovery
     resource: packages/preset/agent-presets/src/discovery.ts
@@ -53,6 +53,11 @@ sources:
 | 仅同步 artifact | 文件/链接存在且内容哈希一致 | 未证明 | 未证明 | 先分类真正变更面，再进入对应分支 |
 
 `dsh web` 的兜底 HMR 使用 `root: []`，目的是保证用户 patch 可热更新，不是任意服务端模块热重载。Web bundle 还显式禁用了共享 server-module HMR 行。
+
+RC8 把浏览器入口从 `boot.tsx` 重构为 `boot.ts`，但生命周期结论没有反转：
+页面仍在启动时取得初始 graph，已有页面不会凭 Host graph 增量创建一个全新的
+client row。另一个 RC8 行为变化是 `dsh web` 默认打开浏览器；自动化与 dshx
+supervisor 必须传 `--no-open`，这与插件是否需要页面 reload 是两件事。
 
 # 决策顺序
 

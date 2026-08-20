@@ -5,7 +5,7 @@ description: Creator Mode+ 是 user preset 加 dshx 固定工具桥；官方浏�
 tags: [creator-mode-plus, preset, webui, supervisor, safety]
 aliases: [Creator Mode+, 创造模式+, dshx plugin, dshx preset, supervisor]
 status: stable
-verified_against: { tag: dsh-v0.1.0-rc.7, sha: 99f6f02fecdb7dff40c3fbc9470f5907c29f74ca, date: 2026-08-20 }
+verified_against: { tag: dsh-v0.1.0-rc.8, sha: 141eb6fef83422698aef7a981029e843e8161534, date: 2026-08-20 }
 sources:
   - id: preset-discovery
     resource: packages/preset/agent-presets/src/discovery.ts
@@ -64,3 +64,10 @@ external supervisor
 3. roster 发现 preset 不需要 Host restart；已开始会话不换 generation，必须用新会话或仍为空白的会话。
 4. 新 client 首次进入页面 graph 时刷新页面；已有 client bundle 后续更新走同页 HMR。
 5. 只按 `SOURCE_BUILT`、`PRESET_ROSTER_VISIBLE`、`PRESET_SESSION_ACTIVE`、`CLIENT_LOADED`、`VISUAL_BEHAVIOR_VERIFIED` 等实际观察层报告。
+
+# RC8 兼容结论
+
+- Standard 与 Creator 的 preset/session discovery 合同未变，Creator Mode+ 仍然无需为 roster discovery 重启 Host。
+- installer 复制 RC8 Standard，因此保留其 disabled Codex/Claude Code tool rows；Creator Mode+ 不自动安装或启用任何原生产品 provider。
+- 用户选择某个 provider 时先走 `manifest` 分支安装对应 Profile Bundle 并重启，再走 `preset` 分支启用复制行并开新会话。两个动作不得合写成“热插拔完成”。
+- RC8 外部 client package 使用 [external client build](client-build.md)，不修改 Harness workspace glob。

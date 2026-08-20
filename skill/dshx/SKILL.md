@@ -17,19 +17,20 @@ Use `dshx` for profile-scoped, file-backed plugins developed by an external agen
 
 The CLI requires one DeepSeek Harness checkout containing both `apps/cli/src/bin.ts` and `tools/dshx/src/cli.ts`.
 
-Resolve in this order:
+Resolve with this fail-closed rule:
 
-1. `$DSHX_HARNESS`.
-2. Walk upward from cwd.
-3. `~/.config/dshx/harness` written by `dshx setup`.
+1. If the user or command supplies `--harness <path>`, use that checkout after validating it. The explicit flag disambiguates all other discovery sources.
+2. Otherwise collect `$DSHX_HARNESS`, `~/.config/dshx/harness`, and the checkout found by walking upward from cwd.
+3. Continue only when every discovered source names the same checkout. If they disagree, stop and request an explicit `--harness`; never choose one by precedence.
 
-If more than one checkout resolves, stop and ask which one. Never guess or hardcode another machine's path.
+Never guess or hardcode another machine's path. Run `which --harness <path>` when switching between release checkouts.
 
 Invoke through this skill's wrapper when possible:
 
 ```sh
 ./scripts/dshx.sh which
 ./scripts/dshx.sh <command>
+./scripts/dshx.sh <command> --harness /absolute/path/to/deepseek-harness
 ```
 
 From the Harness root, the equivalent is:
@@ -74,11 +75,12 @@ Read only the selected branch:
 
 1. Read the relevant contract with `kb cat`; a `kb search` snippet is only an id pointer.
 2. Edit `my-plugins/<name>/` or the named package. Keep committed `cordis.yml` portable.
-3. Run `check <name>`. Completion: no static contract errors; a client package also has a built lazy-CJS `lib/client.js` handoff.
-4. Run `verify-boot <name>` only when an isolated cold boot is needed. Completion: marker and Web HTTP pass. It refuses to stop an existing supervised Host and does not prove current-host activation.
-5. If package bytes must reach a profile, run `sync-artifact <dir>` (`ship` is a compatibility alias). Completion: content hash matches; activation remains unproven.
-6. Execute the previously selected activation branch. Restart only when that branch requires it.
-7. Report evidence by layer: `SOURCE_BUILT`, `ARTIFACT_SYNCED`, `NEXT_BOOT_REGISTERED`, `HOST_TREE_ACTIVE`, `CLIENT_LOADED`, `VISUAL_BEHAVIOR_VERIFIED`. Omit unobserved layers.
+3. For a client package, read `kb cat contracts/client-build`. On RC8, an out-of-tree package must build with dshx `externalClientBundle`; do not import the repository-internal official `clientBundle()` or move the plugin under `packages/`.
+4. Run `check <name>`. Completion: no static contract errors; a client package also has a built lazy-CJS `lib/client.js` handoff.
+5. Run `verify-boot <name>` only when an isolated cold boot is needed. Completion: marker and Web HTTP pass. It refuses to stop an existing supervised Host and does not prove current-host activation.
+6. If package bytes must reach a profile, run `sync-artifact <dir>` (`ship` is a compatibility alias). Completion: content hash matches; activation remains unproven.
+7. Execute the previously selected activation branch. Restart only when that branch requires it.
+8. Report evidence by layer: `SOURCE_BUILT`, `ARTIFACT_SYNCED`, `NEXT_BOOT_REGISTERED`, `HOST_TREE_ACTIVE`, `CLIENT_LOADED`, `VISUAL_BEHAVIOR_VERIFIED`. Omit unobserved layers.
 
 ## Plugin-form checks
 
@@ -86,7 +88,7 @@ Read only the selected branch:
 - Object: default-export `{ apply, name?, inject? }` and set `kind: object`.
 - Class/service: default-export the constructor and set `kind: class`.
 - Tool: inject `tools` and register with `defineTool`.
-- Client: `exports["./client"]` must target built `lib/client.js` containing `window.__ModuleLoader__.load({ id, factory })`; source TSX is not a served client artifact.
+- Client: `exports["./client"]` must target built `lib/client.js` containing `window.__ModuleLoader__.load({ id, factory })`; source TSX is not a served client artifact. RC8 external packages use dshx `externalClientBundle`, while official `packages/client/tsdown.client.ts` remains the in-repository workspace preset.
 
 ## Hard guardrails
 
@@ -97,3 +99,4 @@ Read only the selected branch:
 - `cordis_define` / `cordis_run` are process memory, not a shippable plugin.
 - Do not commit `.env`, `.dshx/`, secrets, or machine-absolute plugin paths.
 - A scarred 400/orphan-tool-call session needs a new session; do not Continue it.
+- RC8 `dsh web` opens a browser unless passed `--no-open`; dshx-supervised Web and cold-boot commands must suppress that side effect.

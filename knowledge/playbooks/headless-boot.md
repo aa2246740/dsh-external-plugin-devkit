@@ -16,8 +16,8 @@ stale_after: 2026-11-17
 # 命令
 
 ```sh
-pnpm dshx start headless hello --task "reply with the single word pong and stop"
-pnpm dshx verify-boot hello --profile headless
+dshx start headless hello --task "reply with the single word pong and stop"
+dshx verify-boot hello --profile headless
 ```
 
 `start headless` **必须**有任务：`--task "..."`，或把任务写在参数末尾。缺任务会 usage 失败，不会偷偷变成 web。CLI 的 `--profile` / `start headless` **覆盖** `dshx.yml` 里的 `profile: web`。
@@ -31,7 +31,7 @@ pnpm dshx verify-boot hello --profile headless
 `start` 在 spawn 后立刻返回。进程可能在任务结束后自己退出。看 marker：
 
 ```sh
-pnpm dshx logs --grep '[my-plugins/hello]'
+dshx logs --grep '[my-plugins/hello]'
 ```
 
 宿主已停时，`logs` 读 `.dshx/last-host.json` 记下的那份 launcher log（headless 是 `.dshx/logs/headless.log`），不要以为默认 web log 才算数。

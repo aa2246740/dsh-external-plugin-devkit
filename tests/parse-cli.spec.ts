@@ -32,6 +32,18 @@ describe('parseCli', () => {
     assert.equal(parsed.options.port, 3091)
   })
 
+  it('applies --harness to every command before or after the command name', () => {
+    const after = parseCli(['check', 'demo', '--harness', '/tmp/rc8'])
+    assert.equal(after.command, 'check')
+    assert.deepEqual(after.args, ['demo'])
+    assert.equal(after.options.harness, '/tmp/rc8')
+
+    const before = parseCli(['--harness', '/tmp/rc8', 'doctor'])
+    assert.equal(before.command, 'doctor')
+    assert.deepEqual(before.args, [])
+    assert.equal(before.options.harness, '/tmp/rc8')
+  })
+
   it('parses setup and ship flags', () => {
     const setup = parseCli(['setup', '--dry-run', '--print-prompt', '--harness', '/tmp/h'])
     assert.equal(setup.command, 'setup')

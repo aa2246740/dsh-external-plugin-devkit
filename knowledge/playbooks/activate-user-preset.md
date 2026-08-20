@@ -5,7 +5,7 @@ description: 用户 preset 每次 roster 调用重新发现，不重启 Host；�
 tags: [preset, creator-mode, session, activation]
 aliases: [user preset, Creator Mode, Creator Mode+, new session, 用户模式, 创造模式]
 status: stable
-verified_against: { tag: dsh-v0.1.0-rc.7, sha: 99f6f02fecdb7dff40c3fbc9470f5907c29f74ca, date: 2026-08-20 }
+verified_against: { tag: dsh-v0.1.0-rc.8, sha: 141eb6fef83422698aef7a981029e843e8161534, date: 2026-08-20 }
 sources:
   - id: preset-discovery
     resource: packages/preset/agent-presets/src/discovery.ts

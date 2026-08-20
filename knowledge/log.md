@@ -2,6 +2,9 @@
 
 ## 2026-08-20
 
+* **RC8 compatibility (0.4.0)**: pinned contracts to official `dsh-v0.1.0-rc.8` / `141eb6f`; added the out-of-tree `externalClientBundle` contract and scaffold because the official workspace preset intentionally discovers only `packages/*/*`; updated browser boot references from `boot.tsx` to `boot.ts`; dshx Web supervision now passes `--no-open` for RC8.
+* **Creator and routing correction (0.4.0)**: documented optional Codex/Claude Code Profile Bundles as a `manifest` step followed by a separate user-preset step; kept Creator Mode+ fail-closed. `--harness` is now a global explicit disambiguator, while env/config/cwd discoveries must agree when no flag is given. Setup installs `~/.local/bin/dshx` and no longer edits Harness `package.json`.
+* **Retry correction (0.4.0)**: RC8 raises `resolveRetryPolicy(undefined).maxRetries` from 2 to 5; preserved the historical `two-retry-stop` knowledge id only as a backwards-compatible search target.
 * **Creator Mode+ bridge (0.3.0)**: exported `dsh-external-plugin-devkit/creator-plus`, added a fail-closed Standard-to-user-preset installer, and exposed only fixed scaffold/check/activation-plan/status tools. Added the official-browser-WebUI compatibility boundary, external-supervisor ownership, and a separate `preset` lifecycle branch requiring a new session but no Host restart.
 
 ## 2026-08-19

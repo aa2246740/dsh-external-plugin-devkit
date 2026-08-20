@@ -5,7 +5,7 @@ description: 外部 Agent 的完整闭环：读合同、写文件、静态 check
 tags: [workflow, dshx, activation]
 aliases: [loop, 闭环, recommended loop, development flow]
 status: stable
-verified_against: { tag: dsh-v0.1.0-rc.7, sha: 99f6f02fecdb7dff40c3fbc9470f5907c29f74ca }
+verified_against: { tag: dsh-v0.1.0-rc.8, sha: 141eb6fef83422698aef7a981029e843e8161534 }
 sources:
   - id: first-plugin
     resource: docs/user/develop/basic/index.md
@@ -22,27 +22,27 @@ sources:
 3. 初始化或编辑磁盘文件。
 
 ~~~sh
-pnpm dshx init demo --kind function
-pnpm dshx check demo
+dshx init demo --kind function
+dshx check demo
 ~~~
 
 4. 需要证明插件能独立启动时才跑 cold boot。它会拒绝停掉现有 supervised Host。
 
 ~~~sh
-pnpm dshx verify-boot demo
+dshx verify-boot demo
 ~~~
 
 5. 需要把本地产物送进 profile 时才同步；到此不宣称 live。
 
 ~~~sh
-pnpm dshx sync-artifact /absolute/path/to/package
+dshx sync-artifact /absolute/path/to/package
 # ARTIFACT_SYNCED; LIVE_ACTIVATION_UNPROVEN
 ~~~
 
 6. 读取磁盘 inventory 并执行已选分支。
 
 ~~~sh
-pnpm dshx activation-plan demo --change patch
+dshx activation-plan demo --change patch
 ~~~
 
 7. 分层验收：Host tree、client manifest/load、视觉/行为分别给证据。没观测到的层不写 PASS。

@@ -11,7 +11,7 @@ stale_after: 2026-11-17
 
 # Verdict
 
-Receipt 来自 `pnpm dshx kb lint`：
+Receipt 来自 `dshx kb lint`：
 
 - `exit_code === 0`
 - 输出里没有 `search "…" missed` / `first hit was`

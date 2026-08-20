@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, it } from 'node:test'
 import { cmdRestart, cmdVerify } from '../src/commands/host.ts'
-import { pidAlive, startHost, writeHostState } from '../src/internal/host.ts'
+import { dshHostArgs, pidAlive, startHost, writeHostState } from '../src/internal/host.ts'
 import { parseCli, writeText } from '../src/internal/io.ts'
 
 async function silence<T>(run: () => Promise<T>): Promise<T> {
@@ -18,6 +18,15 @@ async function silence<T>(run: () => Promise<T>): Promise<T> {
 }
 
 describe('startHost', () => {
+  it('suppresses RC8 automatic browser opening for supervised Web hosts', () => {
+    assert.deepEqual(dshHostArgs({ profile: 'web', port: 3091 }), [
+      'web',
+      '--no-open',
+      '--port',
+      '3091',
+    ])
+  })
+
   it('refuses a second supervised host', () => {
     const root = mkdtempSync(join(tmpdir(), 'dshx-host-'))
     writeHostState(root, {

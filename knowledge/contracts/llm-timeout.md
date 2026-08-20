@@ -32,7 +32,7 @@ sources:
 
 # 和重试的关系
 
-`TIMEOUT` 在默认 `retryableCodes` 里。shipped `dsh-llm-retry` 会按 [llm-retry](llm-retry.md) 再试，默认两次。预算用尽后本轮结束，不会自己再开一轮。
+`TIMEOUT` 在默认 `retryableCodes` 里。shipped `dsh-llm-retry` 会按 [llm-retry](llm-retry.md) 再试；RC8 默认最多 retry 五次。预算用尽后本轮结束，不会自己再开一轮。
 
 # 插件能改什么
 

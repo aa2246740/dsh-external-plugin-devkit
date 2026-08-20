@@ -5,13 +5,13 @@ description: Host graph 可变化，但当前浏览器页面忽略 graph SSE 增
 tags: [client, browser, graph, reload]
 aliases: [client reload, refresh page, new client missing, 新插件页面不显示, graph frame]
 status: stable
-verified_against: { tag: dsh-v0.1.0-rc.7, sha: 99f6f02fecdb7dff40c3fbc9470f5907c29f74ca }
+verified_against: { tag: dsh-v0.1.0-rc.8, sha: 141eb6fef83422698aef7a981029e843e8161534 }
 sources:
   - id: client-hmr
     resource: packages/client/hmr/src/client/index.ts
     title: Existing-page HMR event handling
   - id: web-boot
-    resource: packages/client/web/src/boot.tsx
+    resource: packages/client/web/src/boot.ts
     title: Initial loader-tree construction
 ---
 

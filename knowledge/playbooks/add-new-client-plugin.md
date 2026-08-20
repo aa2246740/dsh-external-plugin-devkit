@@ -5,10 +5,10 @@ description: 新 client entry 可在同一 Host PID 内先热挂 Host 行，但�
 tags: [client, graph, reload, activation]
 aliases: [new client, client reload, 新客户端插件, 页面刷新, new graph entry]
 status: stable
-verified_against: { tag: dsh-v0.1.0-rc.7, sha: 99f6f02fecdb7dff40c3fbc9470f5907c29f74ca }
+verified_against: { tag: dsh-v0.1.0-rc.8, sha: 141eb6fef83422698aef7a981029e843e8161534 }
 sources:
   - id: web-boot
-    resource: packages/client/web/src/boot.tsx
+    resource: packages/client/web/src/boot.ts
     title: One-time page loader tree
   - id: client-hmr
     resource: packages/client/hmr/src/client/index.ts
@@ -17,7 +17,7 @@ sources:
 
 # 步骤
 
-1. 构建并检查 `lib/client.js` lazy-CJS handoff；`dshx check <plugin>` 必须通过。
+1. 先读 [RC8 external client build](../contracts/client-build.md)，构建并检查 `lib/client.js` lazy-CJS handoff；`dshx check <plugin>` 必须通过。
 2. 让 package 从活动 profile 可解析。官方本地开发优先 `dsh plugin --profile <p> add <local-dir>` 产生 `link:`；旧 `file:` copy 才用 `sync-artifact`。
 3. `dshx activation-plan <plugin> --change new-client`。
 4. 通过被监听的 profile/home `cordis.patch.yml` 加稳定 Host entry；避免与 bundle 重复挂载。

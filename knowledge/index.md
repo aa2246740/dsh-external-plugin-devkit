@@ -20,6 +20,7 @@ okf_version: "0.2"
 * [Why external](why-external.md) - Creator Mode 为什么写不好可交付插件
 * [Creator Mode+ safe bridge](contracts/creator-mode-plus.md) - dshx 作为受限 preset 插件时的 WebUI 与 supervisor 边界
 * [Live activation matrix](contracts/live-activation.md) - 先区分 patch / manifest / preset / client / new-client / server / artifact
+* [RC8 external client build](contracts/client-build.md) - 官方 workspace helper 与外部 `my-plugins/*` 的边界
 * [Recommended loop](playbooks/external-loop.md) - `dshx` 闭环
 
 # 合同（先于教程）

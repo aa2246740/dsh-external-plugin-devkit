@@ -4,6 +4,7 @@
 * [Explore the knowledge base](explore-kb.md) - index → symptoms → cat；search 之后必须 cat
 * [First-time setup](setup-workshop.md) - 一句话 prompt / `dshx setup`
 * [Init a plugin](init-plugin.md) - 脚手架
+* [Build an RC8 external client](../contracts/client-build.md) - `my-plugins/*` 使用 dshx `externalClientBundle`
 * [Add a settings card](settings-card.md) - rc.7 官方设置卡片
 * [Check a plugin](check-plugin.md) - 静态合同；default export / 绝对路径会红
 * [Hot-reconcile a config entry](hot-config-entry.md) - watched patch，同 PID mount/unmount/reconfigure
@@ -15,6 +16,6 @@
 * [Verify an isolated cold boot](verify-boot.md) - dump + marker + HTTP；不是 live activation
 * [Headless boot](headless-boot.md) - `--task` 一次性宿主，不是新会话急救
 * [New session after error](new-session.md) - 400 / running
-* [Diagnose model UX](diagnose-model-ux.md) - 超时 / 两次重试后停
+* [Diagnose model UX](diagnose-model-ux.md) - 超时 / retry 预算耗尽；RC8 默认五次
 * [Persist files, not memory](persist-files.md) - 交付物是磁盘
 * [Synchronize an artifact](ship-plugin.md) - link: / legacy file:；不证明 live activation

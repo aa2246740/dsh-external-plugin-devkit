@@ -25,7 +25,7 @@ describe('file: helpers', () => {
     writeText(join(tmp, 'package.json'), `${JSON.stringify({
       name: 'demo',
       exports: { './client': './lib/client.js' },
-      dsh: { client: { inject: [] } },
+      dsh: { client: { platform: 'web', inject: [] } },
     }, null, 2)}\n`)
     writeText(join(tmp, 'lib/client.mjs'), 'export {}\n')
     const findings = clientEntryFindings(tmp)
@@ -43,7 +43,7 @@ export function apply() { console.log('[my-plugins/panel] loaded') }
     writeText(join(dir, 'package.json'), `${JSON.stringify({
       name: 'panel',
       exports: { './client': './lib/client.js' },
-      dsh: { client: { inject: [] } },
+      dsh: { client: { platform: 'web', inject: [] } },
     }, null, 2)}\n`)
     writeText(join(dir, 'lib/client.mjs'), 'export {}\n')
     const findings = checkPlugin(loadPlugin(root, 'panel'), root)
@@ -67,12 +67,26 @@ export function apply() { console.log('[my-plugins/panel] loaded') }
     writeText(join(tmp, 'package.json'), `${JSON.stringify({
       name: 'demo',
       exports: { './client': './lib/client.js' },
-      dsh: { client: { inject: [] } },
+      dsh: { client: { platform: 'web', inject: [] } },
     })}\n`)
     writeText(join(tmp, 'lib/client.js'), 'window.__ModuleLoader__.load({ id: "demo", factory: (require) => ({ apply() {} }) });\n')
     const findings = clientEntryFindings(tmp)
     assert.ok(findings.some(item => item.code === 'client-entry' && item.level === 'ok'), JSON.stringify(findings))
     assert.equal(findings.some(item => item.level === 'error'), false, JSON.stringify(findings))
+  })
+
+  it('rejects RC8 internal clientBundle and a mismatched lazy-CJS id', () => {
+    const tmp = mkdtempSync(join(tmpdir(), 'dshx-client-rc8-'))
+    writeText(join(tmp, 'package.json'), `${JSON.stringify({
+      name: 'demo',
+      exports: { './client': './lib/client.js' },
+      dsh: { client: { platform: 'web', inject: [] } },
+    })}\n`)
+    writeText(join(tmp, 'tsdown.config.ts'), "import { clientBundle } from '../../packages/client/tsdown.client.ts'\n")
+    writeText(join(tmp, 'lib/client.js'), 'window.__ModuleLoader__.load({ id: "other", factory: (require) => ({}) });\n')
+    const findings = clientEntryFindings(tmp)
+    assert.ok(findings.some(item => item.code === 'rc8-external-client-build' && item.level === 'error'), JSON.stringify(findings))
+    assert.ok(findings.some(item => item.code === 'client-entry-id' && item.level === 'error'), JSON.stringify(findings))
   })
 
   it('hashes artifact contents and preserves bundle precedence', () => {

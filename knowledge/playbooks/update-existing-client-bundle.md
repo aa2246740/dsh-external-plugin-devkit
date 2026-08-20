@@ -5,7 +5,7 @@ description: 已在当前页面 loader tree 中的 client 插件，重建 lib/cl
 tags: [client, hmr, browser, bundle]
 aliases: [existing client, client HMR, rebuilt, client hot reload, 前端热更新]
 status: stable
-verified_against: { tag: dsh-v0.1.0-rc.7, sha: 99f6f02fecdb7dff40c3fbc9470f5907c29f74ca }
+verified_against: { tag: dsh-v0.1.0-rc.8, sha: 141eb6fef83422698aef7a981029e843e8161534 }
 sources:
   - id: client-hmr-host
     resource: packages/client/hmr/src/index.ts
@@ -21,6 +21,7 @@ sources:
 - `exports["./client"]` 指向构建后的 `lib/client.js`。
 - 产物使用 `window.__ModuleLoader__.load({ id, factory })` lazy-CJS handoff。
 - Web 的 client HMR 行正在运行，并且构建/watch 真正改写了产物 hash。
+- 外部 RC8 package 使用 [dshx externalClientBundle](../contracts/client-build.md)，不直接导入只扫描 `packages/*/*` 的官方 workspace preset。
 
 # 步骤
 

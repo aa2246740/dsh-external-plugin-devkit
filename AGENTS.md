@@ -7,10 +7,10 @@ This project develops file-backed DeepSeek Harness plugins outside Creator Mode.
 The OKF bundle is knowledge/. Start with:
 
 ~~~sh
-pnpm dshx kb cat start-here
-pnpm dshx kb cat maps/symptoms
-pnpm dshx kb search <topic>
-pnpm dshx kb cat <id-from-search>
+dshx kb cat start-here
+dshx kb cat maps/symptoms
+dshx kb search <topic>
+dshx kb cat <id-from-search>
 ~~~
 
 A search snippet is only an id pointer. Read the matched document and its official sources before changing a contract.
@@ -27,14 +27,14 @@ Before any install, ship, HMR, refresh, or restart advice, read knowledge/contra
 ## Use evidence-scoped commands
 
 ~~~sh
-pnpm dshx check <name>
-pnpm dshx verify-boot <name>                         # isolated cold boot only
-pnpm dshx activation-plan <name> --change <branch>  # read-only lifecycle plan
-pnpm dshx sync-artifact <dir>                       # ship/recopy aliases; not activation
-pnpm dshx start web <name>
-pnpm dshx status
-pnpm dshx restart-supervised                        # current owned Web Host only
-pnpm dshx stop
+dshx check <name>
+dshx verify-boot <name>                         # isolated cold boot only
+dshx activation-plan <name> --change <branch>  # read-only lifecycle plan
+dshx sync-artifact <dir>                       # ship/recopy aliases; not activation
+dshx start web <name>
+dshx status
+dshx restart-supervised                        # current owned Web Host only
+dshx stop
 ~~~
 
 verify-boot must never stop an existing Host. sync-artifact must report ARTIFACT_SYNCED; LIVE_ACTIVATION_UNPROVEN. restart-supervised must refuse stale last-host state and headless task reconstruction.

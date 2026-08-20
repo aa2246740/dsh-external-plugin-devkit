@@ -38,4 +38,4 @@ sources:
 
 # preview / rc
 
-本生命周期更新已对照官方 tag `dsh-v0.1.0-rc.7`、SHA `99f6f02fecdb7dff40c3fbc9470f5907c29f74ca`（2026-08-19）。产品仍是 RC；checkout/tag 变化后先重新核对 `profile-boot.ts`、`plugin.ts`、Web patch 和 client HMR 源码，不能只等 `stale_after` 到期。
+本生命周期与 Creator 更新已对照官方 tag `dsh-v0.1.0-rc.8`、SHA `141eb6fef83422698aef7a981029e843e8161534`（2026-08-20）。产品仍是 RC；checkout/tag 变化后先重新核对 `profile-boot.ts`、`plugin.ts`、Web patch、browser boot、client build/HMR 与 Creator composition skill，不能只等 `stale_after` 到期。

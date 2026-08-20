@@ -5,7 +5,7 @@ description: 用 DSH 正在监听的 profile/home cordis.patch.yml 热挂、热�
 tags: [patch, hmr, host, config]
 aliases: [hot config, cordis.patch.yml, 不重启, 热挂载, hot mount, config reconcile]
 status: stable
-verified_against: { tag: dsh-v0.1.0-rc.7, sha: 99f6f02fecdb7dff40c3fbc9470f5907c29f74ca }
+verified_against: { tag: dsh-v0.1.0-rc.8, sha: 141eb6fef83422698aef7a981029e843e8161534 }
 sources:
   - id: profile-boot
     resource: apps/cli/src/profile-boot.ts
