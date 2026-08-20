@@ -2,7 +2,7 @@
 
 **CLI: dshx** — an out-of-process plugin workshop for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness).
 
-dshx helps Cursor, Claude Code, Codex, Grok, and humans build file-backed plugins without confusing Creator Mode memory, artifact delivery, live Host activation, and browser activation.
+dshx helps Cursor, Claude Code, Codex, Grok, and humans build file-backed plugins without confusing session memory, artifact delivery, live Host activation, and browser activation. Its optional Creator Mode+ bridge exposes only fixed safe dshx operations inside the official WebUI; the external CLI remains the supervisor.
 
 This project is unofficial. It is not dsh, not a Harness fork, and not a plugin pack. Official dsh doctor does not exist; dshx doctor is this workshop's diagnostic command.
 
@@ -35,12 +35,35 @@ There is no universal “hot reload” operation:
 |---|---|---|
 | Watched profile/home cordis.patch.yml | Reconciles in the same PID | New client rows still need page reload |
 | package.json / dsh.profile.bundles | Takes effect on the next Host boot | Verify after boot |
+| User `.agent-presets/<id>` | Re-discovered without a Host restart | Use a new/blank session; reload only if the roster is cached |
 | Existing client lib/client.js | Client HMR can replace the entry | Same page; plugin local React state resets |
 | New client entry | Host patch can activate without restart | Reload/reopen the page |
 | Server module | Restart by default unless exact module HMR is tested | Verify separately |
 | Artifact copy/link only | No activation claim | No activation claim |
 
 The authoritative explanation and official source pointers are in [knowledge/contracts/live-activation.md](knowledge/contracts/live-activation.md).
+
+## Optional Creator Mode+
+
+Creator Mode+ makes this package itself a preset-scoped DSH plugin through the
+`dsh-external-plugin-devkit/creator-plus` export. It supports the official DSH
+browser WebUI and public Cordis/client extension points. App-shell IPC, native
+menus, window chrome, and wrapper-specific refresh behavior are outside the
+compatibility boundary.
+
+~~~sh
+# From the Harness checkout. This writes a plain profile dependency, not a bundle.
+pnpm dsh plugin --profile web add link:./tools/dshx
+
+# Refuses to overwrite an existing user preset.
+DSHX_HARNESS="$PWD" pnpm --dir tools/dshx install:creator-plus
+~~~
+
+Open or refresh the official WebUI only if its preset roster was already cached,
+select **Creator Mode+**, and start a new or still-blank session. No Host restart
+is required for preset discovery. The bridge exposes only `dshx_scaffold`,
+`dshx_check`, `dshx_activation_plan`, and `dshx_status`; it exposes no arbitrary
+shell/argv/path operation and no start, stop, or restart operation.
 
 ## Development flow
 
@@ -111,6 +134,8 @@ Report only what was observed:
 SOURCE_BUILT
 ARTIFACT_SYNCED
 NEXT_BOOT_REGISTERED
+PRESET_ROSTER_VISIBLE
+PRESET_SESSION_ACTIVE
 HOST_TREE_ACTIVE
 CLIENT_LOADED
 VISUAL_BEHAVIOR_VERIFIED
@@ -123,7 +148,7 @@ Package installation, dump-config, HTTP 200, and a cold-boot marker do not subst
 - Never kill or restart DSH from inside a Harness session.
 - Never mount the same plugin through both bundle and user-patch rows.
 - Never commit .env, .dshx/, secrets, or machine-absolute plugin paths.
-- Creator Mode cordis_define / cordis_run packages are process-memory probes, not profile-plugin delivery.
+- Original Creator Mode cordis_define / cordis_run packages are process-memory probes, not profile-plugin delivery. Creator Mode+ is a separate user preset backed by file-based dshx operations.
 - A session already scarred by an orphan tool_call needs a new session.
 
 ## Knowledge bundle

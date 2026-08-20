@@ -6,12 +6,12 @@ import type { CliOptions, Finding } from '../internal/types.ts'
 export function cmdActivationPlan(args: string[], options: CliOptions, root: string): number {
   const raw = args[0]
   if (!raw) {
-    printReport(report('activation-plan', [finding('error', 'usage', 'dshx activation-plan <plugin|package-dir> [--change patch|manifest|client|new-client|server|artifact]')]), options.json)
+    printReport(report('activation-plan', [finding('error', 'usage', 'dshx activation-plan <plugin|package-dir> [--change patch|manifest|preset|client|new-client|server|artifact]')]), options.json)
     return 1
   }
   if (options.change !== undefined && !isActivationChange(options.change)) {
     printReport(report('activation-plan', [finding('error', 'change', `unsupported --change ${options.change}`, {
-      hint: 'use patch, manifest, client, new-client, server, or artifact',
+      hint: 'use patch, manifest, preset, client, new-client, server, or artifact',
     })]), options.json)
     return 1
   }
@@ -50,11 +50,11 @@ export function cmdActivationPlan(args: string[], options: CliOptions, root: str
 
     if (!options.change) {
       findings.push(finding('info', 'change-required', 'inventory complete; choose the changed surface before acting', {
-        hint: 'rerun with --change patch|manifest|client|new-client|server|artifact',
+        hint: 'rerun with --change patch|manifest|preset|client|new-client|server|artifact',
       }))
       const result = report('activation-plan', findings, {
         facts,
-        branches: ['patch', 'manifest', 'client', 'new-client', 'server', 'artifact'],
+        branches: ['patch', 'manifest', 'preset', 'client', 'new-client', 'server', 'artifact'],
       })
       printReport(result, options.json)
       return result.ok ? 0 : 1

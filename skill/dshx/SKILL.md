@@ -11,7 +11,7 @@ description: >-
 
 # dshx
 
-Use `dshx` for profile-scoped, file-backed plugins developed outside Creator Mode. Do not transfer Creator Mode's in-memory lifecycle assumptions to external packages.
+Use `dshx` for profile-scoped, file-backed plugins developed by an external agent or through the optional Creator Mode+ safe bridge. The CLI outside DSH is always the supervisor; Creator Mode+ exposes fixed scaffold/check/plan/status tools but never process control. Do not transfer the original Creator Mode's in-memory lifecycle assumptions to external packages.
 
 ## Resolve the checkout
 
@@ -53,6 +53,7 @@ Choose exactly one changed-surface branch:
 |---|---|---|---|
 | `patch` | Edit the watched profile/home `cordis.patch.yml`; verify Host-tree reconcile | No | Only if this adds a client entry |
 | `manifest` | Update profile dependency / `dsh.profile.bundles`; verify after the next boot | Yes | Verify client separately |
+| `preset` | Write a user-owned preset, then verify it in a new/blank session | No | Only if the current page cached the roster |
 | `client` | Rebuild an already-rostered `lib/client.js`; observe client HMR and same-page behavior | No | No; plugin React-local state resets |
 | `new-client` | Hot-activate the Host patch entry, then reload/reopen the page for the new graph row | No | Yes |
 | `server` | Sync server artifact, then restart the current supervised Host unless exact module HMR is tested | Yes by default | Conditional |
@@ -63,6 +64,7 @@ Choose exactly one changed-surface branch:
 Read only the selected branch:
 
 - `patch` → `kb cat playbooks/hot-config-entry`
+- `preset` → `kb cat playbooks/activate-user-preset`
 - `client` → `kb cat playbooks/update-existing-client-bundle`
 - `new-client` → `kb cat playbooks/add-new-client-plugin`
 - `server` → `kb cat playbooks/restart-server-plugin`

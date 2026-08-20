@@ -2,11 +2,12 @@ export const HELP = `dshx — DeepSeek Harness 进程外插件工作台
 
 先判生命周期，不要把“热重载”当成一个动作
   dshx kb cat contracts/live-activation
-  dshx activation-plan <plugin> --change patch|manifest|client|new-client|server|artifact
+  dshx activation-plan <plugin> --change patch|manifest|preset|client|new-client|server|artifact
 
 分支
   patch       真实 profile/home cordis.patch.yml 被监听；Host 同 PID 热重组
   manifest    package.json / dsh.profile.bundles 是下次启动组合；需要 Host restart
+  preset      用户 preset 每次重新发现；Host 不重启，使用新会话，已缓存名单时刷新页面
   client      当前页面已有 entry 的 lib/client.js；client HMR，不重启 Host、不刷新页面
   new-client  Host entry 可热挂；旧页面不采纳 graph 新行，必须刷新/重开页面
   server      Web 默认不承诺 server module HMR；无专项证据则受控重启
@@ -59,7 +60,7 @@ export const HELP = `dshx — DeepSeek Harness 进程外插件工作台
   --keep                         verify-boot 成功后保留它刚启动的 Host
   --force                        init 覆盖脚手架；start/verify 不应用来抢陌生端口
   --kind function|tool|client|object|class
-  --change patch|manifest|client|new-client|server|artifact
+  --change patch|manifest|preset|client|new-client|server|artifact
   --harness <path>
   --dry-run / --print-prompt
   --task "..."
@@ -77,7 +78,7 @@ export const LOOP = `外部插件开发闭环
    pnpm dshx kb cat contracts/live-activation
 
 2. 明确改动面并只选一个分支
-   pnpm dshx activation-plan <plugin> --change patch|manifest|client|new-client|server|artifact
+   pnpm dshx activation-plan <plugin> --change patch|manifest|preset|client|new-client|server|artifact
 
 3. 写和静态检查
    pnpm dshx init <name> --kind function|tool|client|object|class
@@ -93,6 +94,7 @@ export const LOOP = `外部插件开发闭环
 
 6. 执行已选分支
    patch      → kb cat playbooks/hot-config-entry
+   preset     → kb cat playbooks/activate-user-preset
    client     → kb cat playbooks/update-existing-client-bundle
    new-client → kb cat playbooks/add-new-client-plugin
    server     → kb cat playbooks/restart-server-plugin

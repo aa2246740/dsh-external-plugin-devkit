@@ -7,6 +7,7 @@
 * [Add a settings card](settings-card.md) - rc.7 官方设置卡片
 * [Check a plugin](check-plugin.md) - 静态合同；default export / 绝对路径会红
 * [Hot-reconcile a config entry](hot-config-entry.md) - watched patch，同 PID mount/unmount/reconfigure
+* [Activate a user preset](activate-user-preset.md) - Host 不重启；新会话验证 preset generation
 * [Update an existing client bundle](update-existing-client-bundle.md) - rebuilt + 同页面行为；无需 Host restart
 * [Add a new client plugin](add-new-client-plugin.md) - Host 热挂后刷新/重开页面
 * [Restart a server plugin](restart-server-plugin.md) - module 变更的安全默认分支

@@ -45,7 +45,9 @@ stale_after: 2026-11-17
 | `plugin remove` 后 profile 起不来 | [leftover-bundles](/pitfalls/leftover-bundles.md) | `dshx doctor` |
 | `file:` add 显示 Already up to date，页面仍是旧包 | [file-copy-stale](/pitfalls/file-copy-stale.md) | [ship-plugin](/playbooks/ship-plugin.md)、`dshx ship` |
 | plugin add / ship 成功但当前 Host 没生效 | [installed-is-not-live](/pitfalls/installed-is-not-live.md) | [live-activation](/contracts/live-activation.md)、`dshx activation-plan` |
-| 问热重载/热插拔/不重启该怎么做 | [live-activation](/contracts/live-activation.md) | 按 patch / manifest / client / new-client / server 分支走 |
+| 问热重载/热插拔/不重启该怎么做 | [live-activation](/contracts/live-activation.md) | 按 patch / manifest / preset / client / new-client / server 分支走 |
+| 新增 Creator Mode / 用户 preset 是否要重启 | [activate-user-preset](/playbooks/activate-user-preset.md) | Host 不重启；名单必要时刷新；用新会话验证 |
+| Creator Mode+ 支持哪些 App 壳、supervisor 是谁 | [creator-mode-plus](/contracts/creator-mode-plus.md) | 只验官方浏览器 WebUI；外部 dshx 是 supervisor |
 | 新 client Host 已挂上但旧页面不显示 | [new-client-entry-needs-page-reload](/pitfalls/new-client-entry-needs-page-reload.md) | [add-new-client-plugin](/playbooks/add-new-client-plugin.md)，刷新/重开页面 |
 | 已有 client 改完想同页面热更新 | [update-existing-client-bundle](/playbooks/update-existing-client-bundle.md) | 验 `rebuilt` + UI；不要重启 Host |
 | server module 代码改了 | [restart-server-plugin](/playbooks/restart-server-plugin.md) | 无专项 module-HMR 证据就受控重启 |

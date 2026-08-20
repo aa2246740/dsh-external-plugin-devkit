@@ -18,7 +18,8 @@ okf_version: "0.2"
 * [Symptom index](maps/symptoms.md) - 超时 / 400 / dump 假阴性等现象 → 该 cat 哪篇
 * [OKF practice](maps/okf-practice.md) - 为什么拆散、index 怎么走、search 之后必须 cat
 * [Why external](why-external.md) - Creator Mode 为什么写不好可交付插件
-* [Live activation matrix](contracts/live-activation.md) - 先区分 patch / manifest / client / new-client / server / artifact
+* [Creator Mode+ safe bridge](contracts/creator-mode-plus.md) - dshx 作为受限 preset 插件时的 WebUI 与 supervisor 边界
+* [Live activation matrix](contracts/live-activation.md) - 先区分 patch / manifest / preset / client / new-client / server / artifact
 * [Recommended loop](playbooks/external-loop.md) - `dshx` 闭环
 
 # 合同（先于教程）

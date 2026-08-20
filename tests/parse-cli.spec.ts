@@ -55,4 +55,9 @@ describe('parseCli', () => {
     assert.deepEqual(verify.args, ['demo'])
     assert.equal(verify.options.keep, true)
   })
+
+  it('parses the user-preset lifecycle branch', () => {
+    const plan = parseCli(['activation-plan', 'dsh-creator-plus', '--change', 'preset'])
+    assert.equal(plan.options.change, 'preset')
+  })
 })

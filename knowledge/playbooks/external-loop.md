@@ -18,7 +18,7 @@ sources:
 # 步骤
 
 1. 读 [live activation](../contracts/live-activation.md)。如果是 bug，再从 [symptoms](../maps/symptoms.md) 找对应合同。
-2. 明确改动面：patch / manifest / client / new-client / server / artifact，只选一个。
+2. 明确改动面：patch / manifest / preset / client / new-client / server / artifact，只选一个。
 3. 初始化或编辑磁盘文件。
 
 ~~~sh
@@ -64,4 +64,5 @@ pnpm dshx activation-plan demo --change patch
 - [hot-config-entry](hot-config-entry.md)
 - [update-existing-client-bundle](update-existing-client-bundle.md)
 - [add-new-client-plugin](add-new-client-plugin.md)
+- [activate-user-preset](activate-user-preset.md)
 - [restart-server-plugin](restart-server-plugin.md)

@@ -17,7 +17,7 @@ export interface Report {
 
 export type PluginKind = 'function' | 'tool' | 'client' | 'object' | 'class'
 export type ProfileName = 'web' | 'headless'
-export type ActivationChange = 'patch' | 'manifest' | 'client' | 'new-client' | 'server' | 'artifact'
+export type ActivationChange = 'patch' | 'manifest' | 'preset' | 'client' | 'new-client' | 'server' | 'artifact'
 
 export interface PluginManifest {
   id: string

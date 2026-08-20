@@ -27,7 +27,7 @@ pnpm dshx ship /absolute/path/to/package       # compatibility alias
 - lib/ 用内容 hash 核验，不再用容易误判的 mtime。
 - 成功固定结束为 ARTIFACT_SYNCED; LIVE_ACTIVATION_UNPROVEN。
 
-ship --restart 已禁用。下一步必须单独运行 activation-plan --change patch|manifest|client|new-client|server|artifact。
+ship --restart 已禁用。下一步必须单独运行 activation-plan --change patch|manifest|preset|client|new-client|server|artifact。
 
 # 完成标准
 

@@ -20,6 +20,13 @@ describe('activation lifecycle decisions', () => {
     assert.equal(decision.hostRestart, 'required')
   })
 
+  it('discovers a user preset without restarting but requires a new session generation', () => {
+    const decision = activationDecision('preset', facts)
+    assert.equal(decision.hostRestart, 'not-required')
+    assert.equal(decision.browserReload, 'conditional')
+    assert.match(decision.proof.join(' '), /new session|blank session/)
+  })
+
   it('separates existing and new client entries', () => {
     const existing = activationDecision('client', facts)
     assert.equal(existing.hostRestart, 'not-required')

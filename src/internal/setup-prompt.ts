@@ -8,9 +8,9 @@ export const SETUP_PROMPT_EN = [
   ' If several Harness checkouts exist, stop and ask. Do not start or kill dsh. Do not hardcode another machine’s path.',
 ].join('')
 
-export const DAILY_PROMPT_ZH = '用 dshx 做这个 DSH 插件：先读 contracts/live-activation，把改动归入 patch / manifest / client / new-client / server / artifact 之一，再 check、按需 verify-boot / sync-artifact，并只执行该分支要求的 reload 或 restart。不要把 artifact sync 当 live activation。'
+export const DAILY_PROMPT_ZH = '用 dshx 做这个 DSH 插件：先读 contracts/live-activation，把改动归入 patch / manifest / preset / client / new-client / server / artifact 之一，再 check、按需 verify-boot / sync-artifact，并只执行该分支要求的 reload、new session 或 restart。不要把 artifact sync 当 live activation。'
 
-export const DAILY_PROMPT_EN = 'Use dshx for this DSH plugin: read contracts/live-activation, classify the change as patch / manifest / client / new-client / server / artifact, then check and use verify-boot or sync-artifact only when needed. Perform only the reload or restart required by that branch; artifact sync is not live activation.'
+export const DAILY_PROMPT_EN = 'Use dshx for this DSH plugin: read contracts/live-activation, classify the change as patch / manifest / preset / client / new-client / server / artifact, then check and use verify-boot or sync-artifact only when needed. Perform only the reload, new session, or restart required by that branch; artifact sync is not live activation.'
 
 export const DSHX_CLONE_URL = 'https://github.com/aa2246740/dsh-external-plugin-devkit.git'
 

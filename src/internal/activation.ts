@@ -45,7 +45,7 @@ export interface ActivationDecision {
   proof: string[]
 }
 
-const CHANGES = new Set<ActivationChange>(['patch', 'manifest', 'client', 'new-client', 'server', 'artifact'])
+const CHANGES = new Set<ActivationChange>(['patch', 'manifest', 'preset', 'client', 'new-client', 'server', 'artifact'])
 
 export function isActivationChange(value: string | undefined): value is ActivationChange {
   return value !== undefined && CHANGES.has(value as ActivationChange)
@@ -171,6 +171,24 @@ export function activationDecision(change: ActivationChange, facts: Pick<Activat
       blockers: [],
       preconditions: ['package installation and bundle ordering complete without duplicate loader ids'],
       proof: ['profile manifest records the dependency/bundle', 'a new host boot contains the entry', 'verify browser behavior separately for client packages'],
+    }
+  }
+  if (change === 'preset') {
+    return {
+      method: 'user-preset discovery, then a new session generation',
+      hostRestart: 'not-required',
+      browserReload: 'conditional',
+      blockers: facts.packageResolvable ? [] : ['a package referenced by the preset is not resolvable from the active profile'],
+      preconditions: [
+        'write a new id under the user preset root; never edit the shipped preset directory',
+        'install every package named by the preset as a plain profile dependency',
+      ],
+      proof: [
+        'the official WebUI roster lists the user preset',
+        'start or switch a blank session to the preset; an already-started session keeps its recorded generation',
+        'invoke one preset-owned tool or observe one preset-owned prompt contribution in that new session',
+        'reload/reopen the WebUI only when its already-loaded roster does not refresh',
+      ],
     }
   }
   if (change === 'client') {

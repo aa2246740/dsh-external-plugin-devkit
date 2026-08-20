@@ -1,5 +1,9 @@
 # Directory Update Log
 
+## 2026-08-20
+
+* **Creator Mode+ bridge (0.3.0)**: exported `dsh-external-plugin-devkit/creator-plus`, added a fail-closed Standard-to-user-preset installer, and exposed only fixed scaffold/check/activation-plan/status tools. Added the official-browser-WebUI compatibility boundary, external-supervisor ownership, and a separate `preset` lifecycle branch requiring a new session but no Host restart.
+
 ## 2026-08-19
 
 * **Lifecycle correction (0.3.0)**: added [live-activation](/contracts/live-activation.md) pinned to official rc.7 SHA `99f6f02`; split watched config HMR, next-boot manifest/bundles, existing-client HMR, new-client page reload, server restart, and artifact-only states. Added `activation-plan`, `verify-boot`, `sync-artifact`, and `restart-supervised` semantics; removed automatic Host stops/restarts; added link:/hash/order/rollback guards and lazy-CJS client checks.

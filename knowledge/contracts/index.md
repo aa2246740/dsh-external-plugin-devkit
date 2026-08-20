@@ -17,7 +17,7 @@
 
 # 合成与验证
 
-* [Live activation](live-activation.md) - patch / manifest / client / new-client / server / artifact 六分支
+* [Live activation](live-activation.md) - patch / manifest / preset / client / new-client / server / artifact 七分支
 * [Composition](composition.md) - profile / bundle / patch
 * [dump-config](dump-config.md) - 离线拼树，不挂 Loader
 * [patch overlay](patch-overlay.md) - `--patch` 与绝对 name
@@ -29,6 +29,7 @@
 * [Persistence](persistence.md) - 中断回合与 JSONL
 * [Turn error](turn-error.md) - CLOSED `reason:error` 不会自愈
 * [Creator Mode](creator-mode.md) - preset `cordis`
+* [Creator Mode+](creator-mode-plus.md) - user preset + fixed dshx bridge; WebUI boundary and supervisor ownership
 
 # LLM（观察实验里搜索为零的那一块）
 

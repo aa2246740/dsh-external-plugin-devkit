@@ -1,7 +1,7 @@
 {
   "name": "dsh-external-plugin-devkit",
   "version": "0.3.0",
-  "description": "Out-of-process plugin devkit for DeepSeek Harness. CLI: dshx. For any external agent — not Creator Mode.",
+  "description": "Out-of-process DeepSeek Harness plugin devkit with an optional WebUI-first Creator Mode+ bridge.",
   "type": "module",
   "license": "MIT",
   "private": false,
@@ -16,8 +16,13 @@
   "bin": {
     "dshx": "./src/cli.ts"
   },
+  "exports": {
+    "./creator-plus": "./src/creator-plus/index.js",
+    "./package.json": "./package.json"
+  },
   "scripts": {
     "dshx": "node --import tsx/esm src/cli.ts",
+    "install:creator-plus": "node scripts/install-creator-plus.mjs",
     "test": "node --import tsx/esm --test tests/*.spec.ts"
   },
   "engines": {
@@ -32,6 +37,9 @@
   ],
   "files": [
     "src",
+    "creator-plus",
+    "scripts/install-creator-plus.mjs",
+    "dshx.yml",
     "knowledge",
     "skill",
     "examples",

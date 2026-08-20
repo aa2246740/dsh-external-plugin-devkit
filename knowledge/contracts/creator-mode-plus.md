@@ -1,0 +1,66 @@
+---
+type: Runtime Contract
+title: Creator Mode+ safe bridge
+description: Creator Mode+ 是 user preset 加 dshx 固定工具桥；官方浏览器 WebUI 是兼容面，外部 CLI 才是 supervisor，DSH 会话不能控制自身进程。
+tags: [creator-mode-plus, preset, webui, supervisor, safety]
+aliases: [Creator Mode+, 创造模式+, dshx plugin, dshx preset, supervisor]
+status: stable
+verified_against: { tag: dsh-v0.1.0-rc.7, sha: 99f6f02fecdb7dff40c3fbc9470f5907c29f74ca, date: 2026-08-20 }
+sources:
+  - id: preset-discovery
+    resource: packages/preset/agent-presets/src/discovery.ts
+    title: User preset discovery
+  - id: preset-mount
+    resource: packages/preset/agent-presets/src/mount.ts
+    title: Bare packages resolve from the Harness profile
+  - id: preset-session
+    resource: packages/preset/agent-presets/src/session.ts
+    title: Session preset generation
+  - id: bridge-tools
+    resource: tools/dshx/src/creator-plus/index.ts
+    title: Fixed Creator Mode+ tool surface
+---
+
+# 与原版创造模式的关系
+
+Creator Mode+ 不修改也不替换 shipped `cordis` preset。它是独立的用户 preset `creator-plus`，把文件化 dshx 工作流带进普通 DSH 会话。原版创造模式的内存包仍不能当作 profile 插件交付物。
+
+# 责任边界
+
+| 角色 | 可以做什么 | 不可以做什么 |
+|---|---|---|
+| Creator Mode+ 会话 | scaffold、check、activation-plan、status | 任意 shell/argv/path；start/stop/restart DSH |
+| 外部 dshx CLI | 文件化构建、静态检查、隔离验证、受控 supervisor 操作 | 把离线结果冒充当前 Host/UI 证据 |
+| 用户 | 批准有影响的激活、重启和回滚 | 不承担插件内部运行时职责 |
+
+这里的 supervisor 是 DSH 进程之外的 dshx/宿主操作者，不是模型会话，也不等于“用户本人一直手工盯着”。用户只负责授权有影响的动作。
+
+# 兼容面
+
+- 支持：官方 DSH 浏览器 WebUI、公开 Cordis 插件形式、公开 client runtime 与 UI slots。
+- 可尝试但不验收：原样嵌入同一 WebUI 的第三方桌面壳。
+- 不支持：App IPC、native menu、window chrome、桌面桥和壳专属刷新事件。
+- 缺陷只有在官方浏览器 WebUI 可复现时，才进入 Creator Mode+ 的兼容性责任。
+
+# 执行链
+
+```text
+official WebUI
+  -> user preset roster
+  -> new/blank Creator Mode+ session
+  -> one of four fixed dshx tools
+  -> child dshx CLI with bounded output
+  -> file-backed plugin and layered evidence
+
+external supervisor
+  -> only the lifecycle branch that was planned
+  -> optional browser reload / Host restart / rollback
+```
+
+# 激活合同
+
+1. profile 只把 `dsh-external-plugin-devkit` 安装为普通依赖；它不是 root bundle。
+2. installer 从当前 shipped Standard 整体复制出用户 preset，精确注入 persona、skill 和固定工具行；拒绝覆盖已有用户 preset。
+3. roster 发现 preset 不需要 Host restart；已开始会话不换 generation，必须用新会话或仍为空白的会话。
+4. 新 client 首次进入页面 graph 时刷新页面；已有 client bundle 后续更新走同页 HMR。
+5. 只按 `SOURCE_BUILT`、`PRESET_ROSTER_VISIBLE`、`PRESET_SESSION_ACTIVE`、`CLIENT_LOADED`、`VISUAL_BEHAVIOR_VERIFIED` 等实际观察层报告。
