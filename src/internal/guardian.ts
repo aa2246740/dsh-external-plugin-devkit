@@ -57,6 +57,7 @@ const HEALTHY_RESET_MS = 30_000
 const RECOVERY_FUSE_MS = 30_000
 const CAUSAL_WINDOW_MS = 15_000
 const GUARDIAN_START_WAIT_MS = 3_000
+const GUARDIAN_HEARTBEAT_FRESH_MS = 15_000
 const APP_RECOVERY_GRACE_MS = 2_000
 const guardianSleepCell = new Int32Array(new SharedArrayBuffer(4))
 
@@ -120,6 +121,10 @@ interface GuardianDependencies {
 interface EnsureDependencies {
   spawnDaemon?: typeof spawn
   waitMs?: number
+  now?: () => number
+  pidAlive?: (pid: number) => boolean
+  terminate?: (pid: number) => void
+  sleep?: (ms: number) => Promise<void>
 }
 
 function iso(now: number): string {
@@ -307,12 +312,41 @@ function acquireStartLock(root: string): () => void {
 
 /** Ensure the deterministic external monitor exists; it never runs inside the DSH Host. */
 export async function ensureGuardian(root: string, dependencies: EnsureDependencies = {}): Promise<GuardianRuntimeState> {
+  const isAlive = dependencies.pidAlive ?? pidAlive
   const existing = readGuardianState(root)
-  if (existing?.pid && pidAlive(existing.pid)) return existing
+  if (existing?.pid && isAlive(existing.pid) && existing.version === DSHX_VERSION) return existing
   const release = acquireStartLock(root)
   try {
-    const raced = readGuardianState(root)
-    if (raced?.pid && pidAlive(raced.pid)) return raced
+    let raced = readGuardianState(root)
+    if (raced?.pid && isAlive(raced.pid)) {
+      if (raced.version === DSHX_VERSION) return raced
+      const now = (dependencies.now ?? Date.now)()
+      const heartbeat = Date.parse(raced.heartbeatAt)
+      if (!Number.isFinite(heartbeat) || heartbeat > now + GUARDIAN_HEARTBEAT_FRESH_MS || now - heartbeat > GUARDIAN_HEARTBEAT_FRESH_MS) {
+        throw new Error(`refusing to replace stale dshx Guardian pid ${raced.pid} (${raced.version}); inspect it externally`)
+      }
+      const terminate = dependencies.terminate ?? ((pid: number) => process.kill(pid, 'SIGTERM'))
+      terminate(raced.pid)
+      const deadline = Date.now() + (dependencies.waitMs ?? 3_000)
+      const sleep = dependencies.sleep ?? ((ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms)))
+      while (Date.now() < deadline) {
+        const current = readGuardianState(root)
+        if (!isAlive(raced.pid)) {
+          if (current?.pid === raced.pid) clearGuardianState(root)
+          break
+        }
+        if (!current || current.pid !== raced.pid) break
+        await sleep(50)
+      }
+      if (isAlive(raced.pid)) {
+        throw new Error(`outdated dshx Guardian pid ${raced.pid} did not stop for ${DSHX_VERSION} handoff`)
+      }
+      raced = readGuardianState(root)
+      if (raced?.pid && isAlive(raced.pid)) {
+        if (raced.version === DSHX_VERSION) return raced
+        throw new Error(`another outdated dshx Guardian pid ${raced.pid} appeared during handoff`)
+      }
+    }
     const packageRoot = dshxPackageRoot()
     const packagePath = join(packageRoot, 'package.json')
     const loader = createRequire(packagePath).resolve('tsx/esm')

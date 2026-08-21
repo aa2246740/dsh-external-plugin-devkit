@@ -1,11 +1,13 @@
 import {
   acknowledgeCreatorIncident,
+  assertCreatorClaim,
   claimCreatorPlugin,
   pendingCreatorIncidents,
   readCreatorClientFailure,
   readCreatorContext,
   releaseCreatorClaim,
 } from '../internal/creator.ts'
+import { scaffoldCreatorPlugin } from './init.ts'
 import {
   adoptOrArmCreatorHost,
   disarmGuardian,
@@ -38,6 +40,28 @@ export async function cmdCreator(args: string[], options: CliOptions, root: stri
           ? finding('info', 'adopted', `adopted the current official Web Host on 127.0.0.1:${armed.host.port}`)
           : finding('info', 'supervised', `using the existing dshx-owned Host on 127.0.0.1:${armed.host.port}`),
       ], { claim, host: armed.host, guardian: armed.guardian }), options.json)
+      return 0
+    }
+
+    if (action === 'scaffold') {
+      const pluginId = args[1]
+      const kind = args[2]
+      if (!pluginId || !kind || args.length !== 3) {
+        throw new Error('usage: dshx creator scaffold <plugin> <function|tool|client|object|class>')
+      }
+      const context = requireContext()
+      assertCreatorClaim(root, pluginId, context)
+      if (!context.workspaceRoot) throw new Error('Creator+ scaffold requires the calling session workspace')
+      const scaffold = scaffoldCreatorPlugin(root, context.workspaceRoot, pluginId, kind)
+      printReport(report('creator scaffold', [
+        finding('ok', 'source', `created ${pluginId} in the writable session workspace`, { path: scaffold.dir }),
+        scaffold.linkPath
+          ? finding('ok', 'my-plugins-link', `linked my-plugins/${pluginId} to the session workspace`, { path: scaffold.linkPath })
+          : finding('info', 'my-plugins-path', `session workspace already contains my-plugins/${pluginId}`),
+        kind === 'client'
+          ? finding('warn', 'client-build-required', 'install dependencies and build lib/client.js before dshx_check')
+          : finding('info', 'next', `run dshx_check for ${pluginId}`),
+      ], { scaffold }), options.json)
       return 0
     }
 
@@ -114,7 +138,7 @@ export async function cmdCreator(args: string[], options: CliOptions, root: stri
       return 0
     }
 
-    throw new Error('usage: dshx creator <watch|claim|status|release|disarm|client-failure|recovery>')
+    throw new Error('usage: dshx creator <watch|claim|scaffold|status|release|disarm|client-failure|recovery>')
   } catch (error) {
     printReport(report('creator', [finding('error', 'creator', error instanceof Error ? error.message : String(error))]), options.json)
     return 1

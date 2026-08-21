@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict'
-import { mkdtempSync, readFileSync } from 'node:fs'
+import { lstatSync, mkdtempSync, readFileSync, realpathSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, it } from 'node:test'
-import { cmdInit } from '../src/commands/init.ts'
+import { cmdInit, scaffoldCreatorPlugin } from '../src/commands/init.ts'
 import { checkPlugin } from '../src/internal/check.ts'
 import { loadJson, parseCli } from '../src/internal/io.ts'
 import { loadPlugin } from '../src/internal/plugin.ts'
@@ -47,5 +47,26 @@ describe('init scaffolds', () => {
     const findings = checkPlugin(loadPlugin(root, 'client-demo'), root)
     assert.ok(findings.some(item => item.code === 'rc8-external-client-build' && item.level === 'ok'), JSON.stringify(findings, null, 2))
     assert.ok(findings.some(item => item.code === 'client-entry' && item.level === 'error'), JSON.stringify(findings, null, 2))
+  })
+
+  it('scaffolds Creator source inside the trusted session workspace and links my-plugins automatically', () => {
+    const root = mkdtempSync(join(tmpdir(), 'dshx-creator-scaffold-root-'))
+    const workspace = mkdtempSync(join(tmpdir(), 'dshx-creator-scaffold-workspace-'))
+    const result = scaffoldCreatorPlugin(root, workspace, 'client-demo', 'client')
+    const source = join(realpathSync(workspace), 'client-demo')
+    const linked = join(root, 'my-plugins/client-demo')
+
+    assert.equal(result.dir, source)
+    assert.equal(result.linkPath, linked)
+    assert.equal(lstatSync(linked).isSymbolicLink(), true)
+    assert.equal(realpathSync(linked), realpathSync(source))
+    assert.equal(loadPlugin(root, 'client-demo').dir, linked)
+
+    const tsconfig = readFileSync(join(source, 'tsconfig.json'), 'utf8')
+    assert.doesNotMatch(tsconfig, /tsconfig\.base\.client|\/Users\//)
+    const buildConfig = readFileSync(join(source, 'tsdown.config.ts'), 'utf8')
+    assert.match(buildConfig, /\.config\/dshx\/harness/)
+    assert.match(buildConfig, /externalClientBundle/)
+    assert.doesNotMatch(buildConfig, new RegExp(root.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
   })
 })

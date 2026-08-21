@@ -81,6 +81,55 @@ describe('Creator Mode+ bridge', () => {
     )
   })
 
+  it('allows the exact argv shape behind every fixed Creator tool and lifecycle hook', async () => {
+    const root = harnessAt(temporaryDirectory('dshx-creator-allowlist-'))
+    const spawned: string[][] = []
+    const spawnProcess = (_command: string, args: string[]) => {
+      spawned.push(args)
+      const child = new EventEmitter() as EventEmitter & {
+        stdout: PassThrough
+        stderr: PassThrough
+        kill(): boolean
+      }
+      child.stdout = new PassThrough()
+      child.stderr = new PassThrough()
+      child.kill = () => true
+      queueMicrotask(() => child.emit('close', 0))
+      return child
+    }
+    const exec = {
+      agent: { id: 'session-a' },
+      callId: 'call-a',
+      rootCallId: 'root-a',
+      signal: new AbortController().signal,
+    }
+    const operations = [
+      ['status'],
+      ['creator', 'claim', 'demo'],
+      ['creator', 'scaffold', 'demo', 'client'],
+      ['check', 'demo'],
+      ['activation-plan', 'demo', '--change', 'new-client'],
+      ['activate-new-client', 'demo', '--profile', 'web', '--port', '43127'],
+      ['creator', 'watch', '--json'],
+      ['creator', 'release', '--json'],
+      ['creator', 'recovery', 'pull', '--json'],
+      ['creator', 'recovery', 'ack', '11111111-1111-4111-8111-111111111111', '--json'],
+    ]
+
+    for (const args of operations) {
+      const result = await runDshx(args, exec, {
+        envRoot: root,
+        configFile: '/missing',
+        cwd: '/missing',
+        moduleDir: '/missing',
+        hostPort: 43127,
+        spawnProcess,
+      })
+      assert.equal(result.exitCode, 0)
+    }
+    assert.deepEqual(spawned.map(argv => argv.slice(3)), operations)
+  })
+
   it('forwards browser failure data with fixed argv and Host-owned identity', async () => {
     const root = harnessAt(temporaryDirectory('dshx-creator-client-failure-'))
     let spawnedArgs: string[] = []
@@ -229,7 +278,7 @@ describe('Creator Mode+ bridge', () => {
       return child
     }
     await runDshx(['status'], {
-      agent: { id: 'session-a' },
+      agent: { id: 'session-a', session: { header: { cwd: '/workspace/demo' } } },
       callId: 'call-a',
       rootCallId: 'root-a',
       signal: new AbortController().signal,
@@ -251,6 +300,7 @@ describe('Creator Mode+ bridge', () => {
       hostParentPid: process.ppid,
       hostPort: 43127,
       bridgeVersion: 2,
+      workspaceRoot: '/workspace/demo',
     })
 
     const incidentId = '11111111-1111-4111-8111-111111111111'

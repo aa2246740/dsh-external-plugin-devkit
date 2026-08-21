@@ -10,7 +10,7 @@ import {
   rmSync,
   writeFileSync,
 } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { dirname, isAbsolute, join, resolve } from 'node:path'
 import {
   creatorActivationLockPath,
   creatorActiveTransactionPath,
@@ -41,6 +41,7 @@ export interface CreatorContext {
   hostParentPid: number
   hostPort: number
   bridgeVersion: number
+  workspaceRoot?: string
 }
 
 export interface CreatorClientFailureReport {
@@ -176,6 +177,13 @@ function positiveInteger(value: unknown, label: string): number {
   return value
 }
 
+function boundedAbsolutePath(value: unknown, label: string): string {
+  if (typeof value !== 'string' || value.length < 1 || value.length > 4_096 || !isAbsolute(value)) {
+    throw new Error(`Creator Mode+ ${label} must be an absolute bounded path`)
+  }
+  return resolve(value)
+}
+
 /** Parse identity stamped by the fixed Creator Mode+ bridge, never by model input. */
 export function readCreatorContext(env: NodeJS.ProcessEnv = process.env): CreatorContext | undefined {
   const encoded = env[CREATOR_CONTEXT_ENV]
@@ -200,6 +208,9 @@ export function readCreatorContext(env: NodeJS.ProcessEnv = process.env): Creato
     hostParentPid: positiveInteger(record.hostParentPid, 'hostParentPid'),
     hostPort,
     bridgeVersion,
+    ...record.workspaceRoot === undefined
+      ? {}
+      : { workspaceRoot: boundedAbsolutePath(record.workspaceRoot, 'workspaceRoot') },
   }
 }
 

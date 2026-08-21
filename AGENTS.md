@@ -30,6 +30,14 @@ When working through Creator Mode+, also read
 call `dshx_claim_plugin` before scaffold/edit/build/check. Different sessions may
 own different plugins concurrently; the same plugin is exclusive, and only the
 short live activation transaction is globally serialized.
+Creator scaffold destinations must come from the immutable session cwd. DSHX,
+not the model or user, owns any required link into Harness `my-plugins`.
+Every release must execute the exact argv behind all six fixed Creator+ tools and
+the internal watch/release/recovery hooks through the bridge allowlist. Tool
+registration alone does not prove the bridge is callable.
+Keep `DSHX_VERSION` equal to `package.json`. `ensureGuardian` may replace a
+fresh, live older Guardian through one bounded handoff; stale or unverifiable
+PID state must fail closed without sending a signal.
 
 ## Use evidence-scoped commands
 
@@ -55,6 +63,7 @@ Scratch work belongs in my-plugins/<name>/; .dshx/ is generated state and must n
 ## Guardrails
 
 - Never kill/restart DSH from inside a Harness session.
+- Treat `refusing an operation outside bridge v2` from a fixed tool as a bridge integrity defect. Preserve the plugin and stop at that tool; never reinterpret it as policy denial, manually mount the plugin, or report downstream success.
 - Treat Guardian recovery steering as a stop-and-repair interrupt: inspect the named incident and quarantined plugin, fix and check it, then retry the original activation branch. Never undo quarantine and repeat unchanged bytes.
 - The external Guardian may recover a failed Host once. The fixed same-origin sentry may recover an official client-Loader failure only after unique attribution, quarantine, and manifest-absence proof. Neither path grants model process control or proves visual/functional behavior.
 - `stop` and `restart-supervised` must refuse a Host adopted from an official launcher or App shell.

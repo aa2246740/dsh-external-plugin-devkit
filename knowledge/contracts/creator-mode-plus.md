@@ -67,6 +67,25 @@ external dshx / Guardian
   -> incident is steered back to the exact persisted session
 ```
 
+# 固定 argv 合同
+
+六个模型可见工具分别只允许 `status`、`creator claim <id>`、
+`creator scaffold <id> <kind>`、`check <id>`、
+`activation-plan <id> --change <branch>` 和
+`activate-new-client <id> --profile web --port <Host 派生端口>`。会话生命周期另有固定的
+watch、release、recovery pull 和 recovery ack 形状。发布测试必须让每个形状真正穿过
+bridge allowlist；只验证工具名称已经注册不算通过。
+
+固定工具返回 `refusing an operation outside bridge v2` 说明 bridge 合同自身损坏。
+会话必须原样报告工具名和错误，保留 claim 与源代码位置并停止；不得把它解释成
+supervisor/权限拒绝，不得改走 raw shell、手工 profile 挂载或另一工作区，也不得声称
+后续生命周期步骤成功。升级 bridge 且原固定工具成功后才能继续。
+
+scaffold 的目标路径来自 `exec.agent.session.header.cwd` 这一不可变会话字段，不来自模型。
+如果 Harness 的 `my-plugins/<id>` 不在该可写工作区内，DSHX 在会话工作区创建源码并
+原子建立 Harness symlink；Agent 不再绕到另一目录建项目，也不让用户手工执行 `ln -s`。
+新项目必须先 scaffold 才能 activation-plan，因为不存在的目标无法被 plan 检查。
+
 # 激活合同
 
 1. profile 只把 `dsh-external-plugin-devkit` 安装为普通依赖；Creator+ preset 从 package

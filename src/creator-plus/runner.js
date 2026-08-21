@@ -4,7 +4,7 @@ import { spawn } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { dirname, join, resolve } from 'node:path'
+import { dirname, isAbsolute, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const MAX_CAPTURE_BYTES = 64 * 1024
@@ -16,16 +16,25 @@ export const CREATOR_BRIDGE_VERSION = 2
 
 function isAllowedArgs(args) {
   if (args.length === 1) return args[0] === 'status'
-  if (args.length === 4) {
-    return args[0] === 'creator'
-      && args[1] === 'recovery'
-      && args[2] === 'pull'
-      && args[3] === '--json'
-  }
+  if (args.length === 2) return args[0] === 'check' && PLUGIN_ID.test(args[1])
   if (args.length === 3) {
     return args[0] === 'creator'
       && ((args[1] === 'claim' && PLUGIN_ID.test(args[2]))
         || ((args[1] === 'watch' || args[1] === 'release') && args[2] === '--json'))
+  }
+  if (args.length === 4) {
+    if (args[0] === 'creator') {
+      return (args[1] === 'recovery'
+          && args[2] === 'pull'
+          && args[3] === '--json')
+        || (args[1] === 'scaffold'
+          && PLUGIN_ID.test(args[2])
+          && KINDS.has(args[3]))
+    }
+    if (!PLUGIN_ID.test(args[1])) return false
+    return args[0] === 'activation-plan'
+      && args[2] === '--change'
+      && CHANGES.has(args[3])
   }
   if (args.length === 5) {
     return args[0] === 'creator'
@@ -34,7 +43,6 @@ function isAllowedArgs(args) {
       && /^[0-9a-f-]{36}$/.test(args[3])
       && args[4] === '--json'
   }
-  if (args.length === 2) return args[0] === 'check' && PLUGIN_ID.test(args[1])
   if (args.length === 6 && args[0] === 'activate-new-client' && PLUGIN_ID.test(args[1])) {
     return args[2] === '--profile'
       && args[3] === 'web'
@@ -43,9 +51,7 @@ function isAllowedArgs(args) {
       && Number(args[5]) >= 1
       && Number(args[5]) <= 65_535
   }
-  if (args.length !== 4 || !PLUGIN_ID.test(args[1])) return false
-  if (args[0] === 'init') return args[2] === '--kind' && KINDS.has(args[3])
-  return args[0] === 'activation-plan' && args[2] === '--change' && CHANGES.has(args[3])
+  return false
 }
 
 /** Resolve the current official Web profile's loopback port without accepting model input. */
@@ -69,6 +75,15 @@ function contextFromExecution(exec, hostPort) {
   }
   const callId = typeof exec.callId === 'string' ? exec.callId : undefined
   const rootCallId = typeof exec.rootCallId === 'string' ? exec.rootCallId : callId
+  const workspaceRoot = exec?.agent?.session?.header?.cwd
+  if (workspaceRoot !== undefined && (
+    typeof workspaceRoot !== 'string'
+    || workspaceRoot.length === 0
+    || workspaceRoot.length > 4_096
+    || !isAbsolute(workspaceRoot)
+  )) {
+    throw new Error('dshx/creator-plus: bridge v2 requires an absolute bounded session workspace')
+  }
   return {
     sessionId,
     ...callId ? { callId } : {},
@@ -77,6 +92,7 @@ function contextFromExecution(exec, hostPort) {
     hostParentPid: process.ppid,
     hostPort,
     bridgeVersion: CREATOR_BRIDGE_VERSION,
+    ...workspaceRoot === undefined ? {} : { workspaceRoot: resolve(workspaceRoot) },
   }
 }
 

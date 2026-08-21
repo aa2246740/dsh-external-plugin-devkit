@@ -20,6 +20,15 @@ The bridge repeats the claim before every named operation as a fail-safe. Differ
 sessions may work on different plugins concurrently; the same plugin fails closed
 for a second owner, and only live watched-patch activation is globally serialized.
 Read `kb cat contracts/creator-guardian` for attribution and recovery semantics.
+For a new Creator+ project, call the fixed scaffold immediately after claim. It
+uses the immutable session cwd, returns the only source path the Agent edits, and
+creates the Harness `my-plugins` link when needed. Run activation-plan after that
+target exists and before implementation; existing projects skip scaffold.
+If a fixed tool throws `refusing an operation outside bridge v2`, treat it as a
+Creator Bridge integrity defect: quote the exact tool and error, preserve the
+current plugin location, and stop. It is not permission to use raw dshx, mount the
+plugin manually, move it to another workspace, or infer that the lifecycle step
+succeeded. Retry that fixed tool only after upgrading the bridge.
 
 ## Resolve the checkout
 
@@ -49,7 +58,7 @@ node --import tsx/esm tools/dshx/src/cli.ts <command>
 
 ## Classify activation before acting
 
-When the request involves installation, delivery, HMR, hot-plugging, refresh, or restart, first run:
+When the target already exists and the request involves installation, delivery, HMR, hot-plugging, refresh, or restart, first run:
 
 ```sh
 ./scripts/dshx.sh kb cat contracts/live-activation
@@ -90,13 +99,14 @@ Read only the selected branch:
 ## Develop and prove
 
 1. Read the relevant contract with `kb cat`; a `kb search` snippet is only an id pointer. In Creator Mode+, claim the chosen plugin before changing it.
-2. Edit `my-plugins/<name>/` or the named package. Keep committed `cordis.yml` portable.
-3. For a client package, read `kb cat contracts/client-build`. On RC8, an out-of-tree package must build with dshx `externalClientBundle`; do not import the repository-internal official `clientBundle()` or move the plugin under `packages/`.
-4. Run `check <name>`. Completion: no static contract errors; a client package also passes `client-cordis-inject` and has a built lazy-CJS `lib/client.js` handoff.
-5. Run `verify-boot <name>` only when an isolated cold boot is needed. Completion: marker and Web HTTP pass. It refuses to stop an existing supervised Host and does not prove current-host activation.
-6. If package bytes must reach a profile, run `sync-artifact <dir>` (`ship` is a compatibility alias). Completion: content hash matches; activation remains unproven.
-7. Execute the previously selected activation branch. For `new-client`, use only `activate-new-client`; restart only when a different branch requires it.
-8. Report evidence by layer: `SOURCE_BUILT`, `ARTIFACT_SYNCED`, `NEXT_BOOT_REGISTERED`, `HOST_TREE_ACTIVE`, `CLIENT_LOADED`, `VISUAL_BEHAVIOR_VERIFIED`. Omit unobserved layers.
+2. For a new Creator+ project, use `dshx_scaffold`, then plan the now-resolvable target. Edit only the returned session-workspace path; never ask the user to create a symlink.
+3. For an existing project, edit `my-plugins/<name>/` or the named package. Keep committed `cordis.yml` portable.
+4. For a client package, read `kb cat contracts/client-build`. On RC8, an out-of-tree package must build with dshx `externalClientBundle`; do not import the repository-internal official `clientBundle()` or move the plugin under `packages/`.
+5. Run `check <name>`. Completion: no static contract errors; a client package also passes `client-cordis-inject` and has a built lazy-CJS `lib/client.js` handoff.
+6. Run `verify-boot <name>` only when an isolated cold boot is needed. Completion: marker and Web HTTP pass. It refuses to stop an existing supervised Host and does not prove current-host activation.
+7. If package bytes must reach a profile, run `sync-artifact <dir>` (`ship` is a compatibility alias). Completion: content hash matches; activation remains unproven.
+8. Execute the previously selected activation branch. For `new-client`, use only `activate-new-client`; restart only when a different branch requires it.
+9. Report evidence by layer: `SOURCE_BUILT`, `ARTIFACT_SYNCED`, `NEXT_BOOT_REGISTERED`, `HOST_TREE_ACTIVE`, `CLIENT_LOADED`, `VISUAL_BEHAVIOR_VERIFIED`. Omit unobserved layers.
 
 ## Plugin-form checks
 
@@ -110,6 +120,7 @@ Read only the selected branch:
 
 - Never kill or restart `dsh` from inside a Harness session.
 - A raw `dshx` process launched by a DSH-managed shell (`DSH_SHELL=1`) is still inside the Host boundary. DSHX rejects its mutating/process commands; use the fixed Creator+ tools or an external terminal. Never unset managed environment markers to bypass this guard.
+- A fixed-tool `outside bridge v2` rejection is a bridge defect, not a supervisor denial. Stop at that tool; do not substitute manual profile installation or report downstream success.
 - If a `[Creator+ Guardian incident ...]` steering message arrives, pause the prior task, inspect its confidence/plugin/rollback/log evidence, repair the preserved source, and run `dshx_check` before retrying the same activation branch.
 - Guardian may quarantine and restore a failed Web Host once from outside DSH. Its same-origin browser sentry may also quarantine one uniquely attributed official Loader `FAILED` entry and reload only after the live manifest proves it absent. Neither path makes process control model-facing or proves visual/functional correctness.
 - Manual `stop` / `restart-supervised` must refuse an adopted official Host; normal launcher exit disarms Guardian.

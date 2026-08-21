@@ -20,13 +20,15 @@ import {
 import {
   adoptOrArmCreatorHost,
   armGuardian,
+  ensureGuardian,
   readGuardianControl,
   recoverCreatorClientFailure,
   runGuardianCycle,
+  writeGuardianState,
   type GuardianRuntimeState,
 } from '../src/internal/guardian.ts'
 import { readHostState, writeHostState } from '../src/internal/host.ts'
-import type { HostState } from '../src/internal/types.ts'
+import { DSHX_VERSION, type HostState } from '../src/internal/types.ts'
 
 const roots: string[] = []
 
@@ -156,6 +158,66 @@ describe('Creator+ claims and transactions', () => {
 })
 
 describe('Creator+ Guardian', () => {
+  it('hands a fresh live older Guardian to the current DSHX daemon exactly once', async () => {
+    const harness = root()
+    const now = Date.now()
+    const oldPid = 123_450
+    const nextPid = 123_451
+    let oldAlive = true
+    let terminated: number | undefined
+    writeGuardianState(harness, {
+      pid: oldPid,
+      version: '0.6.1',
+      startedAt: new Date(now - 5_000).toISOString(),
+      heartbeatAt: new Date(now).toISOString(),
+    })
+
+    const state = await ensureGuardian(harness, {
+      now: () => now,
+      pidAlive: pid => pid === oldPid ? oldAlive : pid === nextPid,
+      terminate: pid => {
+        terminated = pid
+        oldAlive = false
+      },
+      sleep: async () => {},
+      spawnDaemon: (() => {
+        writeGuardianState(harness, {
+          pid: nextPid,
+          version: DSHX_VERSION,
+          startedAt: new Date(now).toISOString(),
+          heartbeatAt: new Date(now).toISOString(),
+        })
+        return { pid: nextPid, unref() {} }
+      }) as never,
+    })
+
+    assert.equal(terminated, oldPid)
+    assert.equal(state.pid, nextPid)
+    assert.equal(state.version, DSHX_VERSION)
+  })
+
+  it('refuses to signal an outdated Guardian whose heartbeat cannot prove PID ownership', async () => {
+    const harness = root()
+    const now = Date.now()
+    let terminated = false
+    writeGuardianState(harness, {
+      pid: 123_452,
+      version: '0.6.1',
+      startedAt: new Date(now - 60_000).toISOString(),
+      heartbeatAt: new Date(now - 30_000).toISOString(),
+    })
+
+    await assert.rejects(
+      ensureGuardian(harness, {
+        now: () => now,
+        pidAlive: () => true,
+        terminate: () => { terminated = true },
+      }),
+      /refusing to replace stale dshx Guardian/,
+    )
+    assert.equal(terminated, false)
+  })
+
   it('quarantines an exact browser-loader failure and steers only its owning session', async () => {
     const harness = root()
     const now = Date.now()

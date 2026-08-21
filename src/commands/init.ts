@@ -1,8 +1,10 @@
-import { existsSync } from 'node:fs'
-import { join } from 'node:path'
+import { existsSync, lstatSync, mkdirSync, realpathSync, rmSync, symlinkSync } from 'node:fs'
+import { isAbsolute, join, relative, resolve } from 'node:path'
 import { finding, printReport, report, writeText } from '../internal/io.ts'
 import { pluginsDir } from '../internal/paths.ts'
 import type { CliOptions } from '../internal/types.ts'
+
+const KINDS = new Set(['function', 'tool', 'client', 'object', 'class'])
 
 function functionSource(id: string, marker: string): string {
   return `import type { Context } from '@deepseek-ai/cordis'
@@ -118,6 +120,52 @@ export default externalClientBundle('${id}', ['lib/types/${id}.js'], {
 `
 }
 
+function externalClientTsconfig(): string {
+  return `${JSON.stringify({
+    compilerOptions: {
+      target: 'ES2024',
+      module: 'NodeNext',
+      moduleResolution: 'NodeNext',
+      strict: true,
+      skipLibCheck: true,
+      declaration: true,
+      declarationMap: true,
+      sourceMap: true,
+      rootDir: 'src',
+      outDir: 'lib/types',
+      jsx: 'react-jsx',
+    },
+    include: ['src'],
+  }, null, 2)}\n`
+}
+
+function externalClientBuildConfig(id: string): string {
+  return `import { existsSync, readFileSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { join, resolve } from 'node:path'
+import { pathToFileURL } from 'node:url'
+
+function resolveHarness() {
+  const configured = process.env.DSHX_HARNESS?.trim()
+  const configPath = join(homedir(), '.config/dshx/harness')
+  const recorded = existsSync(configPath) ? readFileSync(configPath, 'utf8').trim() : undefined
+  const roots = [...new Set([configured, recorded].filter(Boolean).map(value => resolve(value)))]
+  if (roots.length !== 1) {
+    throw new Error('dshx client build requires one Harness root from DSHX_HARNESS or ~/.config/dshx/harness')
+  }
+  return roots[0]
+}
+
+const adapter = join(resolveHarness(), 'tools/dshx/src/client-build.js')
+if (!existsSync(adapter)) throw new Error(\`dshx client build adapter not found: \${adapter}\`)
+const { externalClientBundle } = await import(pathToFileURL(adapter).href)
+
+export default externalClientBundle('${id}', ['lib/types/${id}.js'], {
+  clientEntry: 'src/client/index.tsx',
+})
+`
+}
+
 function pascal(id: string): string {
   return id.split('-').filter(Boolean).map(part => part[0]!.toUpperCase() + part.slice(1)).join('')
 }
@@ -154,31 +202,26 @@ export function apply(ctx: Context) {
 `
 }
 
-export function cmdInit(args: string[], options: CliOptions, root: string): number {
-  const name = args[0]
-  const kinds = new Set(['function', 'tool', 'client', 'object', 'class'])
-  if (!name || !/^[a-z][a-z0-9-]*$/.test(name) || !kinds.has(options.kind)) {
-    printReport(report('init', [finding('error', 'usage', 'dshx init <kebab-name> [--kind function|tool|client|object|class]')]), options.json)
-    return 1
+function validateScaffold(name: string | undefined, kind: string): asserts name is string {
+  if (!name || !/^[a-z][a-z0-9-]*$/.test(name) || !KINDS.has(kind)) {
+    throw new Error('usage: dshx init <kebab-name> [--kind function|tool|client|object|class]')
   }
-  const dir = join(pluginsDir(root), name)
-  if (existsSync(dir) && !options.force) {
-    printReport(report('init', [finding('error', 'exists', `already exists: ${dir}`, { hint: 'pass --force to overwrite scaffold files' })]), options.json)
-    return 1
-  }
+}
+
+function writeScaffold(dir: string, name: string, kind: string, externalWorkspace: boolean): { marker: string } {
   const marker = `[my-plugins/${name}] loaded`
   const entry = `src/${name}.ts`
-  const source = options.kind === 'tool'
+  const source = kind === 'tool'
     ? toolSource(name, marker)
-    : options.kind === 'client'
+    : kind === 'client'
       ? clientHostSource(name, marker)
-      : options.kind === 'object'
+      : kind === 'object'
         ? objectSource(name, marker)
-        : options.kind === 'class'
+        : kind === 'class'
           ? classSource(name, marker)
           : functionSource(name, marker)
   writeText(join(dir, entry), source)
-  if (options.kind === 'client') {
+  if (kind === 'client') {
     writeText(join(dir, 'src/client/index.tsx'), clientSource(name))
     writeText(join(dir, 'package.json'), `${JSON.stringify({
       name,
@@ -238,14 +281,14 @@ export function cmdInit(args: string[], options: CliOptions, root: string): numb
         typescript: '^6.0.3',
       },
     }, null, 2)}\n`)
-    writeText(join(dir, 'tsconfig.json'), clientTsconfig())
-    writeText(join(dir, 'tsdown.config.ts'), clientBuildConfig(name))
+    writeText(join(dir, 'tsconfig.json'), externalWorkspace ? externalClientTsconfig() : clientTsconfig())
+    writeText(join(dir, 'tsdown.config.ts'), externalWorkspace ? externalClientBuildConfig(name) : clientBuildConfig(name))
   }
   writeText(join(dir, 'dshx.yml'), [
     `id: ${name}`,
     `entry: ${entry}`,
     `marker: ${JSON.stringify(marker)}`,
-    `kind: ${options.kind}`,
+    `kind: ${kind}`,
     'profile: web',
     '',
   ].join('\n'))
@@ -257,13 +300,14 @@ export function cmdInit(args: string[], options: CliOptions, root: string): numb
     `      name: './${entry}'`,
     '',
   ].join('\n'))
-  const clientNotes = options.kind === 'client' ? [
+  const clientNotes = kind === 'client' ? [
     '',
     'Install this out-of-tree package independently, then build the Host and browser halves:',
     '',
     '```sh',
-    `pnpm --dir my-plugins/${name} install --ignore-workspace`,
-    `pnpm --dir my-plugins/${name} build`,
+    ...externalWorkspace
+      ? ['pnpm install --ignore-workspace', 'pnpm build']
+      : [`pnpm --dir my-plugins/${name} install --ignore-workspace`, `pnpm --dir my-plugins/${name} build`],
     '```',
     '',
     'The generated `tsdown.config.ts` uses dshx `externalClientBundle`; RC8\'s',
@@ -273,7 +317,7 @@ export function cmdInit(args: string[], options: CliOptions, root: string): numb
   writeText(join(dir, 'README.md'), [
     `# ${name}`,
     '',
-    'Scratch plugin. Load it from the repository root with:',
+    'Scratch plugin. Check it through the configured Harness checkout with:',
     '',
     '```sh',
     `dshx check ${name}`,
@@ -282,9 +326,74 @@ export function cmdInit(args: string[], options: CliOptions, root: string): numb
     '```',
     ...clientNotes,
     '',
-    'Read `tools/dshx/knowledge/start-here.md` before changing the contract.',
+    'Read the dshx knowledge bundle before changing the contract.',
     '',
   ].join('\n'))
+  return { marker }
+}
+
+function lexicalExists(path: string): boolean {
+  try {
+    lstatSync(path)
+    return true
+  } catch {
+    return false
+  }
+}
+
+function containsPath(parent: string, child: string): boolean {
+  const rel = relative(parent, child)
+  return rel === '' || (!isAbsolute(rel) && rel !== '..' && !rel.startsWith(`..${process.platform === 'win32' ? '\\' : '/'}`))
+}
+
+export interface CreatorScaffoldResult {
+  dir: string
+  linkPath?: string
+  kind: string
+  marker: string
+}
+
+/** Scaffold into the immutable DSH session workspace and link it into my-plugins when needed. */
+export function scaffoldCreatorPlugin(root: string, workspaceRoot: string, name: string, kind: string): CreatorScaffoldResult {
+  validateScaffold(name, kind)
+  if (!isAbsolute(workspaceRoot) || !existsSync(workspaceRoot)) {
+    throw new Error(`Creator+ session workspace is unavailable: ${workspaceRoot}`)
+  }
+  const workspace = realpathSync(workspaceRoot)
+  const linkPath = resolve(pluginsDir(root), name)
+  const useHarnessPath = containsPath(workspace, linkPath)
+  const dir = useHarnessPath ? linkPath : resolve(workspace, name)
+  if (lexicalExists(dir)) throw new Error(`already exists: ${dir}`)
+  if (!useHarnessPath && lexicalExists(linkPath)) throw new Error(`my-plugins link already exists: ${linkPath}`)
+
+  try {
+    const { marker } = writeScaffold(dir, name, kind, !useHarnessPath)
+    if (!useHarnessPath) {
+      mkdirSync(pluginsDir(root), { recursive: true })
+      symlinkSync(dir, linkPath, 'dir')
+    }
+    return { dir, ...useHarnessPath ? {} : { linkPath }, kind, marker }
+  } catch (error) {
+    if (lexicalExists(dir)) rmSync(dir, { recursive: true, force: true })
+    if (!useHarnessPath && lexicalExists(linkPath)) rmSync(linkPath, { force: true })
+    throw error
+  }
+}
+
+export function cmdInit(args: string[], options: CliOptions, root: string): number {
+  const name = args[0]
+  try {
+    validateScaffold(name, options.kind)
+  } catch {
+    printReport(report('init', [finding('error', 'usage', 'dshx init <kebab-name> [--kind function|tool|client|object|class]')]), options.json)
+    return 1
+  }
+  const dir = join(pluginsDir(root), name)
+  if (existsSync(dir) && !options.force) {
+    printReport(report('init', [finding('error', 'exists', `already exists: ${dir}`, { hint: 'pass --force to overwrite scaffold files' })]), options.json)
+    return 1
+  }
+  const { marker } = writeScaffold(dir, name, options.kind, false)
   const result = report('init', [
     finding('ok', 'scaffold', `created my-plugins/${name}`),
     ...options.kind === 'client'

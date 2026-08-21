@@ -64,7 +64,7 @@ export interface CliOptions {
   harness?: string
 }
 
-export const DSHX_VERSION = '0.6.0'
+export const DSHX_VERSION = '0.6.2'
 export const DEFAULT_PORT = 3080
 export const DEFAULT_TIMEOUT_MS = 60_000
 export const DEFAULT_PROFILE: ProfileName = 'web'

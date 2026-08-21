@@ -2,6 +2,7 @@
 
 ## 2026-08-21
 
+* **Creator+ fixed-tool and workspace repair (0.6.2)**: the scaffold and activation-plan argv now coexist with the four-argument recovery-pull shape instead of being shadowed by it. Scaffold derives the immutable session cwd, creates source inside the writable workspace, and atomically links Harness `my-plugins` when needed. Release tests execute all six model-facing argv forms plus internal lifecycle hooks and enforce package/CLI/Guardian version parity. A fresh live older Guardian is replaced through one bounded external handoff; stale or unverifiable state fails closed. Creator instructions scaffold before planning a new target, consult the knowledge bundle before broad source exploration, and classify `outside bridge v2` as a stop-worthy bridge defect rather than manually mounting or fabricating downstream success.
 * **Generation-safe Creator+ bridge (0.6.1)**: the fixed client-failure route is now one Host-scoped lease broker shared by independently loaded preset generations. The newest live generation handles requests, disposal falls back to another live generation, and the last lease unregisters the route. Managed upgrades preserve the exact `agent.cordis.yml` stamp when its bytes are unchanged, so skill or metadata updates do not create a needless generation. An already-mounted 0.6.0-or-older route needs one external Host restart during this upgrade; future generations are compatible in-process.
 
 ## 2026-08-20

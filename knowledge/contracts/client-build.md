@@ -63,7 +63,12 @@ DSH RC 升级都要重新对照官方 preset、`platform.ts` 和真实 WebUI。
 
 # 最小构建合同
 
-`dshx init <name> --kind client` 生成：
+外部 CLI 的 `dshx init <name> --kind client` 在 Harness `my-plugins` 内生成相对
+adapter 配置。Creator+ 的 `dshx_scaffold` 则在可信会话工作区生成等价的便携配置：
+它从 `DSHX_HARNESS` 或 `~/.config/dshx/harness` 解析唯一 checkout，再加载同一
+`externalClientBundle()`，不会把本机绝对路径写进项目。
+
+Harness 内形状为：
 
 ```ts
 import { externalClientBundle } from '../../tools/dshx/src/client-build.js'
@@ -73,13 +78,22 @@ export default externalClientBundle('<name>', ['lib/types/<name>.js'], {
 })
 ```
 
-然后从 Harness 根执行：
+Harness 内从根执行：
 
 ```sh
 pnpm --dir my-plugins/<name> install --ignore-workspace
 pnpm --dir my-plugins/<name> build
 dshx check <name>
 ```
+
+Creator+ 工作区 scaffold 返回源码目录后，在该目录执行：
+
+```sh
+pnpm install --ignore-workspace
+pnpm build
+```
+
+Harness `my-plugins/<name>` link 已由固定 scaffold 工具建立，不需要用户补命令。
 
 完成条件：Host half 存在、`exports["./client"]` 指向
 `lib/client.js`、产物含 lazy-CJS handoff，并且 `dshx check` 无 client

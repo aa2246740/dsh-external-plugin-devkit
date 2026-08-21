@@ -80,6 +80,10 @@ need that compatibility restart. The bridge exposes only `dshx_claim_plugin`,
 `dshx_scaffold`, `dshx_check`, `dshx_activation_plan`, `dshx_activate_new_client`, and
 `dshx_status`; it exposes no arbitrary
 shell/argv/path operation and no start, stop, or restart operation.
+Release tests execute the exact CLI argv behind all six tools. An
+`outside bridge v2` rejection from a fixed tool is a bridge integrity defect, not
+a permission or supervisor decision; Creator+ preserves the project and stops
+instead of manually mounting it or inventing downstream success.
 The inherited coding shell is not an external supervisor: DSHX detects
 `DSH_SHELL=1` and rejects raw mutating/process commands launched from a model
 shell. This prevents an old or mistaken Creator session from starting a second
@@ -90,6 +94,12 @@ session id and current Host identity. Once a plugin id is known, call
 `dshx_claim_plugin` before editing. Any number of sessions may work on different
 plugins concurrently; the same plugin is exclusive to one session, and only the
 short watched-patch activation section is globally serialized.
+
+For a new project, `dshx_scaffold` derives the immutable session workspace from
+the tool execution context. It creates source there and, when Harness is outside
+that writable root, atomically links the project into `my-plugins`. The Agent can
+edit normally without asking the user for a symlink. The now-existing target is
+then passed to `dshx_activation_plan` before implementation.
 
 `dshx_activate_new_client` is a bounded mutation, not process control. It accepts
 only one `my-plugins` id, takes the current Web port from the running Host, then

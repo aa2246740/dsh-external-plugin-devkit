@@ -20,6 +20,11 @@ dshx init my-service --kind class
 dshx init my-feature --force    # 覆盖已有脚手架文件
 ```
 
+Creator Mode+ 不从模型 shell 运行这些 mutating CLI。固定 `dshx_scaffold` 使用会话的
+可信 cwd：若它不包含 Harness `my-plugins`，源码建在 `<session-cwd>/<name>`，同时由
+DSHX 建立 `my-plugins/<name>` symlink。返回的源码路径是唯一编辑位置；不要另建项目，
+也不要让用户手工补 symlink。新项目 scaffold 成功后再运行 activation-plan。
+
 目录已存在且没有 `--force` 时，`init` 报 `already exists`，不会改文件。
 
 这里的 `--force` **只覆盖脚手架文件**。`start` / `verify` 的 `--force` 是另一回事（不要抢别人的端口），见 [dshx-cli](../references/dshx-cli.md)。搜旗标 `--force` 会先落到那篇，搜 `overwrite` / `already exists` 才是这篇。
