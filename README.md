@@ -65,13 +65,18 @@ pnpm dsh plugin --profile web add link:./tools/dshx
 # Refuses to overwrite an existing user preset.
 DSHX_HARNESS="$PWD" pnpm --dir tools/dshx install:creator-plus
 
-# Future dshx updates: preserve agent.cordis.yml and replace only managed skill/metadata.
+# Future dshx updates: preserve the exact agent.cordis.yml stamp when its bytes
+# are unchanged, and replace only managed skill/metadata.
 DSHX_HARNESS="$PWD" pnpm --dir tools/dshx install:creator-plus -- --upgrade
 ~~~
 
 Open or refresh the official WebUI only if its preset roster was already cached,
 select **Creator Mode+**, and start a new or still-blank session. No Host restart
-is required for preset discovery. The bridge exposes only `dshx_claim_plugin`,
+is required for preset discovery. Since 0.6.1, the fixed Host route is leased
+once per Web Host and is safe when old and new preset generations overlap.
+If 0.6.0 or older is already mounted during the upgrade, restart that Web Host
+once from outside DSH to clear its legacy unshared route; later upgrades do not
+need that compatibility restart. The bridge exposes only `dshx_claim_plugin`,
 `dshx_scaffold`, `dshx_check`, `dshx_activation_plan`, `dshx_activate_new_client`, and
 `dshx_status`; it exposes no arbitrary
 shell/argv/path operation and no start, stop, or restart operation.

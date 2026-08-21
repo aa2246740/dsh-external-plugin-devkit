@@ -50,13 +50,15 @@ Creator+ Guardian 只改变失败后的外部恢复能力，不改变下面任�
 |---|---|---|---|---|
 | profile/home `cordis.patch.yml` | 精确路径 watcher 重新合成配置树 | 同 PID 内按稳定 `id` mount/unmount/reconfigure | 新增 client 行不会自动进入旧页面 | 等热重组并验 Host；新增 client 再刷新页面 |
 | profile `package.json` / `dsh.profile.bundles` | `dsh plugin` 写依赖和下次启动 bundle 清单 | 不重新读 manifest/bundle 层 | 不生效 | 受控重启当前宿主后验证 |
-| 用户 `.agent-presets/<id>` | roster 每次调用都重扫用户根；preset 在 session scope 挂载 | 无需重启；preset 引用的普通依赖须可解析 | 已加载 roster 可能仍是缓存；已开始会话保留其记录的 generation | 必要时刷新/重开页面，并在新会话或空白会话中验 preset 工具/提示词 |
+| 用户 `.agent-presets/<id>` | roster 每次调用都重扫用户根；preset 在 session scope 挂载 | 无需重启；preset 引用的普通依赖须可解析；进程级资源必须跨 generation 安全 | 已加载 roster 可能仍是缓存；已开始会话保留其记录的 generation | 必要时刷新/重开页面，并在新会话或空白会话中验 preset 工具/提示词 |
 | 已在页面 graph 中的 `lib/client.js` | client HMR 发现 hash 变化并发 `rebuilt` | 无需重启 | 同一页面换 fiber；插件 React 本地状态丢失 | 重建产物，观察 rebuilt 与 UI 行为 |
 | 新增 client entry | Host 配置树可热挂；页面 graph 只在 boot 建一次 | 可同 PID 激活 Host 行 | 旧页面忽略 graph 增量 | 刷新/重开页面，再验 client/UI |
 | server module 源码/产物 | 仅在明确配置 module-HMR root 时才可热换 | Web 默认不承诺 module HMR | 不适用 | 除非该面已有专项测试，否则受控重启 |
 | 仅同步 artifact | 文件/链接存在且内容哈希一致 | 未证明 | 未证明 | 先分类真正变更面，再进入对应分支 |
 
 `dsh web` 的兜底 HMR 使用 `root: []`，目的是保证用户 patch 可热更新，不是任意服务端模块热重载。Web bundle 还显式禁用了共享 server-module HMR 行。
+
+“preset 无需重启”以 generation-safe 为前提。RC8 可以在 composition stamp 改变后保留旧 generation，同时 mount 新 generation；preset 内注册的 exact route、singleton service 或其他进程级资源必须使用以 Host/WebServer 为键的跨 generation lease，或放入 Host composition。Managed upgrade 在 composition 内容未变时还必须保留其精确 stamp。若旧版本已经留下不可接管的 unshared 全局资源，这个已存在的 server scar 才需要一次受控重启；它不是正常 preset discovery 的要求。
 
 RC8 把浏览器入口从 `boot.tsx` 重构为 `boot.ts`，但生命周期结论没有反转：
 页面仍在启动时取得初始 graph，已有页面不会凭 Host graph 增量创建一个全新的

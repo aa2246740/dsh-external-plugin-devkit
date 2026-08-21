@@ -1,5 +1,9 @@
 # Directory Update Log
 
+## 2026-08-21
+
+* **Generation-safe Creator+ bridge (0.6.1)**: the fixed client-failure route is now one Host-scoped lease broker shared by independently loaded preset generations. The newest live generation handles requests, disposal falls back to another live generation, and the last lease unregisters the route. Managed upgrades preserve the exact `agent.cordis.yml` stamp when its bytes are unchanged, so skill or metadata updates do not create a needless generation. An already-mounted 0.6.0-or-older route needs one external Host restart during this upgrade; future generations are compatible in-process.
+
 ## 2026-08-20
 
 * **Creator+ Guardian (0.6.0)**: bridge v2 stamps exact session/call/Host provenance, arms an external daemon at every Creator+ session start, and requires one-plugin-per-session claims. Different plugins work concurrently while only live patch mutation is serialized. The Guardian journals exact patch preimages, quarantines a high/probable culprit, gives an App launcher time to restore its own Host, avoids duplicate listeners, restarts once, opens a crash-loop fuse, and steers the durable incident back to the owning session. Control generations prevent an old recovery cycle from overwriting a newer App arm; a Guardian replacement retains the adopted App lifetime. A same-origin browser sentry reports official Loader failures through a Host-stamped fixed route; DSHX reloads only after unique attribution, quarantine, and live-manifest absence. Creator+ does not wrap Host signals, adopted Hosts cannot be manually stopped/restarted by dshx, and a DSH-managed model shell cannot invoke raw mutating/process-control DSHX commands.

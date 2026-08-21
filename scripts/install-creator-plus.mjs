@@ -96,6 +96,7 @@ function creatorComposition(standard) {
 function upgradeManagedAssets(target, root) {
   const composition = join(target, 'agent.cordis.yml')
   let text = existsSync(composition) ? readFileSync(composition, 'utf8') : ''
+  const originalText = text
   const managedRow = `- id: dshx-creator-plus\n  name: ${DEFAULT_PACKAGE}`
   const legacyRow = `- id: dshx-creator-plus\n  name: ${LEGACY_PACKAGE}`
   const managedCount = exactRowCount(text, managedRow)
@@ -110,9 +111,10 @@ function upgradeManagedAssets(target, root) {
   const staging = join(temporaryRoot, 'next')
   const backup = join(temporaryRoot, 'previous')
   let movedOriginal = false
+  let installedNext = false
   try {
-    cpSync(target, staging, { recursive: true, errorOnExist: true })
-    writeFileSync(join(staging, 'agent.cordis.yml'), text)
+    cpSync(target, staging, { recursive: true, errorOnExist: true, preserveTimestamps: true })
+    if (text !== originalText) writeFileSync(join(staging, 'agent.cordis.yml'), text)
     rmSync(join(staging, 'skills/creator-mode-plus'), { recursive: true, force: true })
     cpSync(
       join(packageRoot, 'creator-plus/skills/creator-mode-plus'),
@@ -125,8 +127,14 @@ function upgradeManagedAssets(target, root) {
     renameSync(target, backup)
     movedOriginal = true
     renameSync(staging, target)
+    installedNext = true
+    if (text === originalText) {
+      rmSync(join(target, 'agent.cordis.yml'))
+      renameSync(join(backup, 'agent.cordis.yml'), join(target, 'agent.cordis.yml'))
+    }
   } catch (error) {
-    if (movedOriginal && !existsSync(target) && existsSync(backup)) renameSync(backup, target)
+    if (installedNext && existsSync(target)) rmSync(target, { recursive: true, force: true })
+    if (movedOriginal && existsSync(backup)) renameSync(backup, target)
     throw error
   } finally {
     rmSync(temporaryRoot, { recursive: true, force: true })

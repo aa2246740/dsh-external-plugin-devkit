@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { EventEmitter } from 'node:events'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { PassThrough } from 'node:stream'
@@ -148,6 +148,70 @@ describe('Creator Mode+ bridge', () => {
     })
   })
 
+  it('shares one client-failure route across live preset generations', async () => {
+    const first = await import(`../src/creator-plus/index.js?generation=first-${Date.now()}`)
+    const second = await import(`../src/creator-plus/index.js?generation=second-${Date.now()}`)
+    const releases: Array<() => void> = []
+    let registrations = 0
+    let disposals = 0
+    let route: Record<string, unknown> | undefined
+    let owner: string | undefined
+    const webServer = {
+      port: 43127,
+      register(value: Record<string, unknown>) {
+        if (route !== undefined) throw new Error('duplicate exact route')
+        registrations += 1
+        route = value
+        return () => {
+          route = undefined
+          disposals += 1
+        }
+      },
+    }
+    const context = {
+      webServer,
+      effect(callback: () => () => void) { releases.push(callback()) },
+    }
+
+    first.installClientFailureRoute(context, {
+      runClientFailureDshx: async () => {
+        owner = 'first'
+        return { exitCode: 0, stdout: '{}', stderr: '' }
+      },
+    })
+    second.installClientFailureRoute(context, {
+      runClientFailureDshx: async () => {
+        owner = 'second'
+        return { exitCode: 0, stdout: '{}', stderr: '' }
+      },
+    })
+
+    assert.equal(registrations, 1)
+    const req = new PassThrough() as PassThrough & { method: string; headers: Record<string, string> }
+    req.method = 'POST'
+    req.headers = { origin: 'http://127.0.0.1:43127', host: '127.0.0.1:43127' }
+    const response: { status?: number; body?: string; writeHead(status: number): void; end(body?: string): void } = {
+      writeHead(status) { this.status = status },
+      end(body = '') { this.body = body },
+    }
+    req.end(JSON.stringify({ failedIds: ['demo'], message: 'failed' }))
+    await (route!.handler as (request: unknown, reply: unknown) => Promise<void>)(req, response)
+    assert.equal(owner, 'second')
+
+    releases[1]!()
+    assert.equal(disposals, 0)
+    owner = undefined
+    const fallbackRequest = new PassThrough() as PassThrough & { method: string; headers: Record<string, string> }
+    fallbackRequest.method = 'POST'
+    fallbackRequest.headers = { origin: 'http://127.0.0.1:43127', host: '127.0.0.1:43127' }
+    fallbackRequest.end(JSON.stringify({ failedIds: ['demo'], message: 'failed again' }))
+    await (route!.handler as (request: unknown, reply: unknown) => Promise<void>)(fallbackRequest, response)
+    assert.equal(owner, 'first')
+
+    releases[0]!()
+    assert.equal(disposals, 1)
+  })
+
   it('stamps session provenance and steers only the matching recovery session', async () => {
     const root = harnessAt(temporaryDirectory('dshx-creator-context-'))
     let spawned: Record<string, unknown> | undefined
@@ -284,6 +348,20 @@ describe('Creator Mode+ bridge', () => {
     assert.doesNotMatch(readFileSync(compositionPath, 'utf8'), /dsh-external-plugin-devkit\/creator-plus/)
     assert.match(readFileSync(skillPath, 'utf8'), /dshx_activate_new_client/)
     assert.match(readFileSync(join(target, 'preset.yml'), 'utf8'), /会话认领.*外部 Guardian/)
+  })
+
+  it('keeps the composition stamp stable when an upgrade changes only managed assets', () => {
+    const harnessRoot = harnessAt(temporaryDirectory('dshx-creator-idempotent-harness-'))
+    const dshHome = temporaryDirectory('dshx-creator-idempotent-home-')
+    const target = installCreatorPlus({ harnessRoot, dshHome })
+    const compositionPath = join(target, 'agent.cordis.yml')
+    const before = statSync(compositionPath)
+
+    installCreatorPlus({ harnessRoot, dshHome, upgrade: true })
+
+    const after = statSync(compositionPath)
+    assert.equal(after.size, before.size)
+    assert.equal(after.mtimeMs, before.mtimeMs)
   })
 
   it('refuses an ambiguous bundled Creator+ managed row during upgrade', () => {

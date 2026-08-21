@@ -62,7 +62,7 @@ Choose exactly one changed-surface branch:
 |---|---|---|---|
 | `patch` | Edit the watched profile/home `cordis.patch.yml`; verify Host-tree reconcile | No | Only if this adds a client entry |
 | `manifest` | Update profile dependency / `dsh.profile.bundles`; verify after the next boot | Yes | Verify client separately |
-| `preset` | Write a user-owned preset, then verify it in a new/blank session | No | Only if the current page cached the roster |
+| `preset` | Write a user-owned preset, preserve its composition stamp when bytes are unchanged, then verify it in a new/blank session | No, when process-global resources are generation-safe | Only if the current page cached the roster |
 | `client` | Rebuild an already-rostered `lib/client.js`; observe client HMR and same-page behavior | No | No; plugin React-local state resets |
 | `new-client` | Hot-activate the Host patch entry, then reload/reopen the page for the new graph row | No | Yes |
 | `server` | Sync server artifact, then restart the current supervised Host unless exact module HMR is tested | Yes by default | Conditional |
@@ -116,6 +116,7 @@ Read only the selected branch:
 - Never bypass a failed `activate-new-client` by manually editing profile `package.json` or `cordis.patch.yml`; fix the reported blocker and retry the bounded command.
 - `restart-supervised` may restart only the currently live dshx-owned Web Host. It must not resurrect stale `last-host.json` or reconstruct a headless task.
 - Never mount the same plugin through both a bundle and a user-patch insert.
+- RC8 may keep old and new preset generations alive together. Any exact route, singleton, or other process-global resource owned by a preset must use a Host-scoped cross-generation lease, or move to Host composition. A managed upgrade must preserve the exact `agent.cordis.yml` stamp when its bytes are unchanged.
 - Never treat `dump-config` as a boot or live-Loader proof.
 - `cordis_define` / `cordis_run` are process memory, not a shippable plugin.
 - Do not commit `.env`, `.dshx/`, secrets, or machine-absolute plugin paths.

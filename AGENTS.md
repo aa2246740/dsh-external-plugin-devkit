@@ -59,6 +59,8 @@ Scratch work belongs in my-plugins/<name>/; .dshx/ is generated state and must n
 - The external Guardian may recover a failed Host once. The fixed same-origin sentry may recover an official client-Loader failure only after unique attribution, quarantine, and manifest-absence proof. Neither path grants model process control or proves visual/functional behavior.
 - `stop` and `restart-supervised` must refuse a Host adopted from an official launcher or App shell.
 - Never mount the same plugin through both bundle and user-patch rows.
+- Treat preset generations as concurrent. A process-global exact route or resource mounted by a preset must be shared through a Host-scoped cross-generation lease, or live in the Host composition instead of the session generation.
+- A managed preset upgrade whose `agent.cordis.yml` bytes are unchanged must preserve that file's exact filesystem stamp. Metadata-only work must not manufacture another preset generation.
 - Never call dump-config, HTTP 200, package install, or artifact copy a live activation proof.
 - Never treat cordis_define / cordis_run process memory as delivery.
 - Never commit .env, secrets, .dshx/, or machine-absolute paths.

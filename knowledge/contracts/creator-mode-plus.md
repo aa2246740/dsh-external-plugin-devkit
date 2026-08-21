@@ -72,9 +72,12 @@ external dshx / Guardian
 1. profile 只把 `dsh-external-plugin-devkit` 安装为普通依赖；Creator+ preset 从 package
    root 挂载固定 Host bridge，使同包的 browser sentry 能进入官方 client graph。
 2. installer 从当前 shipped Standard 整体复制出用户 preset，精确注入 persona、skill 和固定工具行；拒绝覆盖已有用户 preset。
-3. roster 发现 preset 不需要 Host restart；已开始会话不换 generation，必须用新会话或仍为空白的会话。
+3. roster 发现 preset 不需要 Host restart；已开始会话不换 generation，必须用新会话或仍为空白的会话。RC8 可能让旧、新 generation 同时存活，因此 preset 中任何进程级 route/resource 必须由 Host-scoped 跨 generation lease 共享，或移到 Host composition。
 4. 新 client 首次进入页面 graph 时刷新页面；已有 client bundle 后续更新走同页 HMR。
-5. 只按 `SOURCE_BUILT`、`PRESET_ROSTER_VISIBLE`、`PRESET_SESSION_ACTIVE`、`CLIENT_LOADED`、`VISUAL_BEHAVIOR_VERIFIED` 等实际观察层报告。
+5. managed upgrade 如果没有改变 `agent.cordis.yml` 内容，必须保留它的精确 filesystem stamp，不能因为 skill/metadata 变化制造一个新 generation。
+6. 只按 `SOURCE_BUILT`、`PRESET_ROSTER_VISIBLE`、`PRESET_SESSION_ACTIVE`、`CLIENT_LOADED`、`VISUAL_BEHAVIOR_VERIFIED` 等实际观察层报告。
+
+Creator+ 0.6.1 的 fixed Loader-failure route 已实现上述 lease：每个 WebServer 只注册一次，最新仍存活的 generation 处理请求，最后一个 generation dispose 才注销。若 0.6.0 或更早版本在升级时已经 mount，它留下的是无法安全接管的旧式 unshared route；外部 supervisor 只需受控重启一次清掉该 scar，之后的升级不再需要这次兼容性重启。
 
 多会话并发、同插件独占、精确事务快照、crash-loop fuse、正常退出与 recovery
 steering 的唯一合同是 [Creator+ Guardian](creator-guardian.md)。这些恢复能力不改变
