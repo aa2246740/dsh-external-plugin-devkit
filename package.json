@@ -55,7 +55,9 @@
     "examples",
     "AGENTS.md",
     "LICENSE",
-    "README.md"
+    "README.md",
+    "README.en.md",
+    "docs/screenshots"
   ],
   "dependencies": {
     "js-yaml": "^4.2.0",
