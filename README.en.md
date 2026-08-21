@@ -8,7 +8,7 @@ Official Creator Mode is for probing a live process. dshx is the other half: wri
 
 ![Local dshx activation-plan run: inventory for the hello plugin, then a patch branch that needs no Host restart and no page reload](docs/screenshots/activation-plan.gif)
 
-That GIF is the local CLI. This machine has a DeepSeek Harness checkout, but Harness dependencies were not installed and the official Web UI was not booted. There is no official window to show.
+That GIF is the local CLI. This machine has a DeepSeek Harness checkout with dependencies installed, so `doctor` and `activation-plan` can run `dump-config`. The official Web UI was not booted. There is no official window to show.
 
 ## Install
 
@@ -27,7 +27,7 @@ You can hand the block above to an Agent. `dshx setup --print-prompt` prints the
 
 ## What it looks like
 
-The five stills below are from the same local run. The `dump-config` errors in `doctor` and `activation-plan` are real: Harness’s own packages were not installed here.
+The five stills below are from the same local run. `dump-config` exited 0 — that is not a boot proof, and the official UI was not opened.
 
 `setup` puts the launcher in place and leaves the Host alone:
 
@@ -39,7 +39,7 @@ The five stills below are from the same local run. The `dump-config` errors in `
 
 `doctor` is a workshop diagnostic. It is not official `dsh doctor` — that command does not exist:
 
-![dshx doctor: Node and the source launcher pass; DSH home is missing; dump-config fails on a missing js-yaml package](docs/screenshots/doctor.png)
+![dshx doctor: Node, the source launcher, and dump-config pass; dump-config is not a boot proof; no Host is supervised](docs/screenshots/doctor.png)
 
 `check` is the on-disk contract. A fresh `init` of `hello` can pass:
 
@@ -47,7 +47,7 @@ The five stills below are from the same local run. The `dump-config` errors in `
 
 `activation-plan` reads disk facts, then takes one changed surface. This run chose `patch`: reconcile in place, do not restart the Host:
 
-![dshx activation-plan hello --change patch: method is watched cordis.patch.yml; host-restart and browser-reload are not-required; dump-config is still red](docs/screenshots/activation-plan.png)
+![dshx activation-plan hello --change patch: method is watched cordis.patch.yml; host-restart and browser-reload are not-required](docs/screenshots/activation-plan.png)
 
 ## There is no universal hot reload
 

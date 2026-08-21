@@ -8,7 +8,7 @@ DeepSeek Harness 的进程外插件工作台。给 Cursor、Claude Code、Codex�
 
 ![在本机跑 dshx activation-plan：先打出 hello 插件的盘上事实，再给出 patch 分支——Host 不用重启，页面也不用刷新](docs/screenshots/activation-plan.gif)
 
-上面是本机刚跑过的 CLI。这台机器有一份 DeepSeek Harness 源码，但没装齐依赖，官方 Web UI 没有起来，所以没有官方窗口。
+上面是本机刚跑过的 CLI。这台机器有一份 DeepSeek Harness 源码，依赖也装上了，所以 `doctor` / `activation-plan` 能跑 `dump-config`。官方 Web UI 没有起来，所以没有官方窗口。
 
 ## 装上就能用
 
@@ -27,7 +27,7 @@ dshx which && dshx doctor
 
 ## 它实际长这样
 
-下面五张也是同一次本机演示。`doctor` 和 `activation-plan` 里的 `dump-config` 报错是真的：Harness 自己的包还没装。
+下面五张也是同一次本机演示。`dump-config` 通过了——这不是 boot 证明，官方界面也没开。
 
 `setup` 装好 launcher，不碰 Host：
 
@@ -39,7 +39,7 @@ dshx which && dshx doctor
 
 `doctor` 是工作台诊断，不是官方 `dsh doctor`（那个命令不存在）：
 
-![dshx doctor：Node 和源码 launcher 通过；DSH home 还没有；dump-config 因缺 js-yaml 失败](docs/screenshots/doctor.png)
+![dshx doctor：Node、源码 launcher、dump-config 都通过；dump-config 不是 boot 证明；没有在监督 Host](docs/screenshots/doctor.png)
 
 `check` 看的是落盘合同。刚 `init` 出来的 `hello` 可以通过：
 
@@ -47,7 +47,7 @@ dshx which && dshx doctor
 
 `activation-plan` 只读盘上事实，然后只选一个变更面。这次是 `patch`：热重组，不重启 Host：
 
-![dshx activation-plan hello --change patch：activation-method 是 watched cordis.patch.yml；host-restart / browser-reload 都是 not-required；dump-config 仍然红着](docs/screenshots/activation-plan.png)
+![dshx activation-plan hello --change patch：activation-method 是 watched cordis.patch.yml；host-restart / browser-reload 都是 not-required](docs/screenshots/activation-plan.png)
 
 ## 没有万能热重载
 
