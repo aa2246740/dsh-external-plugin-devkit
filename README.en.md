@@ -4,11 +4,15 @@
 
 An out-of-process plugin workshop for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness). For Cursor, Claude Code, Codex, Grok, and humans.
 
-Official Creator Mode is for probing a live process. dshx is the other half: write the plugin as files, check the contract, name the layer you changed, then decide whether the Host restarts or the page reloads. It is not `dsh`, not a Harness fork, and not a plugin pack.
+Official Creator Mode is for probing a live process. dshx is the other half: write the plugin as files, check the contract, name the layer you changed, then decide whether the Host restarts or the page reloads. **It is not `dsh`, not a Harness fork, and not a Creator Mode replacement.**
 
-![Local dshx activation-plan run: inventory for the hello plugin, then a patch branch that needs no Host restart and no page reload](docs/screenshots/activation-plan.gif)
+0.7.0 adds a transactional update assistant: official release, candidate build, plugin cold boot, and exact rollback as separate gates. It **does not** restart a production Host for you.
 
-That GIF is the local CLI. This machine has a DeepSeek Harness checkout with dependencies installed, so `doctor` and `activation-plan` can run `dump-config`. The official Web UI was not booted. There is no official window to show.
+![Local xfce4-terminal: `dshx update plan` (rc.8 → rc.2), then `dshx update verify --target dsh-v0.1.1-rc.2`; hello plugin cold-boot passed](docs/screenshots/update-plan.gif)
+
+*2026-08-25 · machine `cursor` (Linux) · `dshx update plan` → `dshx update verify --target dsh-v0.1.1-rc.2`*
+
+That GIF is the local CLI. The Harness checkout is `dsh-v0.1.0-rc.8` with dependencies installed, so `doctor`'s `dump-config` can run. The official Web UI was not booted. There is no official window to show. `dump-config` exiting 0 is not a boot proof.
 
 ## Install
 
@@ -17,50 +21,89 @@ cd /path/to/deepseek-harness
 git clone https://github.com/aa2246740/dsh-external-plugin-devkit.git tools/dshx
 node --import tsx/esm tools/dshx/src/cli.ts setup --harness "$PWD"
 dshx which && dshx doctor
+dshx update plan
 ```
 
-`setup` installs a user launcher and the skill, and remembers this checkout. It does not edit Harness `package.json`, and it does not start or stop DSH.
-
-If more than one checkout is in play, pass `--harness`. Do not let the tool guess.
+`setup` installs a user launcher and the skill, and remembers this checkout. It does not edit Harness `package.json`, and it does not start or stop DSH. If more than one checkout is in play, pass `--harness`.
 
 You can hand the block above to an Agent. `dshx setup --print-prompt` prints the full ask.
 
 ## What it looks like
 
-The five stills below are from the same local run. `dump-config` exited 0 — that is not a boot proof, and the official UI was not opened.
+The stills below are from the same local run. The official UI was not opened.
 
 `setup` puts the launcher in place and leaves the Host alone:
 
 ![dshx setup: launcher, skill, and checkout all OK; notes that it will not start or stop dsh](docs/screenshots/setup.png)
 
-`which` names the Harness checkout and the skill paths in use:
+*2026-08-25 · machine `cursor` (Linux) · `dshx setup`*
 
-![dshx which: 0.6.2, Harness from config, skill linked for agents and Cursor](docs/screenshots/which.png)
+`which` names the Harness checkout and the dshx tree in use:
+
+![dshx which: 0.7.0, Node v22.22.2, Harness from config](docs/screenshots/which.png)
+
+*2026-08-25 · machine `cursor` (Linux) · `dshx which`*
 
 `doctor` is a workshop diagnostic. It is not official `dsh doctor` — that command does not exist:
 
-![dshx doctor: Node, the source launcher, and dump-config pass; dump-config is not a boot proof; no Host is supervised](docs/screenshots/doctor.png)
+![dshx doctor: Node and dump-config (135 rows) pass; dump-config is not a boot proof; no Host is supervised](docs/screenshots/doctor.png)
+
+*2026-08-25 · machine `cursor` (Linux) · `dshx doctor`*
 
 `check` is the on-disk contract. A fresh `init` of `hello` can pass:
 
 ![dshx check hello: manifest, named apply, boot marker, and a relative overlay all OK](docs/screenshots/check.png)
 
+*2026-08-25 · machine `cursor` (Linux) · `dshx check hello`*
+
 `activation-plan` reads disk facts, then takes one changed surface. This run chose `patch`: reconcile in place, do not restart the Host:
 
 ![dshx activation-plan hello --change patch: method is watched cordis.patch.yml; host-restart and browser-reload are not-required](docs/screenshots/activation-plan.png)
 
+*2026-08-25 · machine `cursor` (Linux) · `dshx activation-plan hello --change patch`*
+
+## 0.7.0 update assistant
+
+An update is more than `git pull`. The gates are staged. Without `--target`, DSHX queries the latest official `dsh-v*` release live.
+
+```sh
+dshx update plan
+dshx update prepare --target dsh-v0.1.1-rc.2
+dshx update verify --target dsh-v0.1.1-rc.2
+dshx update apply --target dsh-v0.1.1-rc.2
+dshx update rollback --target dsh-v0.1.1-rc.2
+```
+
+This machine planned `0.1.0-rc.8` → `0.1.1-rc.2`, inventoried one plugin, and was not supervising a Host:
+
+![dshx update plan: current 0.1.0-rc.8 → target 0.1.1-rc.2; no tracked dirty; one plugin](docs/screenshots/update-plan.png)
+
+*2026-08-25 · machine `cursor` (Linux) · `dshx update plan`*
+
+`prepare` does a frozen install and full target-Harness build in an isolated worktree, then copies and builds every plugin. It does not switch the active checkout. `verify` runs the static contract and an isolated cold boot for every candidate plugin — `hello` passed here:
+
+![dshx update verify: candidate build passed; hello build/check/cold-boot all true; 1/1 verify-gate; source plugin bytes untouched](docs/screenshots/update-verify.png)
+
+*2026-08-25 · machine `cursor` (Linux) · `dshx update verify --target dsh-v0.1.1-rc.2`*
+
+`apply` accepts only a complete candidate gate, refuses a supervised Host, transactionally switches to `dshx/<release>`, and keeps an exact backup. `rollback` restores the pre-update branch, dependencies, and plugin `lib/`.
+
+Keep three states distinct:
+
+- **Upgrade complete** — checkout is on the target tag; backups live under `.dshx/update-assistant/`
+- **Live runtime proof** — you ran the Host / browser and saw the behavior
+- **Official activation** — the single branch from `activation-plan` actually mounted
+
+The assistant does not restart a production Host. See [knowledge/contracts/harness-update.md](knowledge/contracts/harness-update.md).
+
 ## There is no universal hot reload
 
-A watched patch, a next-boot bundle, a user preset, a client already on the page, a new client entry, a server module, and a copied artifact are seven different states. Read the contract, then pick one branch:
-
-Keep the same DSH PID by default and classify the runtime surface that must change. A plain profile dependency is a resolution prerequisite, not manifest activation or restart evidence. A first Web client remains `new-client` even though its activation writes a dependency: hot-mount the Host row, then reload/reopen the page. Only boot-captured bundle composition or a server module without tested HMR authorizes a normal Host restart.
+A watched patch, a next-boot bundle, a user preset, a client already on the page, a new client entry, a server module, and a copied artifact are seven different states. Keep the same DSH PID by default. A plain dependency is not `manifest` activation and not a restart reason.
 
 ```sh
 dshx kb cat contracts/live-activation
 dshx activation-plan <plugin> --change patch
 ```
-
-The matrix lives in [knowledge/contracts/live-activation.md](knowledge/contracts/live-activation.md).
 
 ## A normal day
 
@@ -69,25 +112,6 @@ dshx init demo --kind function
 dshx check demo
 dshx activation-plan demo --change patch
 ```
-
-## Harness update assistant
-
-An update is more than `git pull`. DSHX 0.7.0 gates the official release, the Harness build, every local plugin, and exact rollback as separate phases:
-
-```sh
-dshx update plan
-dshx update prepare --target dsh-v0.1.1-rc.2
-dshx update verify --target dsh-v0.1.1-rc.2
-dshx update apply --target dsh-v0.1.1-rc.2
-```
-
-- `plan` reads official `dsh-v*` tags, the current checkout, tracked-dirty risk, and directory/symlink plugin inventory without mutation.
-- `prepare` performs a frozen install and full target-Harness build in an isolated worktree, then copies and builds every plugin. It does not switch the active Harness.
-- `verify` runs the static contract and an isolated cold boot for every candidate plugin. RC2 Web clients use the native profile package seam and must appear in the boot graph with a 200 `client.js`; server-only plugins must emit their `apply()` marker.
-- `apply` accepts only a complete candidate gate, refuses a supervised Host, transactionally switches to `dshx/<release>`, rebuilds the actual plugins, and saves exact checkout, dependency-tree, and plugin-`lib/` backups.
-- `rollback` restores the pre-update branch, dependencies, and generated plugin artifacts: `dshx update rollback --target <release>`.
-
-Without `--target`, DSHX queries the latest official release live. The assistant does not restart a production Host: applied bytes, real-runtime acceptance, and production activation remain separate states. See [knowledge/contracts/harness-update.md](knowledge/contracts/harness-update.md).
 
 Use `verify-boot` only when you need an isolated cold-boot proof. Use `sync-artifact` only when a package must land in the profile — it will say `ARTIFACT_SYNCED; LIVE_ACTIVATION_UNPROVEN` and stop there.
 
