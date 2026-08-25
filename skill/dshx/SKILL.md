@@ -3,7 +3,8 @@ name: dshx
 description: >-
   Use the unofficial dshx CLI and its OKF bundle for DeepSeek Harness external
   plugin work. Trigger when the user says dshx, /dshx, dsh-external-plugin-devkit,
-  my-plugins, Creator Mode delivery, plugin add/ship/check/verify, HMR, hot reload,
+  my-plugins, Harness update, 更新 DeepSeek Harness, Creator Mode delivery,
+  plugin add/ship/check/verify, HMR, hot reload,
   热重载, 热插拔, 不重启, Creator+ Guardian, 多个 Creator+, 自救, 自愈, or asks
   whether a DSH plugin needs a browser reload or Host restart. Before any
   ship/restart advice, classify the changed surface with contracts/live-activation.
@@ -13,6 +14,8 @@ description: >-
 # dshx
 
 Use `dshx` for profile-scoped, file-backed plugins developed by an external agent or through the optional Creator Mode+ safe bridge. The CLI and Guardian outside DSH are the supervisor; Creator Mode+ exposes six fixed operations, including plugin claims and bounded new-client activation, but never process control. Do not transfer the original Creator Mode's in-memory lifecycle assumptions to external packages.
+
+Use a **same-PID default** for plugin work. Select the branch by the runtime surface that must change, not by prerequisite files a command happens to write. A plain profile dependency provides module resolution; it is not manifest activation or restart evidence. A first Web client remains `new-client` even though `activate-new-client` writes its dependency link: hot-mount the Host row, keep the DSH PID, then reload/reopen the page. Authorize a normal Host restart only when `activation-plan` names boot-captured bundle composition or a server module without tested module HMR as the reason.
 
 In Creator Mode+, session-start automatically arms the external Guardian. As soon
 as one plugin id is known, call `dshx_claim_plugin` before scaffold/edit/build/check.
@@ -56,6 +59,21 @@ From the Harness root, the equivalent is:
 node --import tsx/esm tools/dshx/src/cli.ts <command>
 ```
 
+## Update Harness safely
+
+When the user asks to update DeepSeek Harness and retain local plugins, read `kb cat contracts/harness-update`, then keep these gates separate:
+
+```sh
+./scripts/dshx.sh update plan [--target dsh-vX.Y.Z-rc.N]
+./scripts/dshx.sh update prepare [--target ...] [--candidate /isolated/worktree]
+./scripts/dshx.sh update verify [--target ...] [--candidate /same/worktree]
+./scripts/dshx.sh update apply [--target ...]
+```
+
+`plan` is read-only. Do not run `apply` until candidate Harness install/full-build and every plugin's build/static/runtime proof pass. Web clients require the RC2-native profile package link, package-name Loader row, active `window.__DSH_BOOT__` entry, and served `client.js`; server-only plugins require a runtime `apply()` marker. `apply` must refuse a supervised Host and retain `.dshx/update-assistant/<tag>/rollback.json`. Do not run `update rollback` merely to test it: that command intentionally restores the previous checkout, dependencies, and plugin artifacts.
+
+Report `candidate verified`, `applied locally`, `real runtime accepted`, and `production activated` as different states. The update assistant never silently restarts a production Host.
+
 ## Classify activation before acting
 
 When the target already exists and the request involves installation, delivery, HMR, hot-plugging, refresh, or restart, first run:
@@ -70,12 +88,12 @@ Choose exactly one changed-surface branch:
 | Branch | Action | Host restart | Browser reload |
 |---|---|---|---|
 | `patch` | Edit the watched profile/home `cordis.patch.yml`; verify Host-tree reconcile | No | Only if this adds a client entry |
-| `manifest` | Update profile dependency / `dsh.profile.bundles`; verify after the next boot | Yes | Verify client separately |
+| `manifest` | Change boot-captured `dsh.profile.bundles` / package `dsh.bundle`; verify after the next boot | Yes, with boot-capture evidence | Verify client separately |
 | `preset` | Write a user-owned preset, preserve its composition stamp when bytes are unchanged, then verify it in a new/blank session | No, when process-global resources are generation-safe | Only if the current page cached the roster |
 | `client` | Rebuild an already-rostered `lib/client.js`; observe client HMR and same-page behavior | No | No; plugin React-local state resets |
 | `new-client` | Hot-activate the Host patch entry, then reload/reopen the page for the new graph row | No | Yes |
 | `server` | Sync server artifact, then restart the current supervised Host unless exact module HMR is tested | Yes by default | Conditional |
-| `artifact` | Synchronize bytes only | Undecided | Undecided |
+| `artifact` | Synchronize bytes or a plain dependency only; activation is separate | No for this step | No for this step |
 
 `sync-artifact` / `ship` must end at `ARTIFACT_SYNCED; LIVE_ACTIVATION_UNPROVEN`. Never turn that result into an activation claim.
 
@@ -85,7 +103,7 @@ For `new-client`, do not hand-edit the profile manifest and watched patch as sep
 ./scripts/dshx.sh activate-new-client <plugin> --profile web --port <current-web-port>
 ```
 
-The command owns the safe order: official profile link, resolvability proof, watched-patch insert/retrigger, current Host manifest proof. Exit 0 proves through `CLIENT_MANIFEST_PRESENT`, not `CLIENT_LOADED`; reload the page and verify UI separately. A nonzero exit is a stop condition, not permission to improvise. If it explicitly names a cached pre-install resolution failure from an earlier bad sequence, the external supervisor may perform one controlled restart; this is recovery for the scar, not the normal new-client branch.
+The command owns the safe order: official profile link, resolvability proof, watched-patch insert/retrigger, current Host manifest proof. The link is a resolution prerequisite, not a manifest branch. Exit 0 proves through `CLIENT_MANIFEST_PRESENT`, not `CLIENT_LOADED`; reload the page and verify UI separately. A nonzero exit is a stop condition, not permission to improvise. If it explicitly names a cached pre-install resolution failure from an earlier bad sequence, the external supervisor may perform one controlled restart; this is recovery for the scar, not the normal new-client branch.
 
 Read only the selected branch:
 
@@ -103,7 +121,7 @@ Read only the selected branch:
 3. For an existing project, edit `my-plugins/<name>/` or the named package. Keep committed `cordis.yml` portable.
 4. For a client package, read `kb cat contracts/client-build`. On RC8, an out-of-tree package must build with dshx `externalClientBundle`; do not import the repository-internal official `clientBundle()` or move the plugin under `packages/`.
 5. Run `check <name>`. Completion: no static contract errors; a client package also passes `client-cordis-inject` and has a built lazy-CJS `lib/client.js` handoff.
-6. Run `verify-boot <name>` only when an isolated cold boot is needed. Completion: marker and Web HTTP pass. It refuses to stop an existing supervised Host and does not prove current-host activation.
+6. Run `verify-boot <name>` only when an isolated cold boot is needed. Completion: server-only plugins show the runtime marker; Web clients appear in the active boot graph and their bundle returns HTTP 200. It refuses to stop an existing supervised Host and does not prove current-host activation.
 7. If package bytes must reach a profile, run `sync-artifact <dir>` (`ship` is a compatibility alias). Completion: content hash matches; activation remains unproven.
 8. Execute the previously selected activation branch. For `new-client`, use only `activate-new-client`; restart only when a different branch requires it.
 9. Report evidence by layer: `SOURCE_BUILT`, `ARTIFACT_SYNCED`, `NEXT_BOOT_REGISTERED`, `HOST_TREE_ACTIVE`, `CLIENT_LOADED`, `VISUAL_BEHAVIOR_VERIFIED`. Omit unobserved layers.
@@ -114,7 +132,7 @@ Read only the selected branch:
 - Object: default-export `{ apply, name?, inject? }` and set `kind: object`.
 - Class/service: default-export the constructor and set `kind: class`.
 - Tool: inject `tools` and register with `defineTool`.
-- Client: `exports["./client"]` must target built `lib/client.js` containing `window.__ModuleLoader__.load({ id, factory })`; source TSX is not a served client artifact. Every direct `ctx.<service>` read must appear in the client entry's Cordis `export const inject`; `package.json` `dsh.client.inject` is unrelated package metadata. RC8 external packages use dshx `externalClientBundle`, while official `packages/client/tsdown.client.ts` remains the in-repository workspace preset.
+- Client: `exports["./client"]` must target built `lib/client.js` containing `window.__ModuleLoader__.load({ id, factory })`; source TSX is not a served client artifact. Every direct `ctx.<service>` read must appear in the client entry's Cordis `export const inject`; `package.json` `dsh.client.inject` is unrelated package metadata. RC8 external packages use dshx `externalClientBundle`, while official `packages/client/tsdown.client.ts` remains the in-repository workspace preset. RC2 runtime discovery additionally requires DSHX's profile-local package link and package-name Loader row; an absolute `src/*.ts` row can mount the Host half but is not client proof.
 
 ## Hard guardrails
 
@@ -132,4 +150,4 @@ Read only the selected branch:
 - `cordis_define` / `cordis_run` are process memory, not a shippable plugin.
 - Do not commit `.env`, `.dshx/`, secrets, or machine-absolute plugin paths.
 - A scarred 400/orphan-tool-call session needs a new session; do not Continue it.
-- RC8 `dsh web` opens a browser unless passed `--no-open`; dshx-supervised Web and cold-boot commands must suppress that side effect.
+- RC8/RC2 `dsh web` opens a browser unless passed `--no-open`; dshx-supervised Web and cold-boot commands must suppress that side effect.

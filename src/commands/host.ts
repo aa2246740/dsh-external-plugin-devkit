@@ -1,11 +1,12 @@
 import { existsSync } from 'node:fs'
-import { dumpConfig, parseDumpEntries } from '../internal/dsh.ts'
+import { dshEnv, dumpConfig, parseDumpEntries } from '../internal/dsh.ts'
 import { currentHost, followLog, logContains, portOpen, readLastHost, readLogTail, startHost, stopHost, waitForHttp, waitForLog } from '../internal/host.ts'
 import { armGuardian, disarmGuardian, ensureGuardian, guardianCreatorSnapshot } from '../internal/guardian.ts'
 import { finding, printReport, report } from '../internal/io.ts'
 import { writeOverlay } from '../internal/overlay.ts'
-import { hostLogPath } from '../internal/paths.ts'
+import { hostLogPath, resolveDshHome } from '../internal/paths.ts'
 import { loadPlugin } from '../internal/plugin.ts'
+import { ensureRuntimePackageLink } from '../internal/runtime-package.ts'
 import type { CliOptions, PluginManifest, ProfileName } from '../internal/types.ts'
 
 function resolveProfile(args: string[], options: CliOptions): { profile: ProfileName; pluginArg?: string; rest: string[] } {
@@ -15,9 +16,10 @@ function resolveProfile(args: string[], options: CliOptions): { profile: Profile
   return { profile: options.profile, pluginArg: args[0], rest: args.slice(1) }
 }
 
-function preparePlugin(root: string, name: string | undefined): { plugin?: PluginManifest; overlay?: string } {
+function preparePlugin(root: string, name: string | undefined, profile: ProfileName): { plugin?: PluginManifest; overlay?: string } {
   if (!name) return {}
   const plugin = loadPlugin(root, name)
+  ensureRuntimePackageLink(plugin, resolveDshHome(dshEnv(root)), profile)
   return { plugin, overlay: writeOverlay(root, plugin) }
 }
 
@@ -31,7 +33,7 @@ export async function cmdStart(args: string[], options: CliOptions, root: string
       })]), options.json)
       return 1
     }
-    const { plugin, overlay } = preparePlugin(root, pluginArg)
+    const { plugin, overlay } = preparePlugin(root, pluginArg, profile)
     if (profile === 'headless') {
       disarmGuardian(root)
       const task = options.task ?? rest.join(' ')
@@ -224,6 +226,7 @@ export async function cmdVerify(args: string[], options: CliOptions, root: strin
   let plugin
   try {
     plugin = loadPlugin(root, name)
+    ensureRuntimePackageLink(plugin, resolveDshHome(dshEnv(root)), options.profile)
   } catch (error) {
     printReport(report(command, [finding('error', 'plugin', error instanceof Error ? error.message : String(error))]), options.json)
     return 1
@@ -286,7 +289,12 @@ export async function cmdVerify(args: string[], options: CliOptions, root: strin
   let markerOk = false
   let failed = false
   try {
-    if (plugin.marker) {
+    const webClientPackage = options.profile === 'web' && plugin.runtimePackage?.webClient === true
+      ? plugin.runtimePackage
+      : undefined
+    if (webClientPackage) {
+      findings.push(finding('info', 'boot-marker', 'RC2 Web client activation is proved by the active client graph and served bundle; default logging may suppress ctx.logger.info markers'))
+    } else if (plugin.marker) {
       markerOk = await waitForLog(state.logFile, plugin.marker, bootDeadline)
       findings.push(markerOk
         ? finding('ok', 'boot-marker', `startup log contains ${plugin.marker}`)
@@ -299,6 +307,27 @@ export async function cmdVerify(args: string[], options: CliOptions, root: strin
       findings.push(httpOk
         ? finding('ok', 'http', `http://127.0.0.1:${options.port}/ accepted a request`)
         : finding('error', 'http', `web did not accept HTTP within ${bootDeadline}ms`))
+      if (httpOk && webClientPackage) {
+        const baseUrl = `http://127.0.0.1:${options.port}/`
+        const page = await fetch(baseUrl)
+        const html = await page.text()
+        const clientPath = `/plugins/${webClientPackage.name}/client.js`
+        const rowPattern = new RegExp(`(${clientPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\?rev=[^"'<\\s]+)`)
+        const row = rowPattern.exec(html)?.[1]
+        findings.push(row
+          ? finding('ok', 'client-graph', `window.__DSH_BOOT__ contains ${webClientPackage.name}`)
+          : finding('error', 'client-graph', `window.__DSH_BOOT__ is missing ${webClientPackage.name}`))
+        let bundleOk = false
+        if (row) {
+          const bundle = await fetch(new URL(row, baseUrl))
+          const bytes = Buffer.byteLength(await bundle.text())
+          bundleOk = bundle.ok && bytes > 0
+          findings.push(bundleOk
+            ? finding('ok', 'client-http', `${row} returned ${bundle.status} (${bytes} bytes)`)
+            : finding('error', 'client-http', `${row} returned ${bundle.status} (${bytes} bytes)`))
+        }
+        markerOk = row !== undefined && bundleOk
+      }
     }
     failed = logContains(state.logFile, 'duplicate loader entry id')
       || logContains(state.logFile, 'Failed to load plugins')

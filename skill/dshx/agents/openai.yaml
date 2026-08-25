@@ -1,4 +1,4 @@
 interface:
   display_name: "dshx"
   short_description: "Develop and activate external DSH plugins safely"
-  default_prompt: "Use dshx to classify the plugin lifecycle branch, read the matching contract, and verify each activation layer without unnecessary Host restarts."
+  default_prompt: "Use dshx with a same-PID default: classify by the runtime surface, treat plain dependency writes as prerequisites rather than manifest activation, and restart only with explicit bundle boot-capture or un-HMR'd server-module evidence."

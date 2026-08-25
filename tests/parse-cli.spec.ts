@@ -11,6 +11,8 @@ describe('parseCli', () => {
     assert.equal(dshManagedShellAllows('restart-supervised', managed), false)
     assert.equal(dshManagedShellAllows('activate-new-client', managed), false)
     assert.equal(dshManagedShellAllows('sync-artifact', managed), false)
+    assert.equal(dshManagedShellAllows('update', managed, ['plan']), true)
+    assert.equal(dshManagedShellAllows('update', managed, ['prepare']), false)
     assert.equal(dshManagedShellAllows('start', {}), true)
   })
   it('treats kb search --keep as a query, not verify --keep', () => {
@@ -90,5 +92,13 @@ describe('parseCli', () => {
     assert.equal(activation.options.profile, 'web')
     assert.equal(activation.options.port, 43127)
     assert.equal(activation.options.timeoutMs, 12_000)
+  })
+
+  it('parses update target and candidate without leaking flags into arguments', () => {
+    const update = parseCli(['update', 'prepare', '--target', 'dsh-v0.1.1-rc.2', '--candidate', '/tmp/rc2'])
+    assert.equal(update.command, 'update')
+    assert.deepEqual(update.args, ['prepare'])
+    assert.equal(update.options.target, 'dsh-v0.1.1-rc.2')
+    assert.equal(update.options.candidate, '/tmp/rc2')
   })
 })

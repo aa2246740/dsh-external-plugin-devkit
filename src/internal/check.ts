@@ -89,7 +89,9 @@ export function checkPlugin(plugin: PluginManifest, repoRoot: string): Finding[]
 
   const overlay = readCommittedOverlay(plugin.dir)
   if (overlay === undefined) {
-    findings.push(finding('info', 'cordis-yml', 'no committed cordis.yml (dshx overlay will generate an absolute --patch file)', { path: plugin.dir }))
+    findings.push(finding('info', 'cordis-yml', plugin.runtimePackage?.webClient === true
+      ? 'no committed cordis.yml (dshx will link the package into the selected profile and generate a package-name --patch)'
+      : 'no committed cordis.yml (dshx overlay will generate an absolute --patch file)', { path: plugin.dir }))
   } else if (!Array.isArray(overlay)) {
     findings.push(finding('error', 'cordis-yml', 'cordis.yml must be a top-level YAML array', { path: `${plugin.dir}/cordis.yml` }))
   } else {

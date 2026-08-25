@@ -1,5 +1,9 @@
 # Directory Update Log
 
+## 2026-08-24
+
+* **Harness update assistant and RC2 native client proof (0.7.0)**: added read-only release planning, isolated Harness/plugin preparation, resumable per-plugin verification, transactional apply, and exact rollback. Web client plugins now link into the selected profile and load by package name, matching RC2 client discovery; `verify-boot` proves the active boot-graph row and served client bundle instead of waiting for suppressed `ctx.logger.info` output. The first real update moved the local Harness to official `dsh-v0.1.1-rc.2`; a combined cold boot loaded 13 Host plugins and 11 Web clients with no page, console, or request failures.
+
 ## 2026-08-21
 
 * **Creator+ fixed-tool and workspace repair (0.6.2)**: the scaffold and activation-plan argv now coexist with the four-argument recovery-pull shape instead of being shadowed by it. Scaffold derives the immutable session cwd, creates source inside the writable workspace, and atomically links Harness `my-plugins` when needed. Release tests execute all six model-facing argv forms plus internal lifecycle hooks and enforce package/CLI/Guardian version parity. A fresh live older Guardian is replaced through one bounded external handoff; stale or unverifiable state fails closed. Creator instructions scaffold before planning a new target, consult the knowledge bundle before broad source exploration, and classify `outside bridge v2` as a stop-worthy bridge defect rather than manually mounting or fabricating downstream success.

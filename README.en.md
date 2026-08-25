@@ -53,6 +53,8 @@ The five stills below are from the same local run. `dump-config` exited 0 — th
 
 A watched patch, a next-boot bundle, a user preset, a client already on the page, a new client entry, a server module, and a copied artifact are seven different states. Read the contract, then pick one branch:
 
+Keep the same DSH PID by default and classify the runtime surface that must change. A plain profile dependency is a resolution prerequisite, not manifest activation or restart evidence. A first Web client remains `new-client` even though its activation writes a dependency: hot-mount the Host row, then reload/reopen the page. Only boot-captured bundle composition or a server module without tested HMR authorizes a normal Host restart.
+
 ```sh
 dshx kb cat contracts/live-activation
 dshx activation-plan <plugin> --change patch
@@ -67,6 +69,25 @@ dshx init demo --kind function
 dshx check demo
 dshx activation-plan demo --change patch
 ```
+
+## Harness update assistant
+
+An update is more than `git pull`. DSHX 0.7.0 gates the official release, the Harness build, every local plugin, and exact rollback as separate phases:
+
+```sh
+dshx update plan
+dshx update prepare --target dsh-v0.1.1-rc.2
+dshx update verify --target dsh-v0.1.1-rc.2
+dshx update apply --target dsh-v0.1.1-rc.2
+```
+
+- `plan` reads official `dsh-v*` tags, the current checkout, tracked-dirty risk, and directory/symlink plugin inventory without mutation.
+- `prepare` performs a frozen install and full target-Harness build in an isolated worktree, then copies and builds every plugin. It does not switch the active Harness.
+- `verify` runs the static contract and an isolated cold boot for every candidate plugin. RC2 Web clients use the native profile package seam and must appear in the boot graph with a 200 `client.js`; server-only plugins must emit their `apply()` marker.
+- `apply` accepts only a complete candidate gate, refuses a supervised Host, transactionally switches to `dshx/<release>`, rebuilds the actual plugins, and saves exact checkout, dependency-tree, and plugin-`lib/` backups.
+- `rollback` restores the pre-update branch, dependencies, and generated plugin artifacts: `dshx update rollback --target <release>`.
+
+Without `--target`, DSHX queries the latest official release live. The assistant does not restart a production Host: applied bytes, real-runtime acceptance, and production activation remain separate states. See [knowledge/contracts/harness-update.md](knowledge/contracts/harness-update.md).
 
 Use `verify-boot` only when you need an isolated cold-boot proof. Use `sync-artifact` only when a package must land in the profile — it will say `ARTIFACT_SYNCED; LIVE_ACTIVATION_UNPROVEN` and stop there.
 

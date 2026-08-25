@@ -15,15 +15,15 @@ dshx kb cat <id-from-search>
 
 A search snippet is only an id pointer. Read the matched document and its official sources before changing a contract.
 
-Before any install, ship, HMR, refresh, or restart advice, read knowledge/contracts/live-activation.md and classify the changed surface:
+Before any install, ship, HMR, refresh, or restart advice, use a same-PID default, read knowledge/contracts/live-activation.md, and classify the changed runtime surface. A plain dependency write is a resolution prerequisite, not manifest activation or restart evidence:
 
 - patch: watched config-tree reconciliation; no Host restart.
-- manifest: next-boot profile/bundle composition; Host restart required.
+- manifest: boot-captured `dsh.profile.bundles` / package `dsh.bundle` composition; Host restart requires that exact evidence.
 - preset: user preset discovery; no Host restart, verify in a new/blank session.
 - client: existing page entry client HMR; no Host restart or page reload.
 - new-client: Host patch can reconcile live; browser page reload required.
 - server: restart current supervised Host unless exact module HMR is configured and tested.
-- artifact: bytes only; activation undecided.
+- artifact: bytes or dependency-only work; no restart for this step, activation remains separate.
 
 When working through Creator Mode+, also read
 `knowledge/contracts/creator-guardian.md`. As soon as the plugin id is known,

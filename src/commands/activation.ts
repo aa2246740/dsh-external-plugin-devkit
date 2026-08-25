@@ -63,7 +63,7 @@ export function cmdActivationPlan(args: string[], options: CliOptions, root: str
     const decision = activationDecision(options.change, facts)
     findings.push(
       finding('ok', 'activation-method', decision.method),
-      finding(decision.hostRestart === 'required' ? 'warn' : 'info', 'host-restart', decision.hostRestart),
+      finding(decision.hostRestart === 'required' ? 'warn' : 'info', 'host-restart', `${decision.hostRestart}: ${decision.restartReason}`),
       finding(decision.browserReload === 'required' ? 'warn' : 'info', 'browser-reload', decision.browserReload),
       ...decision.blockers.map(message => finding('error', 'activation-blocker', message)),
       ...decision.preconditions.map(message => finding('info', 'precondition', message)),

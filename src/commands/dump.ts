@@ -1,7 +1,9 @@
-import { dumpConfig, dumpDefaultConfig, duplicateIds, parseDumpEntries } from '../internal/dsh.ts'
+import { dshEnv, dumpConfig, dumpDefaultConfig, duplicateIds, parseDumpEntries } from '../internal/dsh.ts'
 import { finding, printReport, report } from '../internal/io.ts'
 import { writeOverlay } from '../internal/overlay.ts'
+import { resolveDshHome } from '../internal/paths.ts'
 import { loadPlugin } from '../internal/plugin.ts'
+import { ensureRuntimePackageLink } from '../internal/runtime-package.ts'
 import type { CliOptions } from '../internal/types.ts'
 
 export function cmdDump(args: string[], options: CliOptions, root: string): number {
@@ -10,6 +12,7 @@ export function cmdDump(args: string[], options: CliOptions, root: string): numb
   if (args[0] && args[0] !== '--default') {
     try {
       const plugin = loadPlugin(root, args[0])
+      ensureRuntimePackageLink(plugin, resolveDshHome(dshEnv(root)), options.profile)
       patches.push(writeOverlay(root, plugin))
       pluginId = plugin.id
     } catch (error) {

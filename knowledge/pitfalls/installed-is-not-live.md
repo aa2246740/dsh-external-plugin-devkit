@@ -27,6 +27,8 @@ pnpm add 成功
 
 前四项最多证明 profile 磁盘状态。运行中 Host 不会因此重新读取 bundle manifest；浏览器还另有 boot graph 和 client HMR 生命周期。
 
+反过来也不能因为 dependency 写进了 `package.json` 就机械要求重启。依赖是解析前提；只有 `dsh.profile.bundles` / package `dsh.bundle` 的 boot-captured composition 才属于 manifest restart 分支。首次 Web client 使用 `new-client` 同 PID 激活 Host 行，再刷新页面。
+
 # 修复
 
 先读 [live activation](../contracts/live-activation.md)，再用 `activation-plan --change ...` 选分支。报告时把 `ARTIFACT_SYNCED`、`NEXT_BOOT_REGISTERED`、`HOST_TREE_ACTIVE`、`CLIENT_LOADED` 分开。

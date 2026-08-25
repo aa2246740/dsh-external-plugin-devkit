@@ -3,7 +3,7 @@ type: Reference
 title: dshx command surface
 description: 外部插件工作台的命令、状态目录与非目标。
 tags: [dshx, cli]
-aliases: [dshx, cli, kb catalog, kb search, catalog, which, "dshx status", status, unsupervised, "busy port", "already in use", "3091", "--force", "--port", "--harness", "port-3080", "host-supervised", "activation-plan", "activate-new-client", "verify-boot", "sync-artifact", "restart-supervised"]
+aliases: [dshx, cli, kb catalog, kb search, catalog, which, "dshx status", status, unsupervised, "busy port", "already in use", "3091", "--force", "--port", "--harness", "port-3080", "host-supervised", "activation-plan", "activate-new-client", "verify-boot", "sync-artifact", "restart-supervised", "update plan", "update prepare", "update verify", "update apply", "update rollback"]
 status: stable
 resource: tools/dshx/src/cli.ts
 generated: { by: dshx/grok-4.6, at: 2026-08-17T12:30:00Z }
@@ -44,6 +44,7 @@ dshx kb cat contracts/llm-retry
 - `sync-artifact`（`ship` / `recopy` alias）：link/file artifact，同步完成仍为 `LIVE_ACTIVATION_UNPROVEN`。
 - `restart-supervised`（`restart` alias）：只重启当前 live dshx-owned Web PID；无 live PID、换目标、headless 均拒绝。
 - `creator watch/claim/release/recovery/disarm/client-failure`：bridge v2 内部结构化协议。`client-failure` 只接受固定 Host bridge 写入环境的有界 browser report；模型只通过六个固定工具间接使用，不能提交任意 argv。`dshx status` 可读 Guardian、claims 与 quarantines。
+- `update plan/prepare/verify/apply/rollback`：官方 release 升级事务。plan 只读；prepare/verify 在隔离候选 worktree；apply 拒绝 live supervised Host 并保存精确回滚；rollback 恢复 checkout、依赖与插件生成物。见 [harness-update](../contracts/harness-update.md)。
 
 `dshx start web` 会启动外部 Guardian。Creator+ session-start 还可以领养由官方 CLI/App
 启动的 Web Host并武装 Guardian，但 `stop` / `restart-supervised` 拒绝手工控制这个

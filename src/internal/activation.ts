@@ -39,6 +39,7 @@ export interface ActivationFacts {
 export interface ActivationDecision {
   method: string
   hostRestart: 'required' | 'not-required' | 'not-decided'
+  restartReason: string
   browserReload: 'required' | 'not-required' | 'conditional' | 'not-decided'
   blockers: string[]
   preconditions: string[]
@@ -152,11 +153,12 @@ export function inspectActivation(root: string, profile: ProfileName, raw: strin
   }
 }
 
-export function activationDecision(change: ActivationChange, facts: Pick<ActivationFacts, 'hasClient' | 'inOfflineComposition' | 'packageResolvable'>): ActivationDecision {
+export function activationDecision(change: ActivationChange, facts: Pick<ActivationFacts, 'bundleDeclared' | 'bundleRegistered' | 'hasClient' | 'inOfflineComposition' | 'packageResolvable'>): ActivationDecision {
   if (change === 'patch') {
     return {
       method: 'watched cordis.patch.yml reconciliation',
       hostRestart: 'not-required',
+      restartReason: 'the watched patch reconciles inside the current Host process',
       browserReload: facts.hasClient ? 'conditional' : 'not-required',
       blockers: facts.packageResolvable ? [] : ['plugin module is not resolvable from the active profile'],
       preconditions: ['edit the active profile/home cordis.patch.yml with a stable loader id', 'the plugin module must resolve from the active profile'],
@@ -164,9 +166,27 @@ export function activationDecision(change: ActivationChange, facts: Pick<Activat
     }
   }
   if (change === 'manifest') {
+    if (!facts.bundleDeclared && !facts.bundleRegistered) {
+      return {
+        method: 'plain profile dependency state; no boot-captured bundle change is established',
+        hostRestart: 'not-required',
+        restartReason: 'a dependency link alone is not a running Loader change or a Host restart reason',
+        browserReload: 'not-required',
+        blockers: [
+          'manifest branch requires boot-captured bundle evidence: a package dsh.bundle declaration or an existing dsh.profile.bundles row',
+        ],
+        preconditions: [
+          'select the branch by the runtime surface, not by prerequisite files a command writes',
+          'use new-client for a first Web client; activate-new-client owns its profile dependency link',
+          'use patch for a watched Loader row, client for an existing browser entry, or artifact for bytes/dependency-only work',
+        ],
+        proof: ['keep the current DSH pid unchanged; no live activation or deactivation is claimed by a plain dependency edit'],
+      }
+    }
     return {
-      method: 'profile dependency and dsh.profile.bundles update for the next boot',
+      method: 'boot-captured dsh.profile.bundles / package dsh.bundle composition for the next boot',
       hostRestart: 'required',
+      restartReason: 'the selected bundle composition is captured only when the Host boots',
       browserReload: facts.hasClient ? 'required' : 'not-required',
       blockers: [],
       preconditions: ['package installation and bundle ordering complete without duplicate loader ids'],
@@ -177,6 +197,7 @@ export function activationDecision(change: ActivationChange, facts: Pick<Activat
     return {
       method: 'user-preset discovery, then a new session generation',
       hostRestart: 'not-required',
+      restartReason: 'the preset roster is rediscovered without replacing the Host process',
       browserReload: 'conditional',
       blockers: facts.packageResolvable ? [] : ['a package referenced by the preset is not resolvable from the active profile'],
       preconditions: [
@@ -195,6 +216,7 @@ export function activationDecision(change: ActivationChange, facts: Pick<Activat
     return {
       method: 'existing client entry bundle HMR after lib/client.js changes',
       hostRestart: 'not-required',
+      restartReason: 'client HMR replaces the existing browser entry while the Host pid stays stable',
       browserReload: 'not-required',
       blockers: [
         ...facts.hasClient ? [] : ['target package does not declare a client entry'],
@@ -211,12 +233,14 @@ export function activationDecision(change: ActivationChange, facts: Pick<Activat
     return {
       method: 'watched host patch activation, then browser page reload for a new client graph row',
       hostRestart: 'not-required',
+      restartReason: 'the Host row hot-mounts through the watched patch; only the page boot graph is stale',
       browserReload: 'required',
       blockers: [
         ...facts.hasClient ? [] : ['target package does not declare a client entry'],
         ...facts.packageResolvable ? [] : ['target package is not currently resolvable'],
       ],
       preconditions: [
+        'activate-new-client installs the profile dependency as a resolution prerequisite; that write does not make this a manifest branch',
         'add a stable profile/home patch entry without also mounting the same bundle twice',
         'the package and built client entry resolve from the active profile',
       ],
@@ -227,6 +251,7 @@ export function activationDecision(change: ActivationChange, facts: Pick<Activat
     return {
       method: 'controlled restart of the currently supervised host',
       hostRestart: 'required',
+      restartReason: 'the selected server module has no explicit, tested module-HMR path in the Web composition',
       browserReload: facts.hasClient ? 'conditional' : 'not-required',
       blockers: [],
       preconditions: ['restart is the safe default unless this exact server module has explicit, tested module-HMR coverage'],
@@ -235,10 +260,11 @@ export function activationDecision(change: ActivationChange, facts: Pick<Activat
   }
   return {
     method: 'artifact synchronization only',
-    hostRestart: 'not-decided',
-    browserReload: 'not-decided',
+    hostRestart: 'not-required',
+    restartReason: 'copying bytes or changing a plain dependency does not itself change the running Loader',
+    browserReload: 'not-required',
     blockers: [],
     preconditions: ['choose a separate activation branch after the artifact is built or copied'],
-    proof: ['ARTIFACT_SYNCED is not LIVE_ACTIVATION_PROVEN'],
+    proof: ['ARTIFACT_SYNCED is not LIVE_ACTIVATION_PROVEN', 'keep the current DSH pid unchanged until another branch supplies explicit restart evidence'],
   }
 }

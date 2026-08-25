@@ -18,6 +18,7 @@ export interface Report {
 export type PluginKind = 'function' | 'tool' | 'client' | 'object' | 'class'
 export type ProfileName = 'web' | 'headless'
 export type ActivationChange = 'patch' | 'manifest' | 'preset' | 'client' | 'new-client' | 'server' | 'artifact'
+export type UpdateAction = 'plan' | 'prepare' | 'verify' | 'apply' | 'rollback'
 
 export interface PluginManifest {
   id: string
@@ -31,6 +32,11 @@ export interface PluginManifest {
   profile: ProfileName
   config?: Record<string, unknown>
   inferred: boolean
+  runtimePackage?: {
+    name: string
+    manifestPath: string
+    webClient: boolean
+  }
 }
 
 export interface HostState {
@@ -62,9 +68,11 @@ export interface CliOptions {
   restart: boolean
   change?: ActivationChange
   harness?: string
+  target?: string
+  candidate?: string
 }
 
-export const DSHX_VERSION = '0.6.2'
+export const DSHX_VERSION = '0.7.0'
 export const DEFAULT_PORT = 3080
 export const DEFAULT_TIMEOUT_MS = 60_000
 export const DEFAULT_PROFILE: ProfileName = 'web'

@@ -15,6 +15,7 @@ import { cmdShip } from './commands/ship.ts'
 import { cmdActivationPlan } from './commands/activation.ts'
 import { cmdActivateNewClient } from './commands/new-client.ts'
 import { cmdCreator } from './commands/creator.ts'
+import { cmdUpdate } from './commands/update.ts'
 import { dshManagedShellAllows, finding, parseCli, printReport, report } from './internal/io.ts'
 import { logObserve } from './internal/observe.ts'
 import { findRepoRoot } from './internal/paths.ts'
@@ -39,7 +40,7 @@ async function main(): Promise<number> {
     process.stdout.write(LOOP)
     return 0
   }
-  if (!dshManagedShellAllows(command)) {
+  if (!dshManagedShellAllows(command, process.env, args)) {
     printReport(report(command, [
       finding('error', 'dsh-shell-boundary', `refusing mutating dshx ${command} inside a DSH-managed model shell`, {
         hint: 'Use the fixed Creator Mode+ tool for this operation, or run it from an external supervisor terminal. A DSH session cannot control or replace its own Host.',
@@ -105,6 +106,8 @@ async function main(): Promise<number> {
     case 'recopy':
     case 'sync-artifact':
       return cmdShip(args, options, root)
+    case 'update':
+      return cmdUpdate(args, options, root)
     default:
       printReport(report(command, [
         finding('error', 'unknown', `unknown command: ${command}`),

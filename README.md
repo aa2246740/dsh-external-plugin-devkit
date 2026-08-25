@@ -53,6 +53,8 @@ dshx which && dshx doctor
 
 改 watched patch、下次启动的 bundle、用户 preset、已经在页面里的 client、新的 client 入口、服务端模块，或只是拷了产物——这七种不是同一个动作。先读合同，再让 `activation-plan` 选一条分支：
 
+默认保持同一个 DSH PID，并按真正要改变的运行时表面分类。普通 profile dependency 只是解析前提，不是 `manifest` activation，也不是重启理由；首次 Web client 即使写入 dependency，仍走 `new-client`，Host 热挂后只刷新/重开页面。只有启动时捕获的 bundle composition 或没有专项 HMR 的 server module 才授权重启。
+
 ```sh
 dshx kb cat contracts/live-activation
 dshx activation-plan <plugin> --change patch
@@ -67,6 +69,25 @@ dshx init demo --kind function
 dshx check demo
 dshx activation-plan demo --change patch
 ```
+
+## Harness 更新助手
+
+更新不是一次 `git pull`。DSHX 0.7.0 把官方 release、Harness 构建、全部本地插件和精确回滚放进一个分阶段门禁：
+
+```sh
+dshx update plan
+dshx update prepare --target dsh-v0.1.1-rc.2
+dshx update verify --target dsh-v0.1.1-rc.2
+dshx update apply --target dsh-v0.1.1-rc.2
+```
+
+- `plan` 只读官方 `dsh-v*` tag、当前 checkout、tracked dirty 风险、目录与 symlink 插件清单。
+- `prepare` 在隔离 worktree 冻结安装并完整构建目标 Harness，再复制和构建全部插件；不切换当前 Harness。
+- `verify` 对每个候选插件执行静态合同和隔离冷启动。RC2 Web 客户端走原生 profile 包解析，同时证明启动图条目与 `client.js` 200；服务端-only 插件证明 `apply()` marker。
+- `apply` 只接受完整候选门禁，拒绝正在监督的 Host，事务化切到 `dshx/<release>`、重建实际插件，并保存 checkout、依赖树和插件 `lib/` 的精确备份。
+- `rollback` 恢复升级前分支、依赖与插件生成物：`dshx update rollback --target <release>`。
+
+省略 `--target` 时会实时查询官方最新 release。更新助手不会替你重启正式 Host；升级完成、真实运行时验收和正式激活仍是三个不同状态。详细合同见 [knowledge/contracts/harness-update.md](knowledge/contracts/harness-update.md)。
 
 需要隔离冷启动证明时才 `verify-boot`。需要把包装进 profile 时才 `sync-artifact`——它只会告诉你 `ARTIFACT_SYNCED; LIVE_ACTIVATION_UNPROVEN`。
 

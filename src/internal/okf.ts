@@ -130,6 +130,7 @@ export const RETRIEVAL_FIXTURES: RetrievalFixture[] = [
   { query: '热重载', mustInclude: 'contracts/live-activation', first: 'contracts/live-activation' },
   { query: '热插拔', mustInclude: 'contracts/live-activation', first: 'contracts/live-activation' },
   { query: '不重启', mustInclude: 'contracts/live-activation' },
+  { query: '做插件要重启整个 DeepSeek Harness 吗', mustInclude: 'contracts/live-activation', first: 'contracts/live-activation' },
   { query: '插件装了没生效', mustInclude: 'pitfalls/installed-is-not-live', first: 'pitfalls/installed-is-not-live' },
   { query: 'client reload', mustInclude: 'pitfalls/new-client-entry-needs-page-reload' },
   { query: 'bundle', mustInclude: 'contracts/live-activation' },

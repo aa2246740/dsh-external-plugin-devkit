@@ -1,4 +1,4 @@
-import { existsSync, readdirSync } from 'node:fs'
+import { existsSync, readdirSync, statSync } from 'node:fs'
 import { basename, dirname, join, resolve } from 'node:path'
 import { loadYaml, readText } from './io.ts'
 import { pluginsDir } from './paths.ts'
@@ -15,11 +15,40 @@ interface RawManifest {
   config?: Record<string, unknown>
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function runtimePackage(dir: string): PluginManifest['runtimePackage'] {
+  const manifestPath = join(dir, 'package.json')
+  if (!existsSync(manifestPath)) return undefined
+  const parsed: unknown = JSON.parse(readText(manifestPath))
+  if (!isRecord(parsed)) throw new Error(`package manifest must hold a JSON object: ${manifestPath}`)
+  const name = parsed.name
+  if (typeof name !== 'string' || name.length === 0) return undefined
+  const dsh = isRecord(parsed.dsh) ? parsed.dsh : undefined
+  const client = dsh && isRecord(dsh.client) ? dsh.client : undefined
+  return {
+    name,
+    manifestPath,
+    webClient: client?.platform === 'web',
+  }
+}
+
 export function listPluginNames(root: string): string[] {
   const dir = pluginsDir(root)
   if (!existsSync(dir)) return []
   return readdirSync(dir, { withFileTypes: true })
-    .filter(entry => entry.isDirectory() && !entry.name.startsWith('.'))
+    .filter(entry => {
+      if (entry.name.startsWith('.')) return false
+      if (entry.isDirectory()) return true
+      if (!entry.isSymbolicLink()) return false
+      try {
+        return statSync(join(dir, entry.name)).isDirectory()
+      } catch {
+        return false
+      }
+    })
     .map(entry => entry.name)
     .sort()
 }
@@ -93,7 +122,13 @@ export function loadPlugin(root: string, nameOrPath?: string): PluginManifest {
     profile: raw.profile ?? 'web',
     config: raw.config,
     inferred,
+    runtimePackage: runtimePackage(dir),
   }
+}
+
+/** RC2 discovers browser bundles from resolvable package names, not source-file loader rows. */
+export function runtimePluginSpecifier(plugin: PluginManifest): string {
+  return plugin.runtimePackage?.webClient === true ? plugin.runtimePackage.name : plugin.entryAbs
 }
 
 export function readCommittedOverlay(dir: string): unknown {

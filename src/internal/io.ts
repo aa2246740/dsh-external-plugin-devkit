@@ -53,7 +53,7 @@ export function envHas(name: string, extra?: Record<string, string>): boolean {
   return Boolean(value && value.trim())
 }
 
-const VALUE_FLAGS = new Set(['--profile', '--port', '--timeout', '--grep', '--kind', '--task', '--harness', '--change'])
+const VALUE_FLAGS = new Set(['--profile', '--port', '--timeout', '--grep', '--kind', '--task', '--harness', '--change', '--target', '--candidate'])
 
 const COMMAND_FLAGS: Record<string, ReadonlySet<string>> = {
   kb: new Set(['--json']),
@@ -81,6 +81,7 @@ const COMMAND_FLAGS: Record<string, ReadonlySet<string>> = {
   ship: new Set(['--json', '--profile', '--restart', '--force']),
   recopy: new Set(['--json', '--profile', '--restart', '--force']),
   'sync-artifact': new Set(['--json', '--profile', '--restart', '--force']),
+  update: new Set(['--json', '--target', '--candidate', '--port', '--timeout']),
   help: new Set(['--json']),
   loop: new Set(['--json']),
   version: new Set(['--json']),
@@ -95,8 +96,10 @@ const DSH_MANAGED_SHELL_READ_COMMANDS = new Set([
  * A DSH model shell is not the external supervisor. Keep mutating/process
  * commands behind fixed Creator+ tools or a genuinely external terminal.
  */
-export function dshManagedShellAllows(command: string, env: NodeJS.ProcessEnv = process.env): boolean {
-  return env.DSH_SHELL !== '1' || DSH_MANAGED_SHELL_READ_COMMANDS.has(command)
+export function dshManagedShellAllows(command: string, env: NodeJS.ProcessEnv = process.env, args: readonly string[] = []): boolean {
+  if (env.DSH_SHELL !== '1') return true
+  if (command === 'update') return (args[0] ?? 'plan') === 'plan'
+  return DSH_MANAGED_SHELL_READ_COMMANDS.has(command)
 }
 
 function findCommand(argv: string[]): { command: string; index: number } {
@@ -144,6 +147,12 @@ function applyFlag(token: string, argv: string[], index: number, options: CliOpt
     return index + 1
   } else if (token === '--change' && argv[index + 1]) {
     options.change = argv[index + 1] as ActivationChange
+    return index + 1
+  } else if (token === '--target' && argv[index + 1]) {
+    options.target = argv[index + 1]
+    return index + 1
+  } else if (token === '--candidate' && argv[index + 1]) {
+    options.candidate = argv[index + 1]
     return index + 1
   }
   return index
