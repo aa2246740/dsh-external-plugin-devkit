@@ -21,7 +21,7 @@ import {
   creatorQuarantinesPath,
   creatorTransactionsDir,
 } from './paths.ts'
-import { planWatchedPatch, writeWatchedPatch } from './new-client.ts'
+import { planWatchedPatch, planWatchedPatchRemoval, writeWatchedPatch } from './new-client.ts'
 
 const PLUGIN_ID = /^[a-z][a-z0-9-]*$/
 const CLAIM_TTL_MS = 24 * 60 * 60 * 1000
@@ -80,7 +80,7 @@ export type CreatorTransactionStatus =
 
 export interface CreatorTransaction {
   id: string
-  kind: 'new-client' | 'client-boot'
+  kind: 'new-client' | 'client-boot' | 'plugin-teardown'
   pluginId: string
   sessionId?: string
   callId?: string
@@ -107,7 +107,7 @@ export interface CreatorQuarantine {
 export interface CreatorIncident {
   id: string
   createdAt: string
-  reason: 'host-exited' | 'host-unhealthy' | 'client-failed' | 'crash-loop' | 'recovered-elsewhere'
+  reason: 'host-exited' | 'host-unhealthy' | 'client-failed' | 'plugin-integrity-failed' | 'crash-loop' | 'recovered-elsewhere'
   confidence: 'high' | 'probable' | 'ambiguous'
   sessionIds: string[]
   pluginId?: string
@@ -389,6 +389,11 @@ export function creatorQuarantine(root: string, pluginId: string): CreatorQuaran
   return readQuarantines(root).find(item => item.pluginId === pluginId)
 }
 
+/** Forget a completed teardown quarantine without restoring its removed row. */
+export function discardCreatorQuarantine(root: string, pluginId: string): void {
+  writeQuarantines(root, readQuarantines(root).filter(item => item.pluginId !== pluginId))
+}
+
 function writePatchSnapshot(snapshot: PatchSnapshot): void {
   if (snapshot.existed) writeWatchedPatch(snapshot.path, snapshot.text)
   else rmSync(snapshot.path, { force: true })
@@ -510,6 +515,57 @@ export function createClientFailureTransaction(
   }
   writeTransaction(root, transaction, false)
   return transaction
+}
+
+export interface ClaimedPluginQuarantineResult {
+  transaction: CreatorTransaction
+  quarantine: CreatorQuarantine
+}
+
+/**
+ * Remove or disable one claimed live patch row without touching source or the
+ * profile dependency. This is shared by explicit safe removal and Guardian's
+ * healthy-Host integrity repair.
+ */
+export function quarantineClaimedPlugin(
+  root: string,
+  claim: CreatorClaim,
+  patchPath: string,
+  hostPid: number,
+  hostPort: number,
+  reason: string,
+  now = Date.now(),
+): ClaimedPluginQuarantineResult | undefined {
+  const existed = existsSync(patchPath)
+  const current = existed ? readFileSync(patchPath, 'utf8') : ''
+  const plan = planWatchedPatchRemoval(existed ? current : undefined, claim.pluginId, claim.pluginId)
+  if (plan.action === 'absent') return undefined
+  const transaction: CreatorTransaction = {
+    id: randomUUID(),
+    kind: 'plugin-teardown',
+    pluginId: claim.pluginId,
+    sessionId: claim.sessionId,
+    ...claim.callId ? { callId: claim.callId } : {},
+    ...claim.rootCallId ? { rootCallId: claim.rootCallId } : {},
+    hostPid,
+    hostPort,
+    status: 'recovery-needed',
+    startedAt: iso(now),
+    updatedAt: iso(now),
+    patch: {
+      path: patchPath,
+      existed,
+      text: plan.before,
+      afterText: plan.current,
+      action: plan.action === 'removed' ? 'inserted' : 'retriggered',
+    },
+    retryingQuarantine: false,
+    error: reason,
+  }
+  writeTransaction(root, transaction, false)
+  const quarantine = quarantineCreatorTransaction(root, transaction, now)
+  markCreatorTransactionRecovered(root, transaction, now)
+  return { transaction, quarantine }
 }
 
 export function beginCreatorActivation(

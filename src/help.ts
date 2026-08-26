@@ -48,7 +48,7 @@ export const HELP = `dshx — DeepSeek Harness 进程外插件工作台
   restart-supervised            只重启当前 supervised Web PID
   restart                       restart-supervised 兼容别名
   status / logs                 监督状态和 launcher log
-  creator                       Bridge v2 内部协议：watch/claim/recovery/disarm；无模型任意 argv
+  creator                       Bridge v2 内部协议：watch/claim/remove/recovery/disarm；无模型任意 argv
   doctor                        profile/workshop 诊断；不是官方 dsh doctor
   session list|inspect [id]
   which

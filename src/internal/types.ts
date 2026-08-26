@@ -72,7 +72,7 @@ export interface CliOptions {
   candidate?: string
 }
 
-export const DSHX_VERSION = '0.7.1'
+export const DSHX_VERSION = '0.7.2'
 export const DEFAULT_PORT = 3080
 export const DEFAULT_TIMEOUT_MS = 60_000
 export const DEFAULT_PROFILE: ProfileName = 'web'

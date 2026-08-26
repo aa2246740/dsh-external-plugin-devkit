@@ -50,6 +50,7 @@ stale_after: 2026-11-17
 | 新增 Creator Mode / 用户 preset 是否要重启 | [activate-user-preset](/playbooks/activate-user-preset.md) | Host 不重启；名单必要时刷新；用新会话验证 |
 | Creator Mode+ 支持哪些 App 壳、supervisor 是谁 | [creator-mode-plus](/contracts/creator-mode-plus.md) | 只验官方浏览器 WebUI；外部 dshx 是 supervisor |
 | 多个 Creator+ 同时做插件，或插件让 Host/官方 Web Loader 失败后要自救 | [creator-guardian](/contracts/creator-guardian.md) | 不同插件并行；同插件独占；唯一归因后隔离、复活/刷新并 steer 原 session |
+| Creator+ 删除插件后 DSH 冷启动失败、profile link/source 消失但 patch 还在 | [creator-guardian](/contracts/creator-guardian.md) | `dshx_remove_plugin` 先脱载再清 profile；Guardian healthy cycle 隔离 stale row，禁止 raw teardown |
 | 新 client Host 已挂上但旧页面不显示 | [new-client-entry-needs-page-reload](/pitfalls/new-client-entry-needs-page-reload.md) | [add-new-client-plugin](/playbooks/add-new-client-plugin.md)，刷新/重开页面 |
 | 已有 client 改完想同页面热更新 | [update-existing-client-bundle](/playbooks/update-existing-client-bundle.md) | 验 `rebuilt` + UI；不要重启 Host |
 | server module 代码改了 | [restart-server-plugin](/playbooks/restart-server-plugin.md) | 无专项 module-HMR 证据就受控重启 |

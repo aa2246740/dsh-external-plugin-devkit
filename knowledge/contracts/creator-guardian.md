@@ -38,8 +38,9 @@ Creator+ 继承的 coding shell 仍属于 DSH 内部，不是外部 supervisor�
 入口拒绝这类 shell 发起的 mutation/process 命令。因此旧 session 即使忽略 skill，
 也不能再用 raw `dshx start/stop/restart/activate/ship` 绕过固定 bridge。
 
-Guardian 自动恢复两类可确定故障：**Web Host 进程/HTTP 失败**，以及官方 Web boot
-Loader 明确报告的 `Failed to load plugins`。它不把任意 client render exception、视觉
+Guardian 自动恢复三类可确定故障：**Web Host 进程/HTTP 失败**、官方 Web boot
+Loader 明确报告的 `Failed to load plugins`，以及已认领且已进入 watched patch 的 client
+在 Host 仍健康时丢失 profile link/source package。它不把任意 client render exception、视觉
 正确性或功能正确性冒充成已自愈。
 
 # 多会话所有权
@@ -98,10 +99,26 @@ Host pid/HTTP 失败
   -> 持久化 incident，steer 原 session
 ```
 
+```text
+认领中的 watched client 丢失 profile link，Host/HTTP 仍健康
+  -> Guardian 在每次 healthy cycle 检查该 id 的 profile package
+  -> 用精确独立 insert block remove，歧义格式则追加唯一 disabled override
+  -> 等当前 Host manifest 证明该 id 已消失
+  -> 不清理 profile dependency，不删除源码，不重启 Host
+  -> 持久化 plugin-integrity-failed incident，steer 原 session
+  -> 后续冷启动不会再消费仍 active 的 stale row
+```
+
 源码不会被删除。隔离只处理嫌疑插件自己的 live composition；若另一个 session 已经
 修改同一 patch，Guardian 使用事务唯一的 disabled override，不会把整份旧快照覆盖到
 新文件。下一次重试只移除该唯一 override。Agent 修复、`dshx_check` 通过后才可重新走
 原 activation branch。
+
+显式整插件移除与该自愈共用同一 byte-preserving quarantine 原语，但多两道有序 gate：
+同 Host absence proof 之后才运行官方 profile remover，成功后只断开 Harness symlink。
+Creator 会话的 bash guard 同时拒绝认领插件根、Harness link 与 active profile teardown，
+但允许插件内部普通组件/文件清理。guard 是第一道拦截，healthy-cycle integrity check 是
+独立兜底；两者都不授予会话 Host process control。
 
 # 不误伤正常退出
 

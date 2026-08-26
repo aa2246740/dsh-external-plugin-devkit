@@ -89,11 +89,11 @@ dshx update apply --target dsh-v0.1.1-rc.2
 
 省略 `--target` 时会实时查询官方最新 release。更新助手不会替你重启正式 Host；升级完成、真实运行时验收和正式激活仍是三个不同状态。详细合同见 [knowledge/contracts/harness-update.md](knowledge/contracts/harness-update.md)。
 
-DSHX 0.7.1 修复了 RC2 新 client 激活验证：同时识别旧版 `window.__DSH_BOOT__` 与当前官方 `globalThis["__DSH_BOOT__"]` 注入形式。Creator+ 的新 client 流程也明确为先实现、构建并通过 `check`，再运行 `activation-plan` 和同 PID 激活。
+DSHX 0.7.2 在 0.7.1 的 RC8/RC2 新 client 验证兼容上补齐安全卸载：`dshx_remove_plugin` 先让同 PID Host 脱载，再清 profile，只断开经目标校验的 symlink 并保留源码。RC8 若删了 dependency 却遗留本插件的 `node_modules` symlink，会从 durable quarantine 续跑并安全解绑；目录、越界目标或无法证明的状态仍失败关闭。Creator 会话直接拆插件根、Harness link 或 active profile 会被拒绝；Guardian 还会在已认领插件的 profile link 消失、Host 尚健康时主动隔离 stale row，避免下次冷启动失败。
 
 需要隔离冷启动证明时才 `verify-boot`。需要把包装进 profile 时才 `sync-artifact`——它只会告诉你 `ARTIFACT_SYNCED; LIVE_ACTIVATION_UNPROVEN`。
 
-可选的 Creator Mode+ 是一个用户 preset，只暴露六个固定工具。见 [knowledge/contracts/creator-mode-plus.md](knowledge/contracts/creator-mode-plus.md)。
+可选的 Creator Mode+ 是一个用户 preset，只暴露七个固定工具。见 [knowledge/contracts/creator-mode-plus.md](knowledge/contracts/creator-mode-plus.md)。
 
 更多：[从这里开始](knowledge/start-here.md) · [为什么出仓](knowledge/why-external.md) · [命令一览](knowledge/references/dshx-cli.md) · [站岗说明](AGENTS.md)
 

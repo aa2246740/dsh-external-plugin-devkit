@@ -89,11 +89,11 @@ dshx update apply --target dsh-v0.1.1-rc.2
 
 Without `--target`, DSHX queries the latest official release live. The assistant does not restart a production Host: applied bytes, real-runtime acceptance, and production activation remain separate states. See [knowledge/contracts/harness-update.md](knowledge/contracts/harness-update.md).
 
-DSHX 0.7.1 repairs RC2 new-client activation proof by accepting both the older `window.__DSH_BOOT__` assignment and the current official `globalThis["__DSH_BOOT__"]` injection. Creator+ now implements, builds, and passes `check` before running `activation-plan` and same-PID activation for a fresh client.
+DSHX 0.7.2 adds safe removal to 0.7.1's RC8/RC2 new-client compatibility. `dshx_remove_plugin` deactivates the same-PID Host first, then cleans the profile, detaches only target-verified symlinks, and preserves source. If RC8 removes the dependency but leaves this plugin's `node_modules` symlink, the transaction resumes from durable quarantine and safely detaches it; directories, outside targets, and unproved states still fail closed. Creator sessions cannot directly tear down a claimed plugin root, Harness link, or active profile; Guardian also quarantines a stale watched row when the claimed profile link disappears while the Host is still healthy, before a cold boot can fail.
 
 Use `verify-boot` only when you need an isolated cold-boot proof. Use `sync-artifact` only when a package must land in the profile — it will say `ARTIFACT_SYNCED; LIVE_ACTIVATION_UNPROVEN` and stop there.
 
-Optional Creator Mode+ is a user preset that exposes six fixed tools. See [knowledge/contracts/creator-mode-plus.md](knowledge/contracts/creator-mode-plus.md).
+Optional Creator Mode+ is a user preset that exposes seven fixed tools. See [knowledge/contracts/creator-mode-plus.md](knowledge/contracts/creator-mode-plus.md).
 
 More: [start here](knowledge/start-here.md) · [why work outside Creator Mode](knowledge/why-external.md) · [command surface](knowledge/references/dshx-cli.md) · [standing orders](AGENTS.md)
 

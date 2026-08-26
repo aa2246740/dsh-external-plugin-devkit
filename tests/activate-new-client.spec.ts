@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, 
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, it } from 'node:test'
-import { activateNewClient, parseBootManifest, planWatchedPatch } from '../src/internal/new-client.ts'
+import { activateNewClient, parseBootManifest, planWatchedPatch, planWatchedPatchRemoval } from '../src/internal/new-client.ts'
 
 const temporaryRoots: string[] = []
 
@@ -125,6 +125,18 @@ describe('activate-new-client', () => {
     assert.equal(planned.action, 'inserted')
     assert.match(planned.after, /!!js ctx\.webStartup\.port \?\? 3080/)
     assert.match(planned.after, /id: "demo"/)
+  })
+
+  it('removes only a standalone matching insert block and disables ambiguous shared rows', () => {
+    const standalone = '# keep\n- insert:\n    - id: "demo"\n      name: "demo"\n- id: another\n  disabled: true\n'
+    const removed = planWatchedPatchRemoval(standalone, 'demo', 'demo')
+    assert.equal(removed.action, 'removed')
+    assert.equal(removed.before, '# keep\n- id: another\n  disabled: true\n')
+
+    const shared = '- insert:\n    - id: demo\n      name: demo\n    - id: another\n      name: another\n'
+    const disabled = planWatchedPatchRemoval(shared, 'demo', 'demo')
+    assert.equal(disabled.action, 'disabled')
+    assert.equal(disabled.before, shared)
   })
 
   it('fails closed on an id collision before installing anything', async () => {

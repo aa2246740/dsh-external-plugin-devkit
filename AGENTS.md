@@ -32,9 +32,20 @@ own different plugins concurrently; the same plugin is exclusive, and only the
 short live activation transaction is globally serialized.
 Creator scaffold destinations must come from the immutable session cwd. DSHX,
 not the model or user, owns any required link into Harness `my-plugins`.
-Every release must execute the exact argv behind all six fixed Creator+ tools and
+Every release must execute the exact argv behind all seven fixed Creator+ tools and
 the internal watch/release/recovery hooks through the bridge allowlist. Tool
 registration alone does not prove the bridge is callable.
+The seventh tool, `dshx_remove_plugin`, must quarantine/remove the live watched
+row, prove same-Host absence, use the official profile remover when the
+dependency still exists, and detach only verified plugin-owned symlinks. A
+partial removal must resume from its durable quarantine without rerunning a
+package-manager removal for an already-absent dependency. Preserve source and
+never control the Host process.
+The Creator-scoped bash guard may deny only claimed plugin-root, Harness-link,
+and active-profile teardown; ordinary component/file cleanup remains allowed.
+Guardian independently detects a claimed watched client whose profile link has
+disappeared and quarantines the row while the Host is healthy, before a cold boot
+can consume stale configuration.
 Keep `DSHX_VERSION` equal to `package.json`. `ensureGuardian` may replace a
 fresh, live older Guardian through one bounded handoff; stale or unverifiable
 PID state must fail closed without sending a signal.

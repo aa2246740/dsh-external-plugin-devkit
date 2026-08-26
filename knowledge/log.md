@@ -2,6 +2,7 @@
 
 ## 2026-08-26
 
+* **Creator+ safe removal and pre-crash integrity quarantine (0.7.2)**: added the seventh fixed tool, `dshx_remove_plugin`, with live-row quarantine → same-PID absence → official profile remove → verified symlink-only detach → source-preservation ordering. RC8 live acceptance exposed that pnpm can remove the dependency yet leave its root `node_modules` symlink; the removal transaction now resumes from durable quarantine, skips a second package-manager removal when the dependency is already absent, and detaches the orphan only when it is a symlink targeting the claimed Harness/source path. Creator-scoped bash denies claimed plugin-root, Harness-link, and active-profile teardown while allowing ordinary file/component cleanup. Guardian detects a claimed watched client whose profile package disappears while the Host is still healthy and quarantines the stale row before cold boot. Regression tests reproduce both the raw deletion crash chain and the partial official-removal seam.
 * **RC2 new-client activation repair (0.7.1)**: boot-manifest verification now accepts both the RC8 `window.__DSH_BOOT__` assignment and RC2's official `globalThis["__DSH_BOOT__"]` injection without evaluating script text. Fresh Creator+ client instructions now build and pass `check` before `activation-plan`, so the plan can validate the required lazy-CJS handoff instead of blocking an unbuilt scaffold.
 
 ## 2026-08-24

@@ -43,7 +43,7 @@ dshx kb cat contracts/llm-retry
 - `verify-boot`（`verify` alias）：隔离 cold boot；已有 supervised Host 时拒绝，绝不自动 stop。
 - `sync-artifact`（`ship` / `recopy` alias）：link/file artifact，同步完成仍为 `LIVE_ACTIVATION_UNPROVEN`。
 - `restart-supervised`（`restart` alias）：只重启当前 live dshx-owned Web PID；无 live PID、换目标、headless 均拒绝。
-- `creator watch/claim/release/recovery/disarm/client-failure`：bridge v2 内部结构化协议。`client-failure` 只接受固定 Host bridge 写入环境的有界 browser report；模型只通过六个固定工具间接使用，不能提交任意 argv。`dshx status` 可读 Guardian、claims 与 quarantines。
+- `creator watch/claim/remove/release/recovery/disarm/client-failure`：bridge v2 内部结构化协议。`remove` 先隔离 live row、证明同 Host absence，再走官方 profile remover 并保留源码；`client-failure` 只接受固定 Host bridge 写入环境的有界 browser report。模型只通过七个固定工具间接使用，不能提交任意 argv。`dshx status` 可读 Guardian、claims 与 quarantines。
 - `update plan/prepare/verify/apply/rollback`：官方 release 升级事务。plan 只读；prepare/verify 在隔离候选 worktree；apply 拒绝 live supervised Host 并保存精确回滚；rollback 恢复 checkout、依赖与插件生成物。见 [harness-update](../contracts/harness-update.md)。
 
 `dshx start web` 会启动外部 Guardian。Creator+ session-start 还可以领养由官方 CLI/App

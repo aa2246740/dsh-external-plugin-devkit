@@ -7,6 +7,11 @@ import {
   runClientFailureDshx,
   runDshx,
 } from './runner.js'
+import {
+  forgetCreatorClaim,
+  installCreatorSafetyGuard,
+  rememberCreatorClaim,
+} from './safety.js'
 
 export const name = 'dshx-creator-plus'
 export const inject = ['tools', 'webServer']
@@ -158,6 +163,7 @@ export function apply(ctx) {
   console.log('[dshx/creator-plus] loaded')
   installCreatorRecovery(ctx)
   installClientFailureRoute(ctx)
+  installCreatorSafetyGuard(ctx)
 
   ctx.tools.register({
     name: 'dshx_claim_plugin',
@@ -172,7 +178,10 @@ export function apply(ctx) {
     output,
     execute(args, exec) {
       const id = pluginId(args.name)
-      return runDshx(['creator', 'claim', id], exec, { hostPort: currentWebPort() })
+      return runDshx(['creator', 'claim', id], exec, { hostPort: currentWebPort() }).then((result) => {
+        if (result.exitCode === 0) rememberCreatorClaim(exec, id)
+        return result
+      })
     },
     presentCall: args => ({ card: 'generic', title: `dshx claim ${args.name}`, kind: 'edit', rawInput: args.name }),
   })
@@ -260,6 +269,27 @@ export function apply(ctx) {
       ], exec, { hostPort: port })
     },
     presentCall: args => ({ card: 'generic', title: `dshx activate ${args.name}`, kind: 'edit', rawInput: args.name }),
+  })
+
+  ctx.tools.register({
+    name: 'dshx_remove_plugin',
+    description: 'Safely deactivate and unregister one claimed plugin. It proves current-Host absence before profile cleanup, detaches only symlinks, preserves source, and never restarts DSH.',
+    parameters: {
+      type: 'object',
+      properties: { name: { type: 'string', description: 'Claimed plugin id to deactivate and unregister' } },
+      required: ['name'],
+      additionalProperties: false,
+    },
+    timeoutMs: 90_000,
+    output,
+    async execute(args, exec) {
+      const id = pluginId(args.name)
+      const port = currentWebPort()
+      const result = await runClaimedDshx(id, ['creator', 'remove', id], exec, { hostPort: port })
+      if (result.exitCode === 0) forgetCreatorClaim(exec)
+      return result
+    },
+    presentCall: args => ({ card: 'generic', title: `dshx remove ${args.name}`, kind: 'edit', rawInput: args.name }),
   })
 
   ctx.tools.register({

@@ -78,6 +78,13 @@ export interface WatchedPatchPlan {
   after: string
 }
 
+export interface WatchedPatchRemovalPlan {
+  action: 'removed' | 'disabled' | 'absent'
+  before: string
+  current: string
+  inactiveReason?: 'not-inserted' | 'already-disabled'
+}
+
 const jsExpressionType = new yaml.Type('tag:yaml.org,2002:js', {
   kind: 'scalar',
   construct: value => value ?? '',
@@ -143,6 +150,67 @@ export function planWatchedPatch(current: string | undefined, id: string, packag
   const insertion = `- insert:\n    - id: ${yamlScalar(id)}\n      name: ${yamlScalar(packageName)}\n`
   if (source.trim() === '' || source.trim() === '[]') return { action: 'inserted', after: insertion }
   return { action: 'inserted', after: `${source.trimEnd()}\n${insertion}` }
+}
+
+/**
+ * Plan a byte-preserving removal of one standalone insert row. Rows sharing a
+ * patch item, user-formatted ambiguous rows, and active id overrides fall back
+ * to a later disabled override instead of rewriting user YAML.
+ */
+export function planWatchedPatchRemoval(current: string | undefined, id: string, packageName: string): WatchedPatchRemovalPlan {
+  const source = current ?? ''
+  const patches = parsePatchList(source)
+  const inserted: Record<string, unknown>[] = []
+  let alreadyDisabled = false
+
+  for (const patchValue of patches) {
+    const patch = record(patchValue)
+    if (!patch) continue
+    if (patch.id === id && patch.disabled === true) alreadyDisabled = true
+    if (!Array.isArray(patch.insert)) continue
+    for (const rowValue of patch.insert) {
+      const row = record(rowValue)
+      if (row?.id === id) inserted.push(row)
+    }
+  }
+
+  if (inserted.length > 1) throw new Error(`watched patch id ${id} is inserted more than once`)
+  if (inserted.length === 0) {
+    return { action: 'absent', before: source, current: source, inactiveReason: 'not-inserted' }
+  }
+  if (alreadyDisabled) {
+    return { action: 'absent', before: source, current: source, inactiveReason: 'already-disabled' }
+  }
+  if (inserted[0]!.name !== packageName) {
+    throw new Error(`watched patch id ${id} belongs to ${String(inserted[0]!.name ?? '(missing name)')}, not ${packageName}`)
+  }
+
+  const removable: Array<{ start: number; end: number }> = []
+  const blockPattern = /^- insert:\r?\n(?:[ \t]+.*(?:\r?\n|$))+/gm
+  for (const match of source.matchAll(blockPattern)) {
+    const block = match[0]
+    try {
+      const parsed = parsePatchList(block)
+      const item = parsed.length === 1 ? record(parsed[0]) : undefined
+      const rows = item && Object.keys(item).length === 1 && Array.isArray(item.insert) ? item.insert : undefined
+      const row = rows?.length === 1 ? record(rows[0]) : undefined
+      if (row?.id === id && row.name === packageName) {
+        removable.push({ start: match.index!, end: match.index! + block.length })
+      }
+    } catch {
+      // The full patch already parsed; an isolated nonstandard item is simply
+      // not eligible for byte removal and will use a disabled override.
+    }
+  }
+  if (removable.length === 1) {
+    const [range] = removable
+    return {
+      action: 'removed',
+      before: source.slice(0, range!.start) + source.slice(range!.end),
+      current: source,
+    }
+  }
+  return { action: 'disabled', before: source, current: source }
 }
 
 export function disabledWatchedPatch(current: string, id: string): string {
