@@ -89,6 +89,8 @@ dshx update apply --target dsh-v0.1.1-rc.2
 
 Without `--target`, DSHX queries the latest official release live. The assistant does not restart a production Host: applied bytes, real-runtime acceptance, and production activation remain separate states. See [knowledge/contracts/harness-update.md](knowledge/contracts/harness-update.md).
 
+DSHX 0.7.1 repairs RC2 new-client activation proof by accepting both the older `window.__DSH_BOOT__` assignment and the current official `globalThis["__DSH_BOOT__"]` injection. Creator+ now implements, builds, and passes `check` before running `activation-plan` and same-PID activation for a fresh client.
+
 Use `verify-boot` only when you need an isolated cold-boot proof. Use `sync-artifact` only when a package must land in the profile — it will say `ARTIFACT_SYNCED; LIVE_ACTIVATION_UNPROVEN` and stop there.
 
 Optional Creator Mode+ is a user preset that exposes six fixed tools. See [knowledge/contracts/creator-mode-plus.md](knowledge/contracts/creator-mode-plus.md).

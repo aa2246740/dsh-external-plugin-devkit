@@ -315,8 +315,8 @@ export async function cmdVerify(args: string[], options: CliOptions, root: strin
         const rowPattern = new RegExp(`(${clientPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\?rev=[^"'<\\s]+)`)
         const row = rowPattern.exec(html)?.[1]
         findings.push(row
-          ? finding('ok', 'client-graph', `window.__DSH_BOOT__ contains ${webClientPackage.name}`)
-          : finding('error', 'client-graph', `window.__DSH_BOOT__ is missing ${webClientPackage.name}`))
+          ? finding('ok', 'client-graph', `__DSH_BOOT__ contains ${webClientPackage.name}`)
+          : finding('error', 'client-graph', `__DSH_BOOT__ is missing ${webClientPackage.name}`))
         let bundleOk = false
         if (row) {
           const bundle = await fetch(new URL(row, baseUrl))

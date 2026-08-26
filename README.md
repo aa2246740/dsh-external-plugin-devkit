@@ -89,6 +89,8 @@ dshx update apply --target dsh-v0.1.1-rc.2
 
 省略 `--target` 时会实时查询官方最新 release。更新助手不会替你重启正式 Host；升级完成、真实运行时验收和正式激活仍是三个不同状态。详细合同见 [knowledge/contracts/harness-update.md](knowledge/contracts/harness-update.md)。
 
+DSHX 0.7.1 修复了 RC2 新 client 激活验证：同时识别旧版 `window.__DSH_BOOT__` 与当前官方 `globalThis["__DSH_BOOT__"]` 注入形式。Creator+ 的新 client 流程也明确为先实现、构建并通过 `check`，再运行 `activation-plan` 和同 PID 激活。
+
 需要隔离冷启动证明时才 `verify-boot`。需要把包装进 profile 时才 `sync-artifact`——它只会告诉你 `ARTIFACT_SYNCED; LIVE_ACTIVATION_UNPROVEN`。
 
 可选的 Creator Mode+ 是一个用户 preset，只暴露六个固定工具。见 [knowledge/contracts/creator-mode-plus.md](knowledge/contracts/creator-mode-plus.md)。

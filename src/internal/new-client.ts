@@ -196,13 +196,17 @@ function installedLinkIsReady(prof: string, packageName: string, packageDir: str
     && sameRealPath(installed, packageDir)
 }
 
-function parseBootManifest(html: string): { entries?: HostManifestEntry[] } {
-  const marker = 'window.__DSH_BOOT__ = '
-  const start = html.indexOf(marker)
-  if (start < 0) throw new Error('Host HTML has no window.__DSH_BOOT__ manifest')
-  const bodyStart = start + marker.length
+// RC8 writes window.__DSH_BOOT__; RC2 writes globalThis["__DSH_BOOT__"].
+// Match only the supported assignment surface and parse the value as JSON;
+// never evaluate Host-controlled script text.
+export const BOOT_MANIFEST_ASSIGNMENT = /(?:window\s*\.\s*__DSH_BOOT__|globalThis(?:\s*\.\s*__DSH_BOOT__|\s*\[\s*["']__DSH_BOOT__["']\s*\]))\s*=\s*/
+
+export function parseBootManifest(html: string): { entries?: HostManifestEntry[] } {
+  const assignment = BOOT_MANIFEST_ASSIGNMENT.exec(html)
+  if (!assignment) throw new Error('Host HTML has no supported __DSH_BOOT__ manifest assignment')
+  const bodyStart = assignment.index + assignment[0].length
   const end = html.indexOf('</script>', bodyStart)
-  if (end < 0) throw new Error('Host HTML has an unterminated window.__DSH_BOOT__ manifest')
+  if (end < 0) throw new Error('Host HTML has an unterminated __DSH_BOOT__ manifest assignment')
   return JSON.parse(html.slice(bodyStart, end).trim().replace(/;$/, '')) as { entries?: HostManifestEntry[] }
 }
 

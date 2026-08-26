@@ -85,6 +85,8 @@ scaffold 的目标路径来自 `exec.agent.session.header.cwd` 这一不可变�
 如果 Harness 的 `my-plugins/<id>` 不在该可写工作区内，DSHX 在会话工作区创建源码并
 原子建立 Harness symlink；Agent 不再绕到另一目录建项目，也不让用户手工执行 `ln -s`。
 新项目必须先 scaffold 才能 activation-plan，因为不存在的目标无法被 plan 检查。
+其中 fresh `new-client` 在 scaffold 后先实现、构建并通过 `check`，再跑 activation-plan；
+plan 会验证 `lib/client.js` handoff，不能要求未构建 scaffold 先通过。
 
 # 激活合同
 

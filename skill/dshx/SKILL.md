@@ -26,7 +26,10 @@ Read `kb cat contracts/creator-guardian` for attribution and recovery semantics.
 For a new Creator+ project, call the fixed scaffold immediately after claim. It
 uses the immutable session cwd, returns the only source path the Agent edits, and
 creates the Harness `my-plugins` link when needed. Run activation-plan after that
-target exists and before implementation; existing projects skip scaffold.
+target exists. For a fresh `new-client`, read `contracts/client-build`, implement,
+build, and pass `dshx_check` before calling activation-plan, because the plan
+validates the built `lib/client.js` handoff. Existing built targets can plan before
+implementation.
 If a fixed tool throws `refusing an operation outside bridge v2`, treat it as a
 Creator Bridge integrity defect: quote the exact tool and error, preserve the
 current plugin location, and stop. It is not permission to use raw dshx, mount the
@@ -70,18 +73,22 @@ When the user asks to update DeepSeek Harness and retain local plugins, read `kb
 ./scripts/dshx.sh update apply [--target ...]
 ```
 
-`plan` is read-only. Do not run `apply` until candidate Harness install/full-build and every plugin's build/static/runtime proof pass. Web clients require the RC2-native profile package link, package-name Loader row, active `window.__DSH_BOOT__` entry, and served `client.js`; server-only plugins require a runtime `apply()` marker. `apply` must refuse a supervised Host and retain `.dshx/update-assistant/<tag>/rollback.json`. Do not run `update rollback` merely to test it: that command intentionally restores the previous checkout, dependencies, and plugin artifacts.
+`plan` is read-only. Do not run `apply` until candidate Harness install/full-build and every plugin's build/static/runtime proof pass. Web clients require the RC2-native profile package link, package-name Loader row, active `__DSH_BOOT__` entry (currently emitted as `globalThis["__DSH_BOOT__"]`), and served `client.js`; server-only plugins require a runtime `apply()` marker. `apply` must refuse a supervised Host and retain `.dshx/update-assistant/<tag>/rollback.json`. Do not run `update rollback` merely to test it: that command intentionally restores the previous checkout, dependencies, and plugin artifacts.
 
 Report `candidate verified`, `applied locally`, `real runtime accepted`, and `production activated` as different states. The update assistant never silently restarts a production Host.
 
 ## Classify activation before acting
 
-When the target already exists and the request involves installation, delivery, HMR, hot-plugging, refresh, or restart, first run:
+When the target already exists, is build-ready, and the request involves installation, delivery, HMR, hot-plugging, refresh, or restart, run:
 
 ```sh
 ./scripts/dshx.sh kb cat contracts/live-activation
 ./scripts/dshx.sh activation-plan <plugin> --change <branch>
 ```
+
+A freshly scaffolded `new-client` is the one sequencing exception: classify it
+immediately, then implement, build, and pass `check` before activation-plan so
+the plan can validate the required `lib/client.js` handoff.
 
 Choose exactly one changed-surface branch:
 
@@ -117,14 +124,15 @@ Read only the selected branch:
 ## Develop and prove
 
 1. Read the relevant contract with `kb cat`; a `kb search` snippet is only an id pointer. In Creator Mode+, claim the chosen plugin before changing it.
-2. For a new Creator+ project, use `dshx_scaffold`, then plan the now-resolvable target. Edit only the returned session-workspace path; never ask the user to create a symlink.
+2. For a new Creator+ project, use `dshx_scaffold`. Edit only the returned session-workspace path; never ask the user to create a symlink. Do not require activation-plan to pass while a fresh client scaffold still lacks its built handoff.
 3. For an existing project, edit `my-plugins/<name>/` or the named package. Keep committed `cordis.yml` portable.
 4. For a client package, read `kb cat contracts/client-build`. On RC8, an out-of-tree package must build with dshx `externalClientBundle`; do not import the repository-internal official `clientBundle()` or move the plugin under `packages/`.
 5. Run `check <name>`. Completion: no static contract errors; a client package also passes `client-cordis-inject` and has a built lazy-CJS `lib/client.js` handoff.
-6. Run `verify-boot <name>` only when an isolated cold boot is needed. Completion: server-only plugins show the runtime marker; Web clients appear in the active boot graph and their bundle returns HTTP 200. It refuses to stop an existing supervised Host and does not prove current-host activation.
-7. If package bytes must reach a profile, run `sync-artifact <dir>` (`ship` is a compatibility alias). Completion: content hash matches; activation remains unproven.
-8. Execute the previously selected activation branch. For `new-client`, use only `activate-new-client`; restart only when a different branch requires it.
-9. Report evidence by layer: `SOURCE_BUILT`, `ARTIFACT_SYNCED`, `NEXT_BOOT_REGISTERED`, `HOST_TREE_ACTIVE`, `CLIENT_LOADED`, `VISUAL_BEHAVIOR_VERIFIED`. Omit unobserved layers.
+6. Run `activation-plan <name> --change <branch>` now if this is a freshly built `new-client`; for an existing built target it may already have run before editing. Do not begin live mutation unless the selected plan exits `0`.
+7. Run `verify-boot <name>` only when an isolated cold boot is needed. Completion: server-only plugins show the runtime marker; Web clients appear in the active boot graph and their bundle returns HTTP 200. It refuses to stop an existing supervised Host and does not prove current-host activation.
+8. If package bytes must reach a profile, run `sync-artifact <dir>` (`ship` is a compatibility alias). Completion: content hash matches; activation remains unproven.
+9. Execute the selected activation branch. For `new-client`, use only `activate-new-client`; restart only when a different branch requires it.
+10. Report evidence by layer: `SOURCE_BUILT`, `ARTIFACT_SYNCED`, `NEXT_BOOT_REGISTERED`, `HOST_TREE_ACTIVE`, `CLIENT_LOADED`, `VISUAL_BEHAVIOR_VERIFIED`. Omit unobserved layers.
 
 ## Plugin-form checks
 

@@ -1,5 +1,9 @@
 # Directory Update Log
 
+## 2026-08-26
+
+* **RC2 new-client activation repair (0.7.1)**: boot-manifest verification now accepts both the RC8 `window.__DSH_BOOT__` assignment and RC2's official `globalThis["__DSH_BOOT__"]` injection without evaluating script text. Fresh Creator+ client instructions now build and pass `check` before `activation-plan`, so the plan can validate the required lazy-CJS handoff instead of blocking an unbuilt scaffold.
+
 ## 2026-08-24
 
 * **Harness update assistant and RC2 native client proof (0.7.0)**: added read-only release planning, isolated Harness/plugin preparation, resumable per-plugin verification, transactional apply, and exact rollback. Web client plugins now link into the selected profile and load by package name, matching RC2 client discovery; `verify-boot` proves the active boot-graph row and served client bundle instead of waiting for suppressed `ctx.logger.info` output. The first real update moved the local Harness to official `dsh-v0.1.1-rc.2`; a combined cold boot loaded 13 Host plugins and 11 Web clients with no page, console, or request failures.

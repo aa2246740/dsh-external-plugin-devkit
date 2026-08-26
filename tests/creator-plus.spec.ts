@@ -371,6 +371,7 @@ describe('Creator Mode+ bridge', () => {
 
     assert.equal(readFileSync(source, 'utf8'), before)
     assert.match(composition, /You are Creator Mode\+/)
+    assert.match(composition, /Harness update planning is read-only/)
     assert.match(composition, /name: dsh-external-plugin-devkit\n/)
     assert.equal(existsSync(join(target, 'skills/creator-mode-plus/SKILL.md')), true)
     assert.match(readFileSync(join(target, 'preset.yml'), 'utf8'), /Creator Mode\+/)
@@ -397,6 +398,7 @@ describe('Creator Mode+ bridge', () => {
     assert.match(readFileSync(compositionPath, 'utf8'), /name: dsh-external-plugin-devkit\n/)
     assert.doesNotMatch(readFileSync(compositionPath, 'utf8'), /dsh-external-plugin-devkit\/creator-plus/)
     assert.match(readFileSync(skillPath, 'utf8'), /dshx_activate_new_client/)
+    assert.match(readFileSync(skillPath, 'utf8'), />=0\.7\.1 <0\.8\.0/)
     assert.match(readFileSync(join(target, 'preset.yml'), 'utf8'), /会话认领.*外部 Guardian/)
   })
 
