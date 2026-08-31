@@ -89,7 +89,7 @@ dshx update apply --target dsh-v0.1.1-rc.2
 
 省略 `--target` 时会实时查询官方最新 release。更新助手不会替你重启正式 Host；升级完成、真实运行时验收和正式激活仍是三个不同状态。详细合同见 [knowledge/contracts/harness-update.md](knowledge/contracts/harness-update.md)。
 
-DSHX 0.7.2 在 0.7.1 的 RC8/RC2 新 client 验证兼容上补齐安全卸载：`dshx_remove_plugin` 先让同 PID Host 脱载，再清 profile，只断开经目标校验的 symlink 并保留源码。RC8 若删了 dependency 却遗留本插件的 `node_modules` symlink，会从 durable quarantine 续跑并安全解绑；目录、越界目标或无法证明的状态仍失败关闭。Creator 会话直接拆插件根、Harness link 或 active profile 会被拒绝；Guardian 还会在已认领插件的 profile link 消失、Host 尚健康时主动隔离 stale row，避免下次冷启动失败。
+DSHX 0.7.3 修复 bundle 插件卸载顺序。外部 supervisor 使用 `dshx plugin remove <package> --profile web --port <当前端口>`：先让当前 `__DSH_BOOT__` 同 PID 脱载，再调用官方 remover，绝不先删 `client.js` 留旧 Loader 图。旧 boot 期间会保留精确 disable；用户以后正常重开 DSH.app 后重跑同一命令，只有证明新 Host 从干净 profile 启动才清掉它。命令还能续跑“dependency 已没、旧 live 图仍在”的半删除状态。Creator+ watched 插件仍走固定 `dshx_remove_plugin`，两条路径都不重启 Host、不删除源码。
 
 需要隔离冷启动证明时才 `verify-boot`。需要把包装进 profile 时才 `sync-artifact`——它只会告诉你 `ARTIFACT_SYNCED; LIVE_ACTIVATION_UNPROVEN`。
 

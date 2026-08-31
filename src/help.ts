@@ -37,6 +37,7 @@ export const HELP = `dshx — DeepSeek Harness 进程外插件工作台
   check [name]                  静态合同；client 必须是 built lazy-CJS lib/client.js
   activation-plan <target>      只读 inventory；--change 选择生命周期分支
   activate-new-client <plugin>  固定顺序 link → watched patch → 当前 Host manifest；不重启、不刷新页面
+  plugin remove <package>       同名 Loader id 的 bundle 安全卸载：live disable → 同 PID absence → 官方 remove
   overlay [name]                生成一次性绝对 --patch 文件；该文件不受 user-patch watcher 监听
   dump [name]                   离线合成；退出 0 不是 boot/live 证明
   verify-boot [name]            隔离冷启动：服务端 marker，或 Web client graph + bundle HTTP
@@ -64,6 +65,7 @@ export const HELP = `dshx — DeepSeek Harness 进程外插件工作台
   restart-supervised 没有 live owned PID 时会拒绝，绝不复活 last-host.json。
   adopted 官方/App Host 不能被 stop/restart-supervised 手工控制；Guardian 只在真实失败后恢复一次。
   Creator+ session-start 自动武装 Guardian；不同插件可并行，同插件只允许一个 session 认领。
+  外部 bundle 卸载不会先删包再留下旧 Loader 图；旧 boot 的临时 disable 会留到下次正常重开，再重跑同一命令清理。
   sync-artifact 成功只输出 ARTIFACT_SYNCED; LIVE_ACTIVATION_UNPROVEN。
   ship --restart 已禁用；保持当前 PID，只有带精确证据的 manifest/server 分支才显式 restart-supervised。
 

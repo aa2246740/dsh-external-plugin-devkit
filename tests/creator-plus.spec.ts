@@ -423,7 +423,7 @@ describe('Creator Mode+ bridge', () => {
     assert.match(readFileSync(compositionPath, 'utf8'), /seven-tool DSHX v0\.7 fixed bridge/)
     assert.doesNotMatch(readFileSync(compositionPath, 'utf8'), /six-tool DSHX v0\.7 fixed bridge/)
     assert.match(readFileSync(skillPath, 'utf8'), /dshx_activate_new_client/)
-    assert.match(readFileSync(skillPath, 'utf8'), />=0\.7\.2 <0\.8\.0/)
+    assert.match(readFileSync(skillPath, 'utf8'), />=0\.7\.3 <0\.8\.0/)
     assert.match(readFileSync(join(target, 'preset.yml'), 'utf8'), /会话认领.*外部 Guardian/)
   })
 

@@ -10,6 +10,7 @@ describe('parseCli', () => {
     assert.equal(dshManagedShellAllows('start', managed), false)
     assert.equal(dshManagedShellAllows('restart-supervised', managed), false)
     assert.equal(dshManagedShellAllows('activate-new-client', managed), false)
+    assert.equal(dshManagedShellAllows('plugin', managed, ['remove', 'demo']), false)
     assert.equal(dshManagedShellAllows('sync-artifact', managed), false)
     assert.equal(dshManagedShellAllows('update', managed, ['plan']), true)
     assert.equal(dshManagedShellAllows('update', managed, ['prepare']), false)
@@ -92,6 +93,15 @@ describe('parseCli', () => {
     assert.equal(activation.options.profile, 'web')
     assert.equal(activation.options.port, 43127)
     assert.equal(activation.options.timeoutMs, 12_000)
+  })
+
+  it('keeps safe bundle removal flags on the plugin command', () => {
+    const parsed = parseCli(['plugin', 'remove', 'dsh-ade', '--profile', 'web', '--port', '43127', '--timeout', '12'])
+    assert.equal(parsed.command, 'plugin')
+    assert.deepEqual(parsed.args, ['remove', 'dsh-ade'])
+    assert.equal(parsed.options.profile, 'web')
+    assert.equal(parsed.options.port, 43127)
+    assert.equal(parsed.options.timeoutMs, 12_000)
   })
 
   it('parses update target and candidate without leaking flags into arguments', () => {

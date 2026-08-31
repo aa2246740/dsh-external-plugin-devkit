@@ -176,7 +176,7 @@ export function planWatchedPatchRemoval(current: string | undefined, id: string,
 
   if (inserted.length > 1) throw new Error(`watched patch id ${id} is inserted more than once`)
   if (inserted.length === 0) {
-    return { action: 'absent', before: source, current: source, inactiveReason: 'not-inserted' }
+    return { action: 'absent', before: source, current: source, inactiveReason: alreadyDisabled ? 'already-disabled' : 'not-inserted' }
   }
   if (alreadyDisabled) {
     return { action: 'absent', before: source, current: source, inactiveReason: 'already-disabled' }

@@ -58,3 +58,4 @@
 * **Creation**: Playbooks for the external loop, out-of-process restart, real boot verify, and new-session recovery.
 * **Creation**: Pitfalls distilled from community-reproduced failures (orphan `tool_call`, host suicide, duplicate loader id, leftover bundles, dump false negative).
 * **Creation**: Attested computations for `dshx verify`, `dshx dump`, and `dshx doctor`.
+* **Bundle removal order repair (0.7.3)**: added external `dshx plugin remove` for Web bundles. It installs/resumes a byte-bounded live disable, proves `__DSH_BOOT__` absence on the same PID, then invokes official profile removal and validates dependency/bundle/link cleanup. A tombstone survives the old boot and is removed only when Host start time is later than persistent profile removal; the same command therefore repairs and resumes the `client.js`-gone/stale-Loader half-removal without restarting DSH.

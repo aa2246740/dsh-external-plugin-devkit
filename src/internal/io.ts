@@ -73,6 +73,7 @@ const COMMAND_FLAGS: Record<string, ReadonlySet<string>> = {
   'activation-plan': new Set(['--json', '--profile', '--change']),
   'activate-new-client': new Set(['--json', '--profile', '--port', '--timeout']),
   creator: new Set(['--json']),
+  plugin: new Set(['--json', '--profile', '--port', '--timeout']),
   doctor: new Set(['--json', '--profile']),
   session: new Set(['--json']),
   which: new Set(['--json']),

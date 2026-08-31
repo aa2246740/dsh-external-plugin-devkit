@@ -137,6 +137,10 @@ describe('activate-new-client', () => {
     const disabled = planWatchedPatchRemoval(shared, 'demo', 'demo')
     assert.equal(disabled.action, 'disabled')
     assert.equal(disabled.before, shared)
+
+    const alreadyDisabled = planWatchedPatchRemoval('- id: demo\n  disabled: true\n', 'demo', 'demo')
+    assert.equal(alreadyDisabled.action, 'absent')
+    assert.equal(alreadyDisabled.inactiveReason, 'already-disabled')
   })
 
   it('fails closed on an id collision before installing anything', async () => {

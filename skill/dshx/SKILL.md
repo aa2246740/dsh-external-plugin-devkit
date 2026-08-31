@@ -38,6 +38,8 @@ succeeded. Retry that fixed tool only after upgrading the bridge.
 
 For whole-plugin removal inside Creator Mode+, use only `dshx_remove_plugin` after the claim. It removes/quarantines the watched Host row first, proves same-PID absence, runs the official profile remover while the dependency exists, verifies dependency/link absence, detaches only verified plugin-owned symlinks, and preserves source. RC8 can remove the manifest dependency while leaving its `node_modules` symlink: DSHX labels the bounded recovery `detached-orphan-symlink` only after proving that the dependency is absent, the residual entry is a symlink, and its target is this claim's Harness/source path. A non-symlink or outside target fails closed. A partial attempt resumes from durable quarantine without rerunning package removal for an already-absent dependency. Do not use bash, `rm`, `unlink`, `mv`, manual Web-profile edits, or package-manager commands to tear down a plugin. Ordinary file/component cleanup inside the claimed source is still allowed. If raw teardown is denied, do not retry through a different shell or script.
 
+For an externally supervised Web bundle (`dsh.profile.bundles` / package `dsh.bundle`) whose package name is also its Loader id, use `dshx plugin remove <package> --profile web --port <current-web-port>`. This is not the Creator watched-row remover. It writes or resumes one exact live `disabled: true` tombstone, proves the current `__DSH_BOOT__` no longer names the package on the same PID, then runs the official profile remover and verifies dependency/bundle/link absence. A bundle whose client-row id cannot be proved from the same-name live entry fails closed instead of guessing. The command also repairs the specific dependency-gone/bundle-leftover seam. Never delete package files first. While the old boot remains alive, a DSHX-owned disable is intentionally retained; after the user later reopens DSH.app normally, rerun the same command and it removes the tombstone only when process-start and profile-removal times prove the new Host booted from the clean profile. Already-open failed pages still require a hard refresh or new page. Do not restart DSH merely to clean the tombstone.
+
 ## Resolve the checkout
 
 The CLI requires one DeepSeek Harness checkout containing both `apps/cli/src/bin.ts` and `tools/dshx/src/cli.ts`.
@@ -136,7 +138,7 @@ Read only the selected branch:
 9. Execute the selected activation branch. For `new-client`, use only `activate-new-client`; restart only when a different branch requires it.
 10. Report evidence by layer: `SOURCE_BUILT`, `ARTIFACT_SYNCED`, `NEXT_BOOT_REGISTERED`, `HOST_TREE_ACTIVE`, `CLIENT_LOADED`, `VISUAL_BEHAVIOR_VERIFIED`. Omit unobserved layers.
 
-For a removal request, replace activation steps 6–9 with the fixed `dshx_remove_plugin` operation. Completion requires `HOST_TREE_INACTIVE` and `PROFILE_DEPENDENCY_REMOVED`; report `SOURCE_PRESERVED` only when observed. The operation never proves the source was deleted, never restarts the Host, and never controls the browser.
+For a watched-row removal request inside Creator Mode+, replace activation steps 6–9 with the fixed `dshx_remove_plugin` operation. For an external boot-captured bundle, use `dshx plugin remove` from the supervisor instead. Completion requires `HOST_TREE_INACTIVE` and `PROFILE_DEPENDENCY_REMOVED`; report `SOURCE_PRESERVED` only when observed. Neither operation proves the source was deleted, restarts the Host, or controls the browser.
 
 ## Plugin-form checks
 
