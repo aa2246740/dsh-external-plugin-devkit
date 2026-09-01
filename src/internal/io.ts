@@ -62,7 +62,7 @@ const COMMAND_FLAGS: Record<string, ReadonlySet<string>> = {
   check: new Set(['--json']),
   overlay: new Set(['--json']),
   dump: new Set(['--json', '--profile']),
-  start: new Set(['--json', '--profile', '--port', '--timeout', '--keep', '--force', '--task']),
+  start: new Set(['--json', '--profile', '--port', '--timeout', '--force', '--task']),
   stop: new Set(['--json']),
   restart: new Set(['--json']),
   'restart-supervised': new Set(['--json']),

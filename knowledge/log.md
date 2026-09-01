@@ -7,6 +7,7 @@
 
 ## 2026-08-24
 
+* **Single-Home Host ownership (0.7.4)**: App, direct CLI, and dshx are launchers for one long-lived Web Host per real `DSH_HOME`. `start` discovers and attaches instead of spawning another port, duplicates/unknown visibility fail closed, and EPERM is no longer false death. `verify-boot` now runs in a temporary Home and always tears it down; `--keep` is rejected.
 * **Harness update assistant and RC2 native client proof (0.7.0)**: added read-only release planning, isolated Harness/plugin preparation, resumable per-plugin verification, transactional apply, and exact rollback. Web client plugins now link into the selected profile and load by package name, matching RC2 client discovery; `verify-boot` proves the active boot-graph row and served client bundle instead of waiting for suppressed `ctx.logger.info` output. The first real update moved the local Harness to official `dsh-v0.1.1-rc.2`; a combined cold boot loaded 13 Host plugins and 11 Web clients with no page, console, or request failures.
 
 ## 2026-08-21

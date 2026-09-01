@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { clearGuardianState, readGuardianState, runGuardianCycle, writeGuardianState } from './internal/guardian.ts'
+import { probePid } from './internal/host.ts'
 import { DSHX_VERSION } from './internal/types.ts'
 
 function harnessArgument(argv: string[]): string {
@@ -12,12 +13,8 @@ function harnessArgument(argv: string[]): string {
 const root = harnessArgument(process.argv.slice(2))
 const existing = readGuardianState(root)
 if (existing?.pid && existing.pid !== process.pid) {
-  try {
-    process.kill(existing.pid, 0)
-    throw new Error(`guardian already running as pid ${existing.pid}`)
-  } catch (error) {
-    if (error instanceof Error && error.message.startsWith('guardian already')) throw error
-  }
+  const state = probePid(existing.pid)
+  if (state !== 'dead') throw new Error(`guardian already running or inaccessible as pid ${existing.pid} (${state})`)
 }
 
 const startedAt = new Date().toISOString()

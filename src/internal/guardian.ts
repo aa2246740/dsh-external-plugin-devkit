@@ -410,6 +410,10 @@ export async function adoptOrArmCreatorHost(
       }
       writeHostState(root, host)
       adopted = true
+    } else if (existing.ownership === 'adopted' && existing.launcherPid !== context.hostParentPid) {
+      host = { ...existing, launcherPid: context.hostParentPid }
+      writeHostState(root, host)
+      adopted = true
     } else {
       host = existing
     }

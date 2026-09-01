@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, it } from 'node:test'
 import { cmdRestart, cmdStop, cmdVerify } from '../src/commands/host.ts'
-import { dshHostArgs, pidAlive, startHost, writeHostState } from '../src/internal/host.ts'
+import { dshHostArgs, pidAlive, probePid, probePort, startHost, writeHostState } from '../src/internal/host.ts'
 import { parseCli, writeText } from '../src/internal/io.ts'
 
 async function silence<T>(run: () => Promise<T>): Promise<T> {
@@ -52,23 +52,20 @@ describe('startHost', () => {
     )
   })
 
-  it('verify-boot refuses an active supervised host without stopping it', async () => {
+  it('verify-boot rejects a persistent second Host', async () => {
     const root = mkdtempSync(join(tmpdir(), 'dshx-host-'))
-    writeText(join(root, 'my-plugins/demo/dshx.yml'), 'id: demo\nentry: src/demo.ts\nmarker: "[demo] loaded"\nkind: function\n')
-    writeText(join(root, 'my-plugins/demo/src/demo.ts'), `export function apply() { console.log('[demo] loaded') }\n`)
-    writeHostState(root, {
-      pid: process.pid,
-      profile: 'web',
-      port: 3091,
-      overlay: '',
-      logFile: join(root, '.dshx/logs/web.log'),
-      startedAt: new Date().toISOString(),
-      command: ['node'],
-    })
-    const { options } = parseCli(['verify-boot', 'demo', '--json'])
+    const { options } = parseCli(['verify-boot', 'demo', '--keep', '--json'])
     const code = await silence(() => cmdVerify(['demo'], options, root))
     assert.equal(code, 1)
     assert.equal(pidAlive(process.pid), true)
+  })
+
+  it('does not interpret EPERM as a dead process or closed port', async () => {
+    const denied = Object.assign(new Error('denied'), { code: 'EPERM' })
+    const signal = (() => { throw denied }) as typeof process.kill
+    assert.equal(probePid(123, signal), 'unknown')
+    const request = (async () => { throw Object.assign(new Error('denied'), { cause: denied }) }) as typeof fetch
+    assert.equal(await probePort(43127, '127.0.0.1', request), 'unknown')
   })
 
   it('restart-supervised does not resurrect stale last-host state', async () => {

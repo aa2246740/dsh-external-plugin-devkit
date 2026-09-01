@@ -9,7 +9,7 @@ Build file-backed plugins against the official DeepSeek Harness browser WebUI th
 
 ## Workflow
 
-1. Session-start automatically arms the external Guardian. Call `dshx_status`; completion means exit code `0`, one Harness checkout, stable DSHX `>=0.7.3 <0.8.0`, contract `dshx-v0.7/creator-bridge-v2`, and bridge version `2`. Status must include safe plugin removal and proactive plugin-integrity quarantine. Status is inventory, not activation proof.
+1. Session-start automatically arms the external Guardian. Call `dshx_status`; completion means exit code `0`, one Harness checkout, stable DSHX `>=0.7.4 <0.8.0`, contract `dshx-v0.7/creator-bridge-v2`, and bridge version `2`. Status must include one attached/supervised same-Home Web Host, no shared-Home collision or unknown Host, safe plugin removal, and proactive plugin-integrity quarantine. Status is inventory, not activation proof.
 2. As soon as the plugin id is known, call `dshx_claim_plugin` before editing. Different sessions may claim different plugins concurrently; the same plugin has one owner. A nonzero conflict is a stop condition.
 3. For a new project, call `dshx_scaffold` immediately after the claim. It creates source under the calling session's trusted writable workspace and, when needed, creates the Harness `my-plugins/<name>` link itself. Use the returned source path for all edits; never create a substitute project or ask the user to add a symlink. Existing projects skip this step.
 4. Classify the change as `patch`, `manifest`, `preset`, `client`, `new-client`, `server`, or `artifact`. A new browser UI plugin is normally `new-client`. Before broad repository exploration, use the read-only DSHX knowledge bundle for the selected seam. A client starts with `dshx kb cat contracts/client-build` and `dshx kb cat maps/extension-points`; an update request starts with `dshx kb cat contracts/harness-update`. Follow an official source pointer only when the contract lacks the needed detail.
@@ -57,6 +57,10 @@ Do not undo quarantine and repeat unchanged bytes.
 ## Safety invariants
 
 - The external supervisor owns process restart and rollback; this DSH session owns neither.
+- DSH.app, direct `dsh web`, and dshx are launchers for one long-lived Web Host
+  per `DSH_HOME`. Creator Mode+ never starts a second port; collision or denied
+  Host/Home visibility is a stop condition. Cold-boot proof uses dshx's temporary
+  Home and cannot be kept alive.
 - The inherited bash tool is not an external supervisor. Raw mutating `dshx` commands from a DSH-managed shell are rejected; read-only `update plan` is the sole Harness-update exception. Use only the seven fixed tools for plugin mutation and never unset `DSH_SHELL`/`DSH_SESSION_ID` to bypass the boundary.
 - Guardian is armed for every Creator+ session and may perform one deterministic failure recovery outside DSH; a second failure inside 30 seconds opens the fuse.
 - Normal launcher exit disarms Guardian. The fixed browser sentry may recover an official Loader `FAILED` entry only after DSHX uniquely attributes and quarantines it; component render exceptions, visual defects, and functional defects remain outside automatic recovery.

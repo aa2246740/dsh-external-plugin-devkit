@@ -32,26 +32,51 @@ export function clearHostState(root: string): void {
   if (existsSync(path)) writeText(path, '')
 }
 
-export function pidAlive(pid: number): boolean {
+export type ProcessProbe = 'alive' | 'dead' | 'unknown'
+export type PortProbe = 'open' | 'closed' | 'unknown'
+
+function errorCode(error: unknown): string | undefined {
+  if (typeof error !== 'object' || error === null) return undefined
+  const direct = (error as NodeJS.ErrnoException).code
+  if (typeof direct === 'string') return direct
+  const cause = (error as { cause?: NodeJS.ErrnoException }).cause
+  return typeof cause?.code === 'string' ? cause.code : undefined
+}
+
+/** Probe a PID without turning a sandbox denial into a false death report. */
+export function probePid(pid: number, signal: typeof process.kill = process.kill): ProcessProbe {
   try {
-    process.kill(pid, 0)
-    return true
-  } catch {
-    return false
+    signal(pid, 0)
+    return 'alive'
+  } catch (error) {
+    return errorCode(error) === 'ESRCH' ? 'dead' : 'unknown'
+  }
+}
+
+export function pidAlive(pid: number): boolean {
+  return probePid(pid) !== 'dead'
+}
+
+/** Probe loopback HTTP while preserving denied and timed-out states. */
+export async function probePort(
+  port: number,
+  host = '127.0.0.1',
+  request: typeof fetch = fetch,
+): Promise<PortProbe> {
+  const ac = new AbortController()
+  const timer = setTimeout(() => ac.abort(), 800)
+  try {
+    await request(`http://${host}:${port}/`, { signal: ac.signal })
+    return 'open'
+  } catch (error) {
+    return errorCode(error) === 'ECONNREFUSED' ? 'closed' : 'unknown'
+  } finally {
+    clearTimeout(timer)
   }
 }
 
 export async function portOpen(port: number, host = '127.0.0.1'): Promise<boolean> {
-  const ac = new AbortController()
-  const timer = setTimeout(() => ac.abort(), 800)
-  try {
-    await fetch(`http://${host}:${port}/`, { signal: ac.signal })
-    return true
-  } catch {
-    return false
-  } finally {
-    clearTimeout(timer)
-  }
+  return await probePort(port, host) === 'open'
 }
 
 export function currentHost(root: string): HostState | undefined {
@@ -67,6 +92,8 @@ export interface StartSpec {
   overlay?: string
   plugin?: string
   extraArgs?: string[]
+  env?: NodeJS.ProcessEnv
+  logFile?: string
 }
 
 /** Build only the official dsh arguments for a supervised Host. */
@@ -87,12 +114,8 @@ export function dshHostArgs(spec: StartSpec): string[] {
   return args
 }
 
-export function startHost(root: string, spec: StartSpec): HostState {
-  const existing = currentHost(root)
-  if (existing) {
-    throw new Error(`dshx already supervises pid ${existing.pid} on port ${existing.port}. classify the change first; use restart-supervised only when that branch requires it`)
-  }
-  const logFile = hostLogPath(root, spec.profile)
+function spawnHost(root: string, spec: StartSpec): HostState {
+  const logFile = spec.logFile ?? hostLogPath(root, spec.profile)
   ensureDir(dirname(logFile))
   writeText(logFile, '')
   const { cmd, prefix } = dshBin(root)
@@ -100,7 +123,7 @@ export function startHost(root: string, spec: StartSpec): HostState {
   const fd = openSync(logFile, 'a')
   const child = spawn(cmd, args, {
     cwd: root,
-    env: dshEnv(root),
+    env: spec.env ?? dshEnv(root),
     detached: true,
     stdio: ['ignore', fd, fd],
   })
@@ -118,6 +141,19 @@ export function startHost(root: string, spec: StartSpec): HostState {
     command: [cmd, ...args],
     ownership: 'spawned',
   }
+  return state
+}
+
+export function startTransientHost(root: string, spec: StartSpec): HostState {
+  return spawnHost(root, spec)
+}
+
+export function startHost(root: string, spec: StartSpec): HostState {
+  const existing = currentHost(root)
+  if (existing) {
+    throw new Error(`dshx already supervises pid ${existing.pid} on port ${existing.port}. classify the change first; use restart-supervised only when that branch requires it`)
+  }
+  const state = spawnHost(root, spec)
   writeHostState(root, state)
   writeText(lastHostPath(root), `${JSON.stringify({
     pid: state.pid,
@@ -143,31 +179,40 @@ export function readLastHost(root: string): Pick<HostState, 'profile' | 'port' |
   }
 }
 
-export async function stopHost(root: string, timeoutMs = 8000): Promise<HostState | undefined> {
-  const state = readHostState(root)
-  if (!state?.pid) return undefined
-  if (!pidAlive(state.pid)) {
-    writeText(hostStatePath(root), '')
-    return state
-  }
+async function stopPid(pid: number, timeoutMs: number): Promise<void> {
+  const initial = probePid(pid)
+  if (initial === 'dead') return
+  if (initial === 'unknown') throw new Error(`cannot verify pid ${pid}: process access denied; refusing to clear or signal it`)
   try {
-    process.kill(state.pid, 'SIGTERM')
-  } catch {
-    writeText(hostStatePath(root), '')
-    return state
+    process.kill(pid, 'SIGTERM')
+  } catch (error) {
+    if (errorCode(error) === 'ESRCH') return
+    throw new Error(`cannot signal pid ${pid}: ${errorCode(error) ?? 'unknown process error'}`)
   }
   const deadline = Date.now() + timeoutMs
   while (Date.now() < deadline) {
-    if (!pidAlive(state.pid)) break
+    if (probePid(pid) === 'dead') return
     await new Promise(resolve => setTimeout(resolve, 150))
   }
-  if (pidAlive(state.pid)) {
+  const afterTerm = probePid(pid)
+  if (afterTerm === 'unknown') throw new Error(`cannot verify pid ${pid} after SIGTERM; refusing SIGKILL`)
+  if (afterTerm === 'alive') {
     try {
-      process.kill(state.pid, 'SIGKILL')
-    } catch {
-      // already gone
+      process.kill(pid, 'SIGKILL')
+    } catch (error) {
+      if (errorCode(error) !== 'ESRCH') throw new Error(`cannot kill pid ${pid}: ${errorCode(error) ?? 'unknown process error'}`)
     }
   }
+}
+
+export async function stopTransientHost(state: HostState, timeoutMs = 8000): Promise<void> {
+  await stopPid(state.pid, timeoutMs)
+}
+
+export async function stopHost(root: string, timeoutMs = 8000): Promise<HostState | undefined> {
+  const state = readHostState(root)
+  if (!state?.pid) return undefined
+  await stopPid(state.pid, timeoutMs)
   writeText(hostStatePath(root), '')
   return state
 }

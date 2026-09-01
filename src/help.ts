@@ -44,7 +44,7 @@ export const HELP = `dshx — DeepSeek Harness 进程外插件工作台
   verify [name]                 verify-boot 兼容别名
   sync-artifact <dir|name>      link:/legacy file: 产物同步；live activation 未证明
   ship / recopy                 sync-artifact 兼容别名
-  start [web|headless] [name]   显式启动 workshop Host
+  start [web|headless] [name]   Web 优先附着同 Home 的 App/CLI Host；没有才启动
   stop                          停当前 supervised Host
   restart-supervised            只重启当前 supervised Web PID
   restart                       restart-supervised 兼容别名
@@ -61,7 +61,9 @@ export const HELP = `dshx — DeepSeek Harness 进程外插件工作台
   update rollback              恢复升级前 checkout、依赖树与插件生成物
 
 关键行为
-  verify-boot 遇到正在监督的 Host 会拒绝，绝不偷偷 stop。
+  同一个真实 DSH_HOME 只允许一个长期 Web Host；App、dsh web、dshx 只是启动入口。
+  start 会发现并附着同 Home 的 App/CLI Host；不把换端口当隔离，--force 也不能绕过。
+  verify-boot 始终使用临时 DSH_HOME，允许现有 Host 继续运行，验完自动 stop 并清理。
   restart-supervised 没有 live owned PID 时会拒绝，绝不复活 last-host.json。
   adopted 官方/App Host 不能被 stop/restart-supervised 手工控制；Guardian 只在真实失败后恢复一次。
   Creator+ session-start 自动武装 Guardian；不同插件可并行，同插件只允许一个 session 认领。
@@ -74,7 +76,7 @@ export const HELP = `dshx — DeepSeek Harness 进程外插件工作台
   --profile web|headless
   --port 3080
   --timeout 60
-  --keep                         verify-boot 成功后保留它刚启动的 Host
+  --keep                         已禁用：verify-boot 不允许留下第二个长期 Host
   --force                        init 覆盖脚手架；start/verify 不应用来抢陌生端口
   --kind function|tool|client|object|class
   --change patch|manifest|preset|client|new-client|server|artifact

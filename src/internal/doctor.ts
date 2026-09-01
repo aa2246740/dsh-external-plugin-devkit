@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { dumpConfig, dumpDefaultConfig, duplicateIds, parseDumpEntries } from './dsh.ts'
 import { envHas, finding, loadDotEnv, loadJson, loadYaml } from './io.ts'
-import { currentHost, portOpen } from './host.ts'
+import { currentHost, probePort } from './host.ts'
 import { staleFileCopyFindings } from './file-copy.ts'
 import { profileDir, resolveDshHome, sessionsRoot } from './paths.ts'
 import { listSessions } from './sessions.ts'
@@ -112,14 +112,19 @@ export async function runDoctor(root: string, profile: ProfileName): Promise<Fin
 
   const host = currentHost(root)
   if (host) {
-    findings.push(finding('ok', 'host-supervised', `dshx supervises pid ${host.pid} profile ${host.profile} port ${host.port}`))
+    findings.push(host.ownership === 'adopted'
+      ? finding('ok', 'host-attached', `dshx is attached to external pid ${host.pid} profile ${host.profile} port ${host.port}; its App/CLI launcher owns lifecycle`)
+      : finding('ok', 'host-supervised', `dshx supervises pid ${host.pid} profile ${host.profile} port ${host.port}`))
   } else {
-    findings.push(finding('info', 'host-supervised', 'dshx is not supervising a host (use dshx start from outside Creator Mode)'))
+    findings.push(finding('info', 'host-supervised', 'dshx is not supervising or attached to a host (use dshx start from outside Creator Mode)'))
   }
-  if (await portOpen(3080)) {
+  const port3080 = await probePort(3080)
+  if (port3080 === 'open') {
     findings.push(host?.port === 3080
-      ? finding('ok', 'port-3080', 'supervised host is the listener on 127.0.0.1:3080')
-      : finding('warn', 'port-3080', '127.0.0.1:3080 accepts HTTP but dshx is not supervising it — do not treat this as your plugin host'))
+      ? finding('ok', 'port-3080', 'attached/supervised host is the listener on 127.0.0.1:3080')
+      : finding('warn', 'port-3080', '127.0.0.1:3080 accepts HTTP but is not the attached/supervised host — do not start another same-home Host'))
+  } else if (port3080 === 'unknown') {
+    findings.push(finding('warn', 'port-3080-unknown', 'cannot prove whether 127.0.0.1:3080 is open; denied/timed-out visibility is not reported closed'))
   }
 
   const sessions = listSessions(sessionsRoot(home))

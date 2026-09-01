@@ -89,6 +89,8 @@ dshx update apply --target dsh-v0.1.1-rc.2
 
 省略 `--target` 时会实时查询官方最新 release。更新助手不会替你重启正式 Host；升级完成、真实运行时验收和正式激活仍是三个不同状态。详细合同见 [knowledge/contracts/harness-update.md](knowledge/contracts/harness-update.md)。
 
+DSHX 0.7.4 把 App、直接 `dsh web` 和 dshx 统一成启动入口，而不是三套 Host。`dshx start web` 先按真实 `DSH_HOME` 发现进程：已有一个就附着且不 spawn；多个或 Home 无法证明就失败关闭，换端口和 `--force` 都不能绕过。PID/端口的 `EPERM` 是 unknown，不再误报死亡或关闭。`verify-boot` 改用临时 Home，允许正式 Host 原 PID 继续运行，验完必停临时 Host并清理；`--keep` 已禁用。
+
 DSHX 0.7.3 修复 bundle 插件卸载顺序。外部 supervisor 使用 `dshx plugin remove <package> --profile web --port <当前端口>`：先让当前 `__DSH_BOOT__` 同 PID 脱载，再调用官方 remover，绝不先删 `client.js` 留旧 Loader 图。旧 boot 期间会保留精确 disable；用户以后正常重开 DSH.app 后重跑同一命令，只有证明新 Host 从干净 profile 启动才清掉它。命令还能续跑“dependency 已没、旧 live 图仍在”的半删除状态。Creator+ watched 插件仍走固定 `dshx_remove_plugin`，两条路径都不重启 Host、不删除源码。
 
 需要隔离冷启动证明时才 `verify-boot`。需要把包装进 profile 时才 `sync-artifact`——它只会告诉你 `ARTIFACT_SYNCED; LIVE_ACTIVATION_UNPROVEN`。

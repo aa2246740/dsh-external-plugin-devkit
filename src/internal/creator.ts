@@ -22,6 +22,7 @@ import {
   creatorTransactionsDir,
 } from './paths.ts'
 import { planWatchedPatch, planWatchedPatchRemoval, writeWatchedPatch } from './new-client.ts'
+import { pidAlive } from './host.ts'
 
 const PLUGIN_ID = /^[a-z][a-z0-9-]*$/
 const CLAIM_TTL_MS = 24 * 60 * 60 * 1000
@@ -266,12 +267,7 @@ function writeJson(path: string, value: unknown): void {
 }
 
 function processAlive(pid: number): boolean {
-  try {
-    process.kill(pid, 0)
-    return true
-  } catch {
-    return false
-  }
+  return pidAlive(pid)
 }
 
 /** Serialize short JSON registry updates across concurrent Creator+ CLI processes. */

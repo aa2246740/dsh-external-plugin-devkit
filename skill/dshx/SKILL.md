@@ -17,6 +17,15 @@ Use `dshx` for profile-scoped, file-backed plugins developed by an external agen
 
 Use a **same-PID default** for plugin work. Select the branch by the runtime surface that must change, not by prerequisite files a command happens to write. A plain profile dependency provides module resolution; it is not manifest activation or restart evidence. A first Web client remains `new-client` even though `activate-new-client` writes its dependency link: hot-mount the Host row, keep the DSH PID, then reload/reopen the page. Authorize a normal Host restart only when `activation-plan` names boot-captured bundle composition or a server module without tested module HMR as the reason.
 
+Treat DSH.app, direct `dsh web`, and `dshx start web` as launchers for one
+long-lived Web Host per real `DSH_HOME`. Before starting, use dshx discovery and
+attach to the single existing same-Home Host. Never create a workshop Host on a
+second port to coexist with it; a duplicate, an unproved Home, or denied process
+visibility is a stop condition that `--force` cannot override. For cold-boot
+proof, use `verify-boot`: it runs in a temporary `DSH_HOME`, leaves the user's
+Host PID untouched, and always removes the transient Host. `--keep` is unsafe and
+rejected.
+
 In Creator Mode+, session-start automatically arms the external Guardian. As soon
 as one plugin id is known, call `dshx_claim_plugin` before scaffold/edit/build/check.
 The bridge repeats the claim before every named operation as a fail-safe. Different
@@ -133,7 +142,7 @@ Read only the selected branch:
 4. For a client package, read `kb cat contracts/client-build`. On RC8, an out-of-tree package must build with dshx `externalClientBundle`; do not import the repository-internal official `clientBundle()` or move the plugin under `packages/`.
 5. Run `check <name>`. Completion: no static contract errors; a client package also passes `client-cordis-inject` and has a built lazy-CJS `lib/client.js` handoff.
 6. Run `activation-plan <name> --change <branch>` now if this is a freshly built `new-client`; for an existing built target it may already have run before editing. Do not begin live mutation unless the selected plan exits `0`.
-7. Run `verify-boot <name>` only when an isolated cold boot is needed. Completion: server-only plugins show the runtime marker; Web clients appear in the active boot graph and their bundle returns HTTP 200. It refuses to stop an existing supervised Host and does not prove current-host activation.
+7. Run `verify-boot <name>` only when an isolated cold boot is needed. Completion: server-only plugins show the runtime marker; Web clients appear in the active boot graph and their bundle returns HTTP 200. It uses a temporary Home while an existing Host stays on the same PID, then stops and removes the transient Host; it does not prove current-host activation.
 8. If package bytes must reach a profile, run `sync-artifact <dir>` (`ship` is a compatibility alias). Completion: content hash matches; activation remains unproven.
 9. Execute the selected activation branch. For `new-client`, use only `activate-new-client`; restart only when a different branch requires it.
 10. Report evidence by layer: `SOURCE_BUILT`, `ARTIFACT_SYNCED`, `NEXT_BOOT_REGISTERED`, `HOST_TREE_ACTIVE`, `CLIENT_LOADED`, `VISUAL_BEHAVIOR_VERIFIED`. Omit unobserved layers.
@@ -151,6 +160,10 @@ For a watched-row removal request inside Creator Mode+, replace activation steps
 ## Hard guardrails
 
 - Never kill or restart `dsh` from inside a Harness session.
+- Never run two long-lived Web Hosts against one `DSH_HOME`, even on different
+  ports. Attach to the user's App/CLI Host; use a temporary Home for verification.
+- Treat PID/port access denial or timeout as unknown and fail closed. Only
+  `ESRCH` proves a PID dead and only `ECONNREFUSED` proves a port closed.
 - A raw `dshx` process launched by a DSH-managed shell (`DSH_SHELL=1`) is still inside the Host boundary. DSHX rejects its mutating/process commands; use the fixed Creator+ tools or an external terminal. Never unset managed environment markers to bypass this guard.
 - Creator-scoped bash rejects teardown of the claimed plugin root, its Harness link, or the active DSH profile. This is a final routing decision to `dshx_remove_plugin`, not an invitation to encode the deletion through Node, Python, or another shell.
 - A fixed-tool `outside bridge v2` rejection is a bridge defect, not a supervisor denial. Stop at that tool; do not substitute manual profile installation or report downstream success.
