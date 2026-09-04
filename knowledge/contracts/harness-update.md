@@ -16,7 +16,7 @@ stale_after: 2026-11-24
 
 | 阶段 | 可见结果 | 明确不证明 |
 |---|---|---|
-| plan | 官方目标 tag/SHA、当前 branch/SHA、tracked dirty、全部目录与 symlink 插件 | 目标可构建 |
+| plan | 官方目标 tag/SHA、当前 branch/SHA、tracked dirty、`my-plugins` 与活动 Web profile 的全部本地插件 | 目标可构建 |
 | prepare | 隔离 worktree 的 frozen install、Harness full build、全部插件 build | 当前 Harness 已更新 |
 | verify | 先隔离 cold boot 原生 Web，再检查每个插件，最后 cold boot 全插件组合图；Web client 还要鉴权后的 graph row + bundle 200 | 组合 UI 或正式 Host 已激活 |
 | apply | 当前 checkout 切到 `dshx/<tag>`，实际依赖/Harness/插件全构建，回滚状态落盘 | 正式 Host 已重启或用户行为已验收 |
@@ -26,7 +26,7 @@ stale_after: 2026-11-24
 
 - 只接受官方 `deepseek-ai/deepseek-harness` origin 和 `dsh-v*` release tag。
 - tracked Harness dirty、会被目标覆盖的 untracked 路径、无效插件清单都阻断 apply。
-- `my-plugins` 的真实目录和 symlink 都进入矩阵；候选验证不改插件源字节。
+- `my-plugins` 的真实目录和 symlink，以及活动 Web profile 依赖中的本地 `file:` / `link:` 源都进入矩阵；同名时 profile 的活动源优先，避免验证过期副本。缺失的 profile 本地目标必须显式告警且不进入候选 staging。候选验证不改插件源字节。
 - Web client 必须通过当前原生 profile package resolution：本地包链接、package-name Loader row、启动 token 换得本地 cookie 后读取的官方 `globalThis["__DSH_BOOT__"]` 条目，以及可读取的 client bundle。
 - `verify` 必须分别记录 vanilla Web 与全插件组合 Web 的结果；任一 gate 缺失、失败或只证明 HTTP 可达，都不能 `apply`。
 - apply 前重新核对候选 SHA 与插件 source hash；任何漂移都要求重新 prepare/verify。

@@ -26,7 +26,7 @@ import { ensureRuntimePackageLink } from './runtime-package.ts'
 import type { CliOptions, PluginManifest } from './types.ts'
 import { DEFAULT_PORT } from './types.ts'
 import { collectUpdatePlan } from './update.ts'
-import type { UpdatePlan, UpdatePluginInventory, UpdateTargetState } from './update.ts'
+import type { PluginLocation, UpdatePlan, UpdatePluginInventory, UpdateTargetState } from './update.ts'
 import { fetchAuthenticatedWebPage, fetchAuthenticatedWebResource, findWebStartupUrl, parseWebBootManifest } from './web-boot.ts'
 
 interface CommandResult {
@@ -42,7 +42,7 @@ export interface CandidatePluginResult {
   name: string
   sourcePath: string
   stagedPath: string
-  sourceLocation: 'directory' | 'symlink'
+  sourceLocation: PluginLocation
   client: boolean
   sourceHash: string
   copied: boolean

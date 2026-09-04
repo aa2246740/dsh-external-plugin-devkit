@@ -124,6 +124,10 @@ export async function cmdUpdate(args: string[], options: CliOptions, root: strin
         ? finding('ok', 'untracked-collisions', 'target does not overwrite discovered untracked paths')
         : finding('error', 'untracked-collisions', `${plan.checkout.targetCollisions.length} untracked path(s) collide with the target release`),
       finding('ok', 'plugins', `${plan.plugins.length} plugin entr${plan.plugins.length === 1 ? 'y' : 'ies'} inventoried`),
+      ...plan.staleProfileDependencies.map(item => finding('warn', 'profile-local-missing', `${item.name}: inactive local dependency target is missing and was not staged`, {
+        path: item.source,
+        hint: `profile records ${item.spec}; repair or remove that stale dependency before update apply`,
+      })),
       ...plan.plugins.filter(plugin => !plugin.valid).map(plugin => finding('error', 'plugin-invalid', `${plugin.name}: ${plugin.issue ?? 'invalid plugin entry'}`, { path: plugin.path })),
       ...plan.plugins.filter(plugin => plugin.marker === 'logger-only').map(plugin => finding('warn', 'marker-unobservable', `${plugin.name}: marker uses a logger path that the current Harness launcher stdout may not expose`, {
         path: plugin.path,

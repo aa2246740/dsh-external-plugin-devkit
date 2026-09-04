@@ -2,7 +2,8 @@ import { existsSync, lstatSync, readFileSync, readdirSync, realpathSync, statSyn
 import { join, relative, resolve } from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { currentHost } from './host.ts'
-import { pluginsDir } from './paths.ts'
+import { resolveLocalSpec } from './file-copy.ts'
+import { pluginsDir, profileDir, resolveDshHome } from './paths.ts'
 import { loadPlugin, pluginSource } from './plugin.ts'
 
 interface GitResult {
@@ -19,7 +20,7 @@ interface ReleaseRef {
 }
 
 export type MarkerObservation = 'console' | 'logger-only' | 'missing'
-export type PluginLocation = 'directory' | 'symlink'
+export type PluginLocation = 'directory' | 'symlink' | 'profile-file' | 'profile-link'
 
 export interface UpdatePluginInventory {
   name: string
@@ -55,6 +56,7 @@ export interface UpdatePlan {
   checkout: UpdateCheckoutState
   target: UpdateTargetState
   plugins: UpdatePluginInventory[]
+  staleProfileDependencies: Array<{ name: string; spec: string; source: string }>
   supervisedHost?: { pid: number; port: number; ownership: string }
   blockers: string[]
 }
@@ -201,7 +203,52 @@ function clientPlugin(pkg: Record<string, unknown> | undefined): boolean {
   return isRecord(exports) && './client' in exports
 }
 
-function pluginInventory(root: string): UpdatePluginInventory[] {
+function inventoryPlugin(root: string, name: string, path: string, location: PluginLocation): UpdatePluginInventory {
+  try {
+    if (!statSync(path).isDirectory()) throw new Error(`plugin source is not a directory: ${path}`)
+    const pkg = packageJson(join(path, 'package.json'))
+    const manifest = loadPlugin(root, path)
+    const source = pluginSource(manifest)
+    const marker: MarkerObservation = !manifest.marker
+      ? 'missing'
+      : source.includes(`console.log`) && source.includes(manifest.marker)
+        ? 'console'
+        : source.includes(manifest.marker)
+          ? 'logger-only'
+          : 'missing'
+    return {
+      name,
+      path: path.startsWith(root) ? relative(root, path) : path,
+      realPath: realpathSync(path),
+      location,
+      version: stringField(pkg, 'version'),
+      client: clientPlugin(pkg),
+      build: isRecord(pkg?.scripts) && typeof pkg.scripts.build === 'string',
+      marker,
+      valid: true,
+    }
+  } catch (error) {
+    let realPath = resolve(path)
+    try {
+      if (lstatSync(path).isSymbolicLink()) realPath = realpathSync(path)
+    } catch {
+      // retain the unresolved path for the report
+    }
+    return {
+      name,
+      path: path.startsWith(root) ? relative(root, path) : path,
+      realPath,
+      location,
+      client: false,
+      build: false,
+      marker: 'missing',
+      valid: false,
+      issue: error instanceof Error ? error.message : String(error),
+    }
+  }
+}
+
+function workspacePluginInventory(root: string): UpdatePluginInventory[] {
   const dir = pluginsDir(root)
   if (!existsSync(dir)) return []
   const plugins: UpdatePluginInventory[] = []
@@ -212,53 +259,72 @@ function pluginInventory(root: string): UpdatePluginInventory[] {
     if (entry.isDirectory()) location = 'directory'
     else if (entry.isSymbolicLink()) location = 'symlink'
     else continue
-    try {
-      if (!statSync(path).isDirectory()) continue
-      const pkg = packageJson(join(path, 'package.json'))
-      const manifest = loadPlugin(root, entry.name)
-      const source = pluginSource(manifest)
-      const marker: MarkerObservation = !manifest.marker
-        ? 'missing'
-        : source.includes(`console.log`) && source.includes(manifest.marker)
-          ? 'console'
-          : source.includes(manifest.marker)
-            ? 'logger-only'
-            : 'missing'
-      plugins.push({
-        name: entry.name,
-        path: relative(root, path),
-        realPath: realpathSync(path),
-        location,
-        version: stringField(pkg, 'version'),
-        client: clientPlugin(pkg),
-        build: isRecord(pkg?.scripts) && typeof pkg.scripts.build === 'string',
-        marker,
-        valid: true,
-      })
-    } catch (error) {
-      let realPath = resolve(path)
-      try {
-        if (lstatSync(path).isSymbolicLink()) realPath = realpathSync(path)
-      } catch {
-        // retain the unresolved path for the report
-      }
-      plugins.push({
-        name: entry.name,
-        path: relative(root, path),
-        realPath,
-        location,
-        client: false,
-        build: false,
-        marker: 'missing',
-        valid: false,
-        issue: error instanceof Error ? error.message : String(error),
-      })
-    }
+    plugins.push(inventoryPlugin(root, entry.name, path, location))
   }
-  return plugins.sort((left, right) => left.name.localeCompare(right.name))
+  return plugins
 }
 
-export function collectUpdatePlan(root: string, requestedTarget?: string): UpdatePlan {
+function pluginInventory(root: string, env: NodeJS.ProcessEnv): {
+  plugins: UpdatePluginInventory[]
+  staleProfileDependencies: UpdatePlan['staleProfileDependencies']
+} {
+  const plugins = workspacePluginInventory(root)
+  const staleProfileDependencies: UpdatePlan['staleProfileDependencies'] = []
+  const byName = new Map(plugins.map(plugin => [plugin.name, plugin]))
+  const byRealPath = new Map(plugins.filter(plugin => plugin.valid).map(plugin => [plugin.realPath, plugin]))
+  const profile = profileDir(resolveDshHome(env), 'web')
+  const manifest = packageJson(join(profile, 'package.json'))
+  const dependencies = isRecord(manifest?.dependencies) ? manifest.dependencies : {}
+  for (const [name, raw] of Object.entries(dependencies).sort(([left], [right]) => left.localeCompare(right))) {
+    if (typeof raw !== 'string') continue
+    const source = resolveLocalSpec(raw, profile)
+    if (!source) continue
+    if (!existsSync(source)) {
+      staleProfileDependencies.push({ name, spec: raw, source })
+      continue
+    }
+    const location: PluginLocation = raw.startsWith('file:') ? 'profile-file' : 'profile-link'
+    const existing = byName.get(name)
+    let resolved = resolve(source)
+    try {
+      resolved = realpathSync(source)
+    } catch {
+      // inventoryPlugin will report the exact missing or invalid source
+    }
+    if (existing) {
+      if (existing.realPath === resolved) continue
+      const active = inventoryPlugin(root, name, source, location)
+      if (!active.valid) {
+        plugins.push(active)
+        continue
+      }
+      plugins.splice(plugins.indexOf(existing), 1, active)
+      byName.set(name, active)
+      byRealPath.delete(existing.realPath)
+      byRealPath.set(active.realPath, active)
+      continue
+    }
+    const sameSource = byRealPath.get(resolved)
+    if (sameSource) {
+      plugins.push({
+        ...inventoryPlugin(root, name, source, location),
+        valid: false,
+        issue: `profile dependency ${name} reuses the source already inventoried as ${sameSource.name}`,
+      })
+      continue
+    }
+    const plugin = inventoryPlugin(root, name, source, location)
+    plugins.push(plugin)
+    byName.set(name, plugin)
+    if (plugin.valid) byRealPath.set(plugin.realPath, plugin)
+  }
+  return {
+    plugins: plugins.sort((left, right) => left.name.localeCompare(right.name)),
+    staleProfileDependencies,
+  }
+}
+
+export function collectUpdatePlan(root: string, requestedTarget?: string, env: NodeJS.ProcessEnv = process.env): UpdatePlan {
   const origin = gitValue(root, ['remote', 'get-url', 'origin'], 'origin')
   const target = resolveTarget(root, requestedTarget)
   const status = statusState(root)
@@ -271,18 +337,19 @@ export function collectUpdatePlan(root: string, requestedTarget?: string): Updat
     untrackedPaths: status.untrackedPaths,
     targetCollisions: targetCollisions(root, target, status.untrackedPaths),
   }
-  const plugins = pluginInventory(root)
+  const { plugins, staleProfileDependencies } = pluginInventory(root, env)
   const blockers: string[] = []
   if (!officialOrigin(origin)) blockers.push(`origin is not deepseek-ai/deepseek-harness: ${origin}`)
   if (checkout.trackedChanges.length > 0) blockers.push(`tracked Harness changes must be preserved before apply (${checkout.trackedChanges.length})`)
   if (checkout.targetCollisions.length > 0) blockers.push(`target would overwrite untracked paths (${checkout.targetCollisions.length})`)
   const invalid = plugins.filter(plugin => !plugin.valid)
-  if (invalid.length > 0) blockers.push(`invalid plugin entries under my-plugins (${invalid.map(plugin => plugin.name).join(', ')})`)
+  if (invalid.length > 0) blockers.push(`invalid local plugin sources (${invalid.map(plugin => plugin.name).join(', ')})`)
   const host = currentHost(root)
   return {
     checkout,
     target,
     plugins,
+    staleProfileDependencies,
     ...host ? { supervisedHost: { pid: host.pid, port: host.port, ownership: host.ownership ?? 'spawned' } } : {},
     blockers,
   }

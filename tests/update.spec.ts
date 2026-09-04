@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
-import { mkdtempSync, mkdirSync, symlinkSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, realpathSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { describe, it } from 'node:test'
@@ -40,6 +40,10 @@ function fakeHarness(): string {
   return root
 }
 
+function isolatedEnv(root: string): NodeJS.ProcessEnv {
+  return { ...process.env, DSH_HOME: join(root, '.test-dsh-home') }
+}
+
 describe('update plan', () => {
   it('orders prerelease tags numerically', () => {
     const latest = latestReleaseRef([
@@ -54,7 +58,7 @@ describe('update plan', () => {
   it('inventories directories and symlinks without mutating a clean checkout', () => {
     const root = fakeHarness()
     const before = execFileSync('git', ['-C', root, 'status', '--porcelain=v1'], { encoding: 'utf8' })
-    const plan = collectUpdatePlan(root, 'dsh-v0.1.1-rc.2')
+    const plan = collectUpdatePlan(root, 'dsh-v0.1.1-rc.2', isolatedEnv(root))
     const after = execFileSync('git', ['-C', root, 'status', '--porcelain=v1'], { encoding: 'utf8' })
     assert.equal(plan.checkout.version, '0.1.0-rc.8')
     assert.equal(plan.target.version, '0.1.1-rc.2')
@@ -67,9 +71,50 @@ describe('update plan', () => {
   it('blocks a blind update when tracked Harness files are dirty', () => {
     const root = fakeHarness()
     writeFileSync(join(root, 'package.json'), '{"version":"dirty"}\n')
-    const plan = collectUpdatePlan(root, 'dsh-v0.1.1-rc.2')
+    const plan = collectUpdatePlan(root, 'dsh-v0.1.1-rc.2', isolatedEnv(root))
     assert.equal(plan.checkout.trackedChanges.includes('package.json'), true)
     assert.equal(plan.blockers.some(blocker => blocker.includes('tracked Harness changes')), true)
+  })
+
+  it('includes local Web-profile plugins that are absent from my-plugins', () => {
+    const root = fakeHarness()
+    const home = join(root, '.test-dsh-home')
+    const profile = join(home, 'profiles/web')
+    const source = join(root, 'profile-only')
+    write(join(source, 'src/index.ts'), "export function apply() { console.log('[profile-only] loaded') }\n")
+    write(join(source, 'dshx.yml'), 'id: profile-only\nentry: src/index.ts\nmarker: "[profile-only] loaded"\n')
+    write(join(source, 'package.json'), '{"name":"profile-only","version":"1.0.0","scripts":{"build":"tsc"},"dsh":{"client":{"platform":"web"}}}\n')
+    write(join(profile, 'package.json'), JSON.stringify({ dependencies: { 'profile-only': `link:${source}` } }))
+    const plan = collectUpdatePlan(root, 'dsh-v0.1.1-rc.2', isolatedEnv(root))
+    assert.equal(plan.plugins.find(plugin => plugin.name === 'profile-only')?.location, 'profile-link')
+    assert.equal(plan.plugins.find(plugin => plugin.name === 'profile-only')?.realPath, realpathSync(source))
+  })
+
+  it('reports but does not stage a missing local profile dependency', () => {
+    const root = fakeHarness()
+    const home = join(root, '.test-dsh-home')
+    const profile = join(home, 'profiles/web')
+    const missing = join(root, 'missing-plugin')
+    write(join(profile, 'package.json'), JSON.stringify({ dependencies: { missing: `link:${missing}` } }))
+    const plan = collectUpdatePlan(root, 'dsh-v0.1.1-rc.2', isolatedEnv(root))
+    assert.equal(plan.plugins.some(plugin => plugin.name === 'missing'), false)
+    assert.deepEqual(plan.staleProfileDependencies, [{ name: 'missing', spec: `link:${missing}`, source: missing }])
+    assert.deepEqual(plan.blockers, [])
+  })
+
+  it('uses the active profile source when a same-name my-plugins copy is stale', () => {
+    const root = fakeHarness()
+    const home = join(root, '.test-dsh-home')
+    const profile = join(home, 'profiles/web')
+    const active = join(root, 'active-local')
+    write(join(active, 'src/index.ts'), "export function apply() { console.log('[active-local] loaded') }\n")
+    write(join(active, 'dshx.yml'), 'id: local\nentry: src/index.ts\nmarker: "[active-local] loaded"\n')
+    write(join(active, 'package.json'), '{"name":"local","version":"2.0.0","scripts":{"build":"tsc"}}\n')
+    write(join(profile, 'package.json'), JSON.stringify({ dependencies: { local: `link:${active}` } }))
+    const plan = collectUpdatePlan(root, 'dsh-v0.1.1-rc.2', isolatedEnv(root))
+    assert.equal(plan.plugins.filter(plugin => plugin.name === 'local').length, 1)
+    assert.equal(plan.plugins.find(plugin => plugin.name === 'local')?.location, 'profile-link')
+    assert.equal(plan.plugins.find(plugin => plugin.name === 'local')?.version, '2.0.0')
   })
 
   it('requires both Web gates in addition to every plugin before apply is eligible', () => {
