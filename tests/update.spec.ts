@@ -5,9 +5,9 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { describe, it } from 'node:test'
 import { applyPluginSourceOverrides, collectUpdatePlan, latestReleaseRef, parseReleaseRef } from '../src/internal/update.ts'
-import { candidateVerified, candidateWebGateFailures } from '../src/internal/update-candidate.ts'
+import { candidateVerified, candidateWebGateFailures, combinedPluginNames } from '../src/internal/update-candidate.ts'
 import { assertNoStagingOnlyPluginSources } from '../src/internal/update-apply.ts'
-import type { CandidateWebGateResult, UpdateCandidateState } from '../src/internal/update-candidate.ts'
+import type { CandidatePluginResult, CandidateWebGateResult, UpdateCandidateState } from '../src/internal/update-candidate.ts'
 
 function git(root: string, args: readonly string[]): void {
   execFileSync('git', ['-C', root, ...args], { stdio: 'ignore' })
@@ -65,6 +65,7 @@ describe('update plan', () => {
     assert.equal(plan.target.version, '0.1.1-rc.2')
     assert.deepEqual(plan.plugins.map(plugin => plugin.name), ['linked', 'local'])
     assert.equal(plan.plugins.find(plugin => plugin.name === 'linked')?.location, 'symlink')
+    assert.equal(plan.plugins.every(plugin => plugin.activeInProfile === false), true)
     assert.equal(plan.checkout.trackedChanges.length, 0)
     assert.equal(before, after)
   })
@@ -89,6 +90,18 @@ describe('update plan', () => {
     const plan = collectUpdatePlan(root, 'dsh-v0.1.1-rc.2', isolatedEnv(root))
     assert.equal(plan.plugins.find(plugin => plugin.name === 'profile-only')?.location, 'profile-link')
     assert.equal(plan.plugins.find(plugin => plugin.name === 'profile-only')?.realPath, realpathSync(source))
+    assert.equal(plan.plugins.find(plugin => plugin.name === 'profile-only')?.activeInProfile, true)
+  })
+
+  it('marks a workspace plugin active when the Web profile bundle list enables its package', () => {
+    const root = fakeHarness()
+    const home = join(root, '.test-dsh-home')
+    const profile = join(home, 'profiles/web')
+    write(join(profile, 'package.json'), JSON.stringify({ dsh: { profile: { bundles: ['local'] } } }))
+
+    const plan = collectUpdatePlan(root, 'dsh-v0.1.1-rc.2', isolatedEnv(root))
+    assert.equal(plan.plugins.find(plugin => plugin.name === 'local')?.activeInProfile, true)
+    assert.equal(plan.plugins.find(plugin => plugin.name === 'linked')?.activeInProfile, false)
   })
 
   it('reports but does not stage a missing local profile dependency', () => {
@@ -175,7 +188,17 @@ describe('update plan', () => {
     assert.equal(selected?.realPath, realpathSync(compatible))
     assert.equal(selected?.activeSourcePath, realpathSync(join(root, 'my-plugins/local')))
     assert.equal(selected?.sourceOverride, realpathSync(compatible))
+    assert.equal(selected?.activeInProfile, false)
     assert.equal(readFileSync(join(root, 'my-plugins/local/src/index.ts'), 'utf8').includes('[compat]'), false)
+  })
+
+  it('combines only active-profile plugins while keeping old state conservative', () => {
+    const plugins = [
+      { name: 'active', activeInProfile: true },
+      { name: 'dormant', activeInProfile: false },
+      { name: 'legacy-state' },
+    ] as CandidatePluginResult[]
+    assert.deepEqual(combinedPluginNames(plugins), ['active', 'legacy-state'])
   })
 
   it('rejects an explicit compatible source that changes a plugin id', () => {

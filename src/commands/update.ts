@@ -44,8 +44,8 @@ function candidateFindings(action: 'prepare' | 'verify', result: ReturnType<type
         ? plugin.build
         : plugin.build && plugin.staticCheck === true && plugin.runtime === true
       const detail = action === 'prepare'
-        ? `copied=${plugin.copied} build=${plugin.build}`
-        : `build=${plugin.build} check=${plugin.staticCheck ?? false} cold-boot=${plugin.runtime ?? false}`
+        ? `active=${plugin.activeInProfile !== false} copied=${plugin.copied} build=${plugin.build}`
+        : `active=${plugin.activeInProfile !== false} build=${plugin.build} check=${plugin.staticCheck ?? false} cold-boot=${plugin.runtime ?? false}`
       return finding(ok ? 'ok' : 'error', `plugin-${action}`, `${plugin.name}: ${detail}`, { path: plugin.stagedPath })
     }),
     ...result.state.plugins.filter(plugin => plugin.sourceOverride).map(plugin => finding('warn', 'candidate-only-source', `${plugin.name}: staged from explicit compatibility source; update apply will refuse until the active profile source is promoted`, {

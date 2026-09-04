@@ -40,6 +40,7 @@ interface CommandResult {
 
 export interface CandidatePluginResult {
   name: string
+  activeInProfile?: boolean
   sourcePath: string
   activeSourcePath?: string
   sourceOverride?: string
@@ -586,6 +587,7 @@ export function prepareUpdateCandidate(root: string, options: CliOptions): Candi
       const { activeSourcePath: _previousActiveSourcePath, sourceOverride: _previousSourceOverride, ...reused } = previous
       plugins.push({
         ...reused,
+        activeInProfile: item.activeInProfile,
         sourcePath: item.realPath,
         ...(item.activeSourcePath ? { activeSourcePath: item.activeSourcePath } : {}),
         ...(item.sourceOverride ? { sourceOverride: item.sourceOverride } : {}),
@@ -614,6 +616,7 @@ export function prepareUpdateCandidate(root: string, options: CliOptions): Candi
     }
     plugins.push({
       name: item.name,
+      activeInProfile: item.activeInProfile,
       sourcePath: item.realPath,
       ...(item.activeSourcePath ? { activeSourcePath: item.activeSourcePath } : {}),
       ...(item.sourceOverride ? { sourceOverride: item.sourceOverride } : {}),
@@ -697,7 +700,7 @@ export async function verifyUpdateCandidate(root: string, options: CliOptions): 
       probe: 'staging-wrapper',
     })
   }
-  const combinedWeb = await verifyCandidateWebGate(state.candidateRoot, 'combined-web', state.plugins.map(plugin => plugin.name), port, options.timeoutMs, logDir)
+  const combinedWeb = await verifyCandidateWebGate(state.candidateRoot, 'combined-web', combinedPluginNames(state.plugins), port, options.timeoutMs, logDir)
   const verified: UpdateCandidateState = {
     ...state,
     verifiedAt: new Date().toISOString(),
@@ -727,6 +730,7 @@ export function candidateSummary(plan: UpdatePlan, result: CandidateActionResult
     },
     plugins: result.state.plugins.map(plugin => ({
       name: plugin.name,
+      activeInProfile: plugin.activeInProfile,
       sourceLocation: plugin.sourceLocation,
       sourceOverride: plugin.sourceOverride,
       client: plugin.client,
@@ -758,6 +762,10 @@ export function candidateVerified(state: UpdateCandidateState): boolean {
     && plugin.runtime === true
     && plugin.runtimeProof === (plugin.client ? 'web-client-graph' : 'server-marker'))
     && candidateWebGateFailures(state).length === 0
+}
+
+export function combinedPluginNames(plugins: readonly CandidatePluginResult[]): string[] {
+  return plugins.filter(plugin => plugin.activeInProfile !== false).map(plugin => plugin.name)
 }
 
 export function candidatePluginNames(candidate: string): string[] {

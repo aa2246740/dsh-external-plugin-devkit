@@ -26,6 +26,7 @@ export interface UpdatePluginInventory {
   name: string
   id?: string
   packageName?: string
+  activeInProfile?: boolean
   path: string
   realPath: string
   location: PluginLocation
@@ -297,6 +298,11 @@ function pluginInventory(root: string, env: NodeJS.ProcessEnv): {
   const profile = profileDir(resolveDshHome(env), 'web')
   const manifest = packageJson(join(profile, 'package.json'))
   const dependencies = isRecord(manifest?.dependencies) ? manifest.dependencies : {}
+  const dsh = isRecord(manifest?.dsh) ? manifest.dsh : undefined
+  const profileConfig = isRecord(dsh?.profile) ? dsh.profile : undefined
+  const activeBundles = new Set(Array.isArray(profileConfig?.bundles)
+    ? profileConfig.bundles.filter((value): value is string => typeof value === 'string')
+    : [])
   for (const [name, raw] of Object.entries(dependencies).sort(([left], [right]) => left.localeCompare(right))) {
     if (typeof raw !== 'string') continue
     const source = resolveLocalSpec(raw, profile)
@@ -318,6 +324,13 @@ function pluginInventory(root: string, env: NodeJS.ProcessEnv): {
   // A profile source also wins when an old workspace directory uses another
   // package name but declares the same Host/Loader id.
   plugins = plugins.filter(plugin => (plugin.location === 'profile-file' || plugin.location === 'profile-link') || !plugin.id || !activeIds.has(plugin.id))
+  plugins = plugins.map(plugin => ({
+    ...plugin,
+    activeInProfile: plugin.location === 'profile-file'
+      || plugin.location === 'profile-link'
+      || activeBundles.has(plugin.packageName ?? plugin.name)
+      || activeBundles.has(plugin.name),
+  }))
   markDuplicateIds(plugins)
   return {
     plugins: plugins.sort((left, right) => left.name.localeCompare(right.name)),
@@ -364,6 +377,7 @@ export function applyPluginSourceOverrides(root: string, plugins: readonly Updat
     }
     return {
       ...override,
+      activeInProfile: plugin.activeInProfile,
       activeSourcePath: plugin.realPath,
       sourceOverride: override.realPath,
     }
