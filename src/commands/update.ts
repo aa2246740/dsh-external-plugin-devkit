@@ -48,6 +48,10 @@ function candidateFindings(action: 'prepare' | 'verify', result: ReturnType<type
         : `build=${plugin.build} check=${plugin.staticCheck ?? false} cold-boot=${plugin.runtime ?? false}`
       return finding(ok ? 'ok' : 'error', `plugin-${action}`, `${plugin.name}: ${detail}`, { path: plugin.stagedPath })
     }),
+    ...result.state.plugins.filter(plugin => plugin.sourceOverride).map(plugin => finding('warn', 'candidate-only-source', `${plugin.name}: staged from explicit compatibility source; update apply will refuse until the active profile source is promoted`, {
+      path: plugin.sourceOverride,
+      hint: `active source remains ${plugin.activeSourcePath ?? '(unknown)'}`,
+    })),
     ...webFindings,
     gateOk
       ? finding('ok', `${action}-gate`, action === 'verify'
@@ -65,6 +69,10 @@ export async function cmdUpdate(args: string[], options: CliOptions, root: strin
   const action = updateAction(args[0])
   if (!action) {
     printReport(report('update', [finding('error', 'usage', 'dshx update plan|prepare|verify|apply|rollback [--target <dsh-v...>]')]), options.json)
+    return 2
+  }
+  if (options.pluginSources?.length && action !== 'plan' && action !== 'prepare') {
+    printReport(report(`update ${action}`, [finding('error', 'plugin-source-scope', '--plugin-source is accepted only by update plan and update prepare; verify reads the prepared state and apply rejects candidate-only sources')]), options.json)
     return 2
   }
   if (action === 'apply' || action === 'rollback') {
@@ -99,7 +107,7 @@ export async function cmdUpdate(args: string[], options: CliOptions, root: strin
   }
   if (action === 'prepare' || action === 'verify') {
     try {
-      const plan = collectUpdatePlan(root, options.target)
+      const plan = collectUpdatePlan(root, options.target, process.env, action === 'prepare' ? options.pluginSources : [])
       const result = action === 'prepare'
         ? prepareUpdateCandidate(root, options)
         : await verifyUpdateCandidate(root, options)
@@ -111,7 +119,7 @@ export async function cmdUpdate(args: string[], options: CliOptions, root: strin
     }
   }
   try {
-    const plan = collectUpdatePlan(root, options.target)
+    const plan = collectUpdatePlan(root, options.target, process.env, options.pluginSources)
     const findings: Finding[] = [
       finding('ok', 'current', `${plan.checkout.version} @ ${plan.checkout.sha.slice(0, 12)} (${plan.checkout.branch})`),
       finding('ok', 'target', `${plan.target.version} @ ${plan.target.sha.slice(0, 12)} (${plan.target.local ? 'local' : 'remote'})`),

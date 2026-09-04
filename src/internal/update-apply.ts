@@ -149,6 +149,13 @@ function git(root: string, args: readonly string[]): CommandResult {
   return runCommand(root, 'git', ['-C', root, ...args])
 }
 
+export function assertNoStagingOnlyPluginSources(state: UpdateCandidateState): void {
+  const overrides = state.plugins.filter(plugin => plugin.sourceOverride)
+  if (overrides.length > 0) {
+    throw new Error(`candidate uses staging-only plugin source override(s): ${overrides.map(plugin => plugin.name).join(', ')}; promote those compatible sources into the active profile before update apply`)
+  }
+}
+
 function assertCandidateGate(root: string, options: CliOptions): UpdateCandidateState {
   const plan = collectUpdatePlan(root, options.target)
   if (plan.blockers.length > 0) throw new Error(`update plan has blockers: ${plan.blockers.join('; ')}`)
@@ -160,6 +167,7 @@ function assertCandidateGate(root: string, options: CliOptions): UpdateCandidate
   if (!state.verifiedAt || !candidateVerified(state)) {
     throw new Error(`candidate gate is incomplete: run dshx update verify --target ${plan.target.tag}`)
   }
+  assertNoStagingOnlyPluginSources(state)
   for (const plugin of state.plugins) {
     const sourceHash = pluginSourceHash(plugin.sourcePath)
     const stagedHash = pluginSourceHash(plugin.stagedPath)

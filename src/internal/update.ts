@@ -1,5 +1,5 @@
 import { existsSync, lstatSync, readFileSync, readdirSync, realpathSync, statSync } from 'node:fs'
-import { join, relative, resolve } from 'node:path'
+import { isAbsolute, join, relative, resolve } from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { currentHost } from './host.ts'
 import { resolveLocalSpec } from './file-copy.ts'
@@ -20,13 +20,17 @@ interface ReleaseRef {
 }
 
 export type MarkerObservation = 'console' | 'logger-only' | 'missing'
-export type PluginLocation = 'directory' | 'symlink' | 'profile-file' | 'profile-link'
+export type PluginLocation = 'directory' | 'symlink' | 'profile-file' | 'profile-link' | 'source-override'
 
 export interface UpdatePluginInventory {
   name: string
+  id?: string
+  packageName?: string
   path: string
   realPath: string
   location: PluginLocation
+  activeSourcePath?: string
+  sourceOverride?: string
   version?: string
   client: boolean
   build: boolean
@@ -218,6 +222,8 @@ function inventoryPlugin(root: string, name: string, path: string, location: Plu
           : 'missing'
     return {
       name,
+      id: manifest.id,
+      packageName: stringField(pkg, 'name'),
       path: path.startsWith(root) ? relative(root, path) : path,
       realPath: realpathSync(path),
       location,
@@ -264,14 +270,30 @@ function workspacePluginInventory(root: string): UpdatePluginInventory[] {
   return plugins
 }
 
+function markDuplicateIds(plugins: UpdatePluginInventory[]): void {
+  const grouped = new Map<string, UpdatePluginInventory[]>()
+  for (const plugin of plugins) {
+    if (!plugin.valid || !plugin.id) continue
+    const group = grouped.get(plugin.id) ?? []
+    group.push(plugin)
+    grouped.set(plugin.id, group)
+  }
+  for (const [id, group] of grouped) {
+    if (group.length < 2) continue
+    const labels = group.map(plugin => plugin.name).sort().join(', ')
+    for (const plugin of group) {
+      plugin.valid = false
+      plugin.issue = `plugin id ${id} is declared by multiple active candidate sources: ${labels}`
+    }
+  }
+}
+
 function pluginInventory(root: string, env: NodeJS.ProcessEnv): {
   plugins: UpdatePluginInventory[]
   staleProfileDependencies: UpdatePlan['staleProfileDependencies']
 } {
-  const plugins = workspacePluginInventory(root)
+  let plugins = workspacePluginInventory(root)
   const staleProfileDependencies: UpdatePlan['staleProfileDependencies'] = []
-  const byName = new Map(plugins.map(plugin => [plugin.name, plugin]))
-  const byRealPath = new Map(plugins.filter(plugin => plugin.valid).map(plugin => [plugin.realPath, plugin]))
   const profile = profileDir(resolveDshHome(env), 'web')
   const manifest = packageJson(join(profile, 'package.json'))
   const dependencies = isRecord(manifest?.dependencies) ? manifest.dependencies : {}
@@ -284,47 +306,71 @@ function pluginInventory(root: string, env: NodeJS.ProcessEnv): {
       continue
     }
     const location: PluginLocation = raw.startsWith('file:') ? 'profile-file' : 'profile-link'
-    const existing = byName.get(name)
-    let resolved = resolve(source)
-    try {
-      resolved = realpathSync(source)
-    } catch {
-      // inventoryPlugin will report the exact missing or invalid source
-    }
-    if (existing) {
-      if (existing.realPath === resolved) continue
-      const active = inventoryPlugin(root, name, source, location)
-      if (!active.valid) {
-        plugins.push(active)
-        continue
-      }
-      plugins.splice(plugins.indexOf(existing), 1, active)
-      byName.set(name, active)
-      byRealPath.delete(existing.realPath)
-      byRealPath.set(active.realPath, active)
-      continue
-    }
-    const sameSource = byRealPath.get(resolved)
-    if (sameSource) {
-      plugins.push({
-        ...inventoryPlugin(root, name, source, location),
-        valid: false,
-        issue: `profile dependency ${name} reuses the source already inventoried as ${sameSource.name}`,
-      })
-      continue
-    }
-    const plugin = inventoryPlugin(root, name, source, location)
-    plugins.push(plugin)
-    byName.set(name, plugin)
-    if (plugin.valid) byRealPath.set(plugin.realPath, plugin)
+    const active = inventoryPlugin(root, name, source, location)
+    // A profile dependency is what Web will actually resolve. It displaces an
+    // inactive my-plugins copy by package name before we check stable plugin ids.
+    plugins = plugins.filter(plugin => plugin.name !== name)
+    plugins.push(active)
   }
+  const activeIds = new Set(plugins
+    .filter(plugin => plugin.valid && (plugin.location === 'profile-file' || plugin.location === 'profile-link'))
+    .flatMap(plugin => plugin.id ? [plugin.id] : []))
+  // A profile source also wins when an old workspace directory uses another
+  // package name but declares the same Host/Loader id.
+  plugins = plugins.filter(plugin => (plugin.location === 'profile-file' || plugin.location === 'profile-link') || !plugin.id || !activeIds.has(plugin.id))
+  markDuplicateIds(plugins)
   return {
     plugins: plugins.sort((left, right) => left.name.localeCompare(right.name)),
     staleProfileDependencies,
   }
 }
 
-export function collectUpdatePlan(root: string, requestedTarget?: string, env: NodeJS.ProcessEnv = process.env): UpdatePlan {
+function sourceOverride(spec: string): { name: string; source: string } {
+  const split = spec.indexOf('=')
+  const name = split > 0 ? spec.slice(0, split) : ''
+  const source = split > 0 ? spec.slice(split + 1) : ''
+  if (!name || !source || !isAbsolute(source)) {
+    throw new Error(`--plugin-source must be name=/absolute/path: ${spec}`)
+  }
+  return { name, source: resolve(source) }
+}
+
+export function applyPluginSourceOverrides(root: string, plugins: readonly UpdatePluginInventory[], specs: readonly string[] = []): UpdatePluginInventory[] {
+  if (specs.length === 0) return [...plugins]
+  const selected = new Map<string, string>()
+  for (const raw of specs) {
+    const item = sourceOverride(raw)
+    if (selected.has(item.name)) throw new Error(`plugin source override is repeated for ${item.name}`)
+    selected.set(item.name, item.source)
+  }
+  const known = new Set(plugins.map(plugin => plugin.name))
+  for (const name of selected.keys()) {
+    if (!known.has(name)) throw new Error(`plugin source override names no inventoried plugin: ${name}`)
+  }
+  return plugins.map(plugin => {
+    const source = selected.get(plugin.name)
+    if (!source) return plugin
+    if (!plugin.valid) throw new Error(`cannot override invalid plugin ${plugin.name}: ${plugin.issue ?? 'invalid source'}`)
+    if (!existsSync(source) || !statSync(source).isDirectory()) {
+      throw new Error(`plugin source override is not a directory: ${plugin.name}=${source}`)
+    }
+    const override = inventoryPlugin(root, plugin.name, source, 'source-override')
+    if (!override.valid) throw new Error(`invalid plugin source override for ${plugin.name}: ${override.issue ?? source}`)
+    if (override.id !== plugin.id) {
+      throw new Error(`plugin source override id mismatch for ${plugin.name}: ${override.id ?? '(missing)'} != ${plugin.id ?? '(missing)'}`)
+    }
+    if (override.packageName !== plugin.packageName) {
+      throw new Error(`plugin source override package mismatch for ${plugin.name}: ${override.packageName ?? '(missing)'} != ${plugin.packageName ?? '(missing)'}`)
+    }
+    return {
+      ...override,
+      activeSourcePath: plugin.realPath,
+      sourceOverride: override.realPath,
+    }
+  })
+}
+
+export function collectUpdatePlan(root: string, requestedTarget?: string, env: NodeJS.ProcessEnv = process.env, sourceOverrides: readonly string[] = []): UpdatePlan {
   const origin = gitValue(root, ['remote', 'get-url', 'origin'], 'origin')
   const target = resolveTarget(root, requestedTarget)
   const status = statusState(root)
@@ -337,7 +383,9 @@ export function collectUpdatePlan(root: string, requestedTarget?: string, env: N
     untrackedPaths: status.untrackedPaths,
     targetCollisions: targetCollisions(root, target, status.untrackedPaths),
   }
-  const { plugins, staleProfileDependencies } = pluginInventory(root, env)
+  const inventory = pluginInventory(root, env)
+  const plugins = applyPluginSourceOverrides(root, inventory.plugins, sourceOverrides)
+  const { staleProfileDependencies } = inventory
   const blockers: string[] = []
   if (!officialOrigin(origin)) blockers.push(`origin is not deepseek-ai/deepseek-harness: ${origin}`)
   if (checkout.trackedChanges.length > 0) blockers.push(`tracked Harness changes must be preserved before apply (${checkout.trackedChanges.length})`)

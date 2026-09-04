@@ -41,6 +41,8 @@ interface CommandResult {
 export interface CandidatePluginResult {
   name: string
   sourcePath: string
+  activeSourcePath?: string
+  sourceOverride?: string
   stagedPath: string
   sourceLocation: PluginLocation
   client: boolean
@@ -550,10 +552,10 @@ export function loadUpdateCandidateState(root: string, target: string): UpdateCa
 }
 
 export function prepareUpdateCandidate(root: string, options: CliOptions): CandidateActionResult {
-  let plan = collectUpdatePlan(root, options.target)
+  let plan = collectUpdatePlan(root, options.target, process.env, options.pluginSources)
   if (plan.blockers.length > 0) throw new Error(`update plan has blockers: ${plan.blockers.join('; ')}`)
   ensureTarget(root, plan.target)
-  if (!plan.target.local) plan = collectUpdatePlan(root, plan.target.tag)
+  if (!plan.target.local) plan = collectUpdatePlan(root, plan.target.tag, process.env, options.pluginSources)
   const candidate = ensureCandidateWorktree(root, plan.target, options.candidate)
   ensureCandidateDshx(candidate)
   const logDir = updateLogDir(root, plan.target.tag)
@@ -581,9 +583,12 @@ export function prepareUpdateCandidate(root: string, options: CliOptions): Candi
     const sourceHash = pluginSourceHash(item.realPath)
     const previous = prior?.plugins.find(plugin => plugin.name === item.name)
     if (previous?.build && existsSync(previous.stagedPath) && sourceHash === pluginSourceHash(previous.stagedPath)) {
+      const { activeSourcePath: _previousActiveSourcePath, sourceOverride: _previousSourceOverride, ...reused } = previous
       plugins.push({
-        ...previous,
+        ...reused,
         sourcePath: item.realPath,
+        ...(item.activeSourcePath ? { activeSourcePath: item.activeSourcePath } : {}),
+        ...(item.sourceOverride ? { sourceOverride: item.sourceOverride } : {}),
         sourceLocation: item.location,
         client: item.client,
         sourceHash,
@@ -610,6 +615,8 @@ export function prepareUpdateCandidate(root: string, options: CliOptions): Candi
     plugins.push({
       name: item.name,
       sourcePath: item.realPath,
+      ...(item.activeSourcePath ? { activeSourcePath: item.activeSourcePath } : {}),
+      ...(item.sourceOverride ? { sourceOverride: item.sourceOverride } : {}),
       stagedPath,
       sourceLocation: item.location,
       client: item.client,
@@ -721,6 +728,7 @@ export function candidateSummary(plan: UpdatePlan, result: CandidateActionResult
     plugins: result.state.plugins.map(plugin => ({
       name: plugin.name,
       sourceLocation: plugin.sourceLocation,
+      sourceOverride: plugin.sourceOverride,
       client: plugin.client,
       copied: plugin.copied,
       build: plugin.build,

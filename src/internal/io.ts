@@ -53,7 +53,7 @@ export function envHas(name: string, extra?: Record<string, string>): boolean {
   return Boolean(value && value.trim())
 }
 
-const VALUE_FLAGS = new Set(['--profile', '--port', '--timeout', '--grep', '--kind', '--task', '--harness', '--change', '--target', '--candidate'])
+const VALUE_FLAGS = new Set(['--profile', '--port', '--timeout', '--grep', '--kind', '--task', '--harness', '--change', '--target', '--candidate', '--plugin-source'])
 
 const COMMAND_FLAGS: Record<string, ReadonlySet<string>> = {
   kb: new Set(['--json']),
@@ -82,7 +82,7 @@ const COMMAND_FLAGS: Record<string, ReadonlySet<string>> = {
   ship: new Set(['--json', '--profile', '--restart', '--force']),
   recopy: new Set(['--json', '--profile', '--restart', '--force']),
   'sync-artifact': new Set(['--json', '--profile', '--restart', '--force']),
-  update: new Set(['--json', '--target', '--candidate', '--port', '--timeout']),
+  update: new Set(['--json', '--target', '--candidate', '--plugin-source', '--port', '--timeout']),
   help: new Set(['--json']),
   loop: new Set(['--json']),
   version: new Set(['--json']),
@@ -154,6 +154,10 @@ function applyFlag(token: string, argv: string[], index: number, options: CliOpt
     return index + 1
   } else if (token === '--candidate' && argv[index + 1]) {
     options.candidate = argv[index + 1]
+    return index + 1
+  } else if (token === '--plugin-source' && argv[index + 1]) {
+    options.pluginSources ??= []
+    options.pluginSources.push(argv[index + 1])
     return index + 1
   }
   return index

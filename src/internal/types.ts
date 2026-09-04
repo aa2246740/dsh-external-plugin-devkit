@@ -70,6 +70,7 @@ export interface CliOptions {
   harness?: string
   target?: string
   candidate?: string
+  pluginSources?: string[]
 }
 
 export const DSHX_VERSION = '0.7.4'

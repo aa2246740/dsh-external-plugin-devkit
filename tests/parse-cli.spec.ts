@@ -104,11 +104,15 @@ describe('parseCli', () => {
     assert.equal(parsed.options.timeoutMs, 12_000)
   })
 
-  it('parses update target and candidate without leaking flags into arguments', () => {
-    const update = parseCli(['update', 'prepare', '--target', 'dsh-v0.1.1-rc.2', '--candidate', '/tmp/rc2'])
+  it('parses update target, candidate, and repeatable candidate-only sources without leaking flags into arguments', () => {
+    const update = parseCli([
+      'update', 'prepare', '--target', 'dsh-v0.1.1-rc.2', '--candidate', '/tmp/rc2',
+      '--plugin-source', 'image=/tmp/image-rc1', '--plugin-source', 'gateway=/tmp/gateway-rc1',
+    ])
     assert.equal(update.command, 'update')
     assert.deepEqual(update.args, ['prepare'])
     assert.equal(update.options.target, 'dsh-v0.1.1-rc.2')
     assert.equal(update.options.candidate, '/tmp/rc2')
+    assert.deepEqual(update.options.pluginSources, ['image=/tmp/image-rc1', 'gateway=/tmp/gateway-rc1'])
   })
 })

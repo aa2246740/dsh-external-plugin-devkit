@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
-import { mkdtempSync, mkdirSync, realpathSync, symlinkSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, readFileSync, realpathSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { describe, it } from 'node:test'
-import { collectUpdatePlan, latestReleaseRef, parseReleaseRef } from '../src/internal/update.ts'
+import { applyPluginSourceOverrides, collectUpdatePlan, latestReleaseRef, parseReleaseRef } from '../src/internal/update.ts'
 import { candidateVerified, candidateWebGateFailures } from '../src/internal/update-candidate.ts'
+import { assertNoStagingOnlyPluginSources } from '../src/internal/update-apply.ts'
 import type { CandidateWebGateResult, UpdateCandidateState } from '../src/internal/update-candidate.ts'
 
 function git(root: string, args: readonly string[]): void {
@@ -115,6 +116,83 @@ describe('update plan', () => {
     assert.equal(plan.plugins.filter(plugin => plugin.name === 'local').length, 1)
     assert.equal(plan.plugins.find(plugin => plugin.name === 'local')?.location, 'profile-link')
     assert.equal(plan.plugins.find(plugin => plugin.name === 'local')?.version, '2.0.0')
+  })
+
+  it('uses an active profile source over a differently named workspace copy with the same plugin id', () => {
+    const root = fakeHarness()
+    const home = join(root, '.test-dsh-home')
+    const profile = join(home, 'profiles/web')
+    const stale = join(root, 'my-plugins', 'dsh-cuadrive-mac')
+    const active = join(root, 'active-cua-drive')
+    write(join(stale, 'src/index.ts'), 'export function apply() {}\n')
+    write(join(stale, 'dshx.yml'), 'id: dsh-cuadrive-mac\nentry: src/index.ts\n')
+    write(join(stale, 'package.json'), '{"name":"dsh-cuadrive-mac"}\n')
+    write(join(active, 'src/index.ts'), 'export function apply() {}\n')
+    write(join(active, 'dshx.yml'), 'id: dsh-cuadrive-mac\nentry: src/index.ts\n')
+    write(join(active, 'package.json'), '{"name":"dsh-cua-drive"}\n')
+    write(join(profile, 'package.json'), JSON.stringify({ dependencies: { 'dsh-cua-drive': `link:${active}` } }))
+
+    const plan = collectUpdatePlan(root, 'dsh-v0.1.1-rc.2', isolatedEnv(root))
+    assert.equal(plan.plugins.some(plugin => plugin.name === 'dsh-cuadrive-mac'), false)
+    const winner = plan.plugins.find(plugin => plugin.name === 'dsh-cua-drive')
+    assert.equal(winner?.location, 'profile-link')
+    assert.equal(winner?.id, 'dsh-cuadrive-mac')
+    assert.equal(winner?.realPath, realpathSync(active))
+    assert.equal(plan.blockers.length, 0)
+  })
+
+  it('fails closed when two active profile packages declare the same plugin id', () => {
+    const root = fakeHarness()
+    const home = join(root, '.test-dsh-home')
+    const profile = join(home, 'profiles/web')
+    const first = join(root, 'active-first')
+    const second = join(root, 'active-second')
+    for (const [name, source] of [['first', first], ['second', second]] as const) {
+      write(join(source, 'src/index.ts'), 'export function apply() {}\n')
+      write(join(source, 'dshx.yml'), 'id: duplicate-live-id\nentry: src/index.ts\n')
+      write(join(source, 'package.json'), JSON.stringify({ name }))
+    }
+    write(join(profile, 'package.json'), JSON.stringify({ dependencies: { first: `link:${first}`, second: `link:${second}` } }))
+
+    const plan = collectUpdatePlan(root, 'dsh-v0.1.1-rc.2', isolatedEnv(root))
+    const conflicts = plan.plugins.filter(plugin => plugin.id === 'duplicate-live-id')
+    assert.equal(conflicts.length, 2)
+    assert.equal(conflicts.every(plugin => plugin.valid === false), true)
+    assert.equal(conflicts.every(plugin => plugin.issue?.includes('multiple active candidate sources')), true)
+    assert.equal(plan.blockers.some(blocker => blocker.includes('invalid local plugin sources')), true)
+  })
+
+  it('uses an explicit compatible source only for candidate staging and preserves the active source identity', () => {
+    const root = fakeHarness()
+    const compatible = join(root, 'compat-local')
+    write(join(compatible, 'src/index.ts'), "export function apply() { console.log('[compat] loaded') }\n")
+    write(join(compatible, 'dshx.yml'), 'id: local\nentry: src/index.ts\nmarker: "[compat] loaded"\n')
+    write(join(compatible, 'package.json'), '{"name":"local","version":"2.0.0","scripts":{"build":"tsc"}}\n')
+
+    const plan = collectUpdatePlan(root, 'dsh-v0.1.1-rc.2', isolatedEnv(root), [`local=${compatible}`])
+    const selected = plan.plugins.find(plugin => plugin.name === 'local')
+    assert.equal(selected?.location, 'source-override')
+    assert.equal(selected?.realPath, realpathSync(compatible))
+    assert.equal(selected?.activeSourcePath, realpathSync(join(root, 'my-plugins/local')))
+    assert.equal(selected?.sourceOverride, realpathSync(compatible))
+    assert.equal(readFileSync(join(root, 'my-plugins/local/src/index.ts'), 'utf8').includes('[compat]'), false)
+  })
+
+  it('rejects an explicit compatible source that changes a plugin id', () => {
+    const root = fakeHarness()
+    const incompatible = join(root, 'incompatible-local')
+    write(join(incompatible, 'src/index.ts'), 'export function apply() {}\n')
+    write(join(incompatible, 'dshx.yml'), 'id: not-local\nentry: src/index.ts\n')
+    write(join(incompatible, 'package.json'), '{"name":"local"}\n')
+    const base = collectUpdatePlan(root, 'dsh-v0.1.1-rc.2', isolatedEnv(root)).plugins
+    assert.throws(() => applyPluginSourceOverrides(root, base, [`local=${incompatible}`]), /id mismatch/)
+  })
+
+  it('keeps a candidate-only source override out of update apply', () => {
+    const state = {
+      plugins: [{ name: 'gateway', sourceOverride: '/tmp/gateway-rc1' }],
+    } as UpdateCandidateState
+    assert.throws(() => assertNoStagingOnlyPluginSources(state), /staging-only plugin source override\(s\): gateway/)
   })
 
   it('requires both Web gates in addition to every plugin before apply is eligible', () => {
