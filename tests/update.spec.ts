@@ -5,6 +5,8 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { describe, it } from 'node:test'
 import { collectUpdatePlan, latestReleaseRef, parseReleaseRef } from '../src/internal/update.ts'
+import { candidateVerified, candidateWebGateFailures } from '../src/internal/update-candidate.ts'
+import type { CandidateWebGateResult, UpdateCandidateState } from '../src/internal/update-candidate.ts'
 
 function git(root: string, args: readonly string[]): void {
   execFileSync('git', ['-C', root, ...args], { stdio: 'ignore' })
@@ -68,5 +70,53 @@ describe('update plan', () => {
     const plan = collectUpdatePlan(root, 'dsh-v0.1.1-rc.2')
     assert.equal(plan.checkout.trackedChanges.includes('package.json'), true)
     assert.equal(plan.blockers.some(blocker => blocker.includes('tracked Harness changes')), true)
+  })
+
+  it('requires both Web gates in addition to every plugin before apply is eligible', () => {
+    const gate = (name: CandidateWebGateResult['gate']): CandidateWebGateResult => ({
+      gate: name,
+      staticConfig: true,
+      runtime: true,
+      expectedClientPackages: [],
+      graphEntries: 1,
+      servedBundles: 0,
+      logFile: '/tmp/dshx-test.log',
+    })
+    const state: UpdateCandidateState = {
+      schemaVersion: 1,
+      preparedAt: '2026-09-04T00:00:00.000Z',
+      verifiedAt: '2026-09-04T00:00:01.000Z',
+      sourceRoot: '/tmp/source',
+      sourceSha: 'source',
+      target: { tag: 'dsh-v0.1.2-rc.1', sha: 'target', version: '0.1.2-rc.1', local: true },
+      candidateRoot: '/tmp/candidate',
+      harnessInstall: true,
+      harnessBuild: true,
+      installLog: '/tmp/install.log',
+      buildLog: '/tmp/build.log',
+      plugins: [{
+        name: 'client',
+        sourcePath: '/tmp/source/my-plugins/client',
+        stagedPath: '/tmp/candidate/my-plugins/client',
+        sourceLocation: 'directory',
+        client: true,
+        sourceHash: 'hash',
+        copied: true,
+        build: true,
+        buildRequired: true,
+        staticCheck: true,
+        runtime: true,
+        runtimeProof: 'web-client-graph',
+      }],
+      vanillaWeb: gate('vanilla-web'),
+      combinedWeb: gate('combined-web'),
+    }
+    assert.equal(candidateVerified(state), true)
+    const incomplete: UpdateCandidateState = {
+      ...state,
+      combinedWeb: { ...state.combinedWeb!, runtime: false },
+    }
+    assert.equal(candidateVerified(incomplete), false)
+    assert.deepEqual(candidateWebGateFailures(incomplete), ['combined-web'])
   })
 })

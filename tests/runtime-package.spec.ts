@@ -37,7 +37,7 @@ function clientHarness(): { root: string; plugin: string } {
   return { root, plugin }
 }
 
-describe('RC2 native runtime package seam', () => {
+describe('native runtime package seam', () => {
   it('renders web clients by package name and links the exact local checkout into the profile', () => {
     const { root, plugin: pluginDir } = clientHarness()
     const plugin = loadPlugin(root, 'demo-client')

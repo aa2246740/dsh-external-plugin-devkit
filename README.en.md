@@ -6,7 +6,7 @@ An out-of-process plugin workshop for [DeepSeek Harness](https://github.com/deep
 
 Official Creator Mode is for probing a live process. dshx is the other half: write the plugin as files, check the contract, name the layer you changed, then decide whether the Host restarts or the page reloads. **It is not `dsh`, not a Harness fork, and not a Creator Mode replacement.**
 
-0.7.0 adds a transactional update assistant: official release, candidate build, plugin cold boot, and exact rollback as separate gates. It **does not** restart a production Host for you.
+0.7.4 adds a transactional update assistant: official release, candidate build, plugin cold boot, complete Web composition, and exact rollback as separate gates. It **does not** restart a production Host for you.
 
 ![Local xfce4-terminal: `dshx update plan` (rc.8 → rc.2), then `dshx update verify --target dsh-v0.1.1-rc.2`; hello plugin cold-boot passed](docs/screenshots/update-plan.gif)
 
@@ -62,31 +62,31 @@ The stills below are from the same local run. The official UI was not opened.
 
 *2026-08-25 · machine `cursor` (Linux) · `dshx activation-plan hello --change patch`*
 
-## 0.7.0 update assistant
+## 0.7.4 update assistant and RC1 Web gates
 
 An update is more than `git pull`. The gates are staged. Without `--target`, DSHX queries the latest official `dsh-v*` release live.
 
 ```sh
 dshx update plan
-dshx update prepare --target dsh-v0.1.1-rc.2
-dshx update verify --target dsh-v0.1.1-rc.2
-dshx update apply --target dsh-v0.1.1-rc.2
-dshx update rollback --target dsh-v0.1.1-rc.2
+dshx update prepare --target dsh-v0.1.2-rc.1
+dshx update verify --target dsh-v0.1.2-rc.1
+dshx update apply --target dsh-v0.1.2-rc.1
+dshx update rollback --target dsh-v0.1.2-rc.1
 ```
 
-This machine planned `0.1.0-rc.8` → `0.1.1-rc.2`, inventoried one plugin, and was not supervising a Host:
+The screenshots below are a historical RC2 example: this machine planned `0.1.0-rc.8` → `0.1.1-rc.2`, inventoried one plugin, and was not supervising a Host. They are not proof for a current target:
 
 ![dshx update plan: current 0.1.0-rc.8 → target 0.1.1-rc.2; no tracked dirty; one plugin](docs/screenshots/update-plan.png)
 
 *2026-08-25 · machine `cursor` (Linux) · `dshx update plan`*
 
-`prepare` does a frozen install and full target-Harness build in an isolated worktree, then copies and builds every plugin. It does not switch the active checkout. `verify` runs the static contract and an isolated cold boot for every candidate plugin — `hello` passed here:
+`prepare` does a frozen install and full target-Harness build in an isolated worktree, then copies and builds every plugin. It does not switch the active checkout. `verify` first cold-boots a vanilla Web candidate, then runs the static contract and isolated cold boot for every candidate plugin, then starts the complete candidate Web graph. An RC1 Web page must exchange the startup URL token for its local cookie before DSHX reads `globalThis["__DSH_BOOT__"]` and each served bundle; a bare `HTTP 200/401` is not client acceptance.
 
 ![dshx update verify: candidate build passed; hello build/check/cold-boot all true; 1/1 verify-gate; source plugin bytes untouched](docs/screenshots/update-verify.png)
 
 *2026-08-25 · machine `cursor` (Linux) · `dshx update verify --target dsh-v0.1.1-rc.2`*
 
-`apply` accepts only a complete candidate gate, refuses a supervised Host, transactionally switches to `dshx/<release>`, and keeps an exact backup. `rollback` restores the pre-update branch, dependencies, and plugin `lib/`.
+`apply` accepts only a complete candidate gate, including vanilla and combined Web gates, refuses a supervised Host, transactionally switches to `dshx/<release>`, and keeps an exact backup. `rollback` restores the pre-update branch, dependencies, and plugin `lib/`.
 
 Keep three states distinct:
 
@@ -113,26 +113,7 @@ dshx check demo
 dshx activation-plan demo --change patch
 ```
 
-## Harness update assistant
-
-An update is more than `git pull`. DSHX 0.7.0 gates the official release, the Harness build, every local plugin, and exact rollback as separate phases:
-
-```sh
-dshx update plan
-dshx update prepare --target dsh-v0.1.1-rc.2
-dshx update verify --target dsh-v0.1.1-rc.2
-dshx update apply --target dsh-v0.1.1-rc.2
-```
-
-- `plan` reads official `dsh-v*` tags, the current checkout, tracked-dirty risk, and directory/symlink plugin inventory without mutation.
-- `prepare` performs a frozen install and full target-Harness build in an isolated worktree, then copies and builds every plugin. It does not switch the active Harness.
-- `verify` runs the static contract and an isolated cold boot for every candidate plugin. RC2 Web clients use the native profile package seam and must appear in the boot graph with a 200 `client.js`; server-only plugins must emit their `apply()` marker.
-- `apply` accepts only a complete candidate gate, refuses a supervised Host, transactionally switches to `dshx/<release>`, rebuilds the actual plugins, and saves exact checkout, dependency-tree, and plugin-`lib/` backups.
-- `rollback` restores the pre-update branch, dependencies, and generated plugin artifacts: `dshx update rollback --target <release>`.
-
-Without `--target`, DSHX queries the latest official release live. The assistant does not restart a production Host: applied bytes, real-runtime acceptance, and production activation remain separate states. See [knowledge/contracts/harness-update.md](knowledge/contracts/harness-update.md).
-
-DSHX 0.7.4 treats DSH.app, direct `dsh web`, and dshx as launchers, not separate Hosts. `dshx start web` first discovers processes by their real `DSH_HOME`: it attaches to one existing Host without spawning, and fails closed on duplicates or an unproved Home. Another port and `--force` cannot bypass that gate. PID/port `EPERM` is unknown, never falsely dead or closed. `verify-boot` now uses a temporary Home while the production PID keeps running, then always stops and removes its transient Host; `--keep` is disabled.
+DSHX 0.7.4 treats DSH.app, direct `dsh web`, and dshx as launchers, not separate Hosts. `dshx start web` first discovers processes by their real `DSH_HOME`: it attaches to one existing Host without spawning, and fails closed on duplicates or an unproved Home. Another port and `--force` cannot bypass that gate. PID/port `EPERM` is unknown, never falsely dead or closed. `verify-boot` now uses a temporary Home while the production PID keeps running, then always stops and removes its transient Host; RC1 client-graph verification follows the startup-token-to-local-cookie request chain; `--keep` is disabled.
 
 DSHX 0.7.3 fixes bundle-plugin removal ordering. The external supervisor runs `dshx plugin remove <package> --profile web --port <current-port>`: it removes the package from the current `__DSH_BOOT__` on the same PID before invoking the official remover, so a stale Loader graph never points at a deleted `client.js`. One exact disable stays for the lifetime of the old boot; rerunning the same command after a later normal DSH.app reopen removes it only when the new Host is proved to have booted from the clean profile. The command also resumes the dependency-gone/live-row-still-present half-removal state. Creator+ watched plugins continue to use the fixed `dshx_remove_plugin`; neither path restarts the Host or deletes source.
 

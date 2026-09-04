@@ -2,6 +2,8 @@ import { collectUpdatePlan } from '../internal/update.ts'
 import {
   candidateFailures,
   candidateSummary,
+  candidateVerified,
+  candidateWebGateFailures,
   prepareUpdateCandidate,
   verifyUpdateCandidate,
 } from '../internal/update-candidate.ts'
@@ -17,6 +19,22 @@ function updateAction(value: string | undefined): UpdateAction | undefined {
 
 function candidateFindings(action: 'prepare' | 'verify', result: ReturnType<typeof prepareUpdateCandidate>): Finding[] {
   const failures = candidateFailures(result.state)
+  const webFailures = action === 'verify' ? candidateWebGateFailures(result.state) : []
+  const webFindings = action === 'verify'
+    ? ([['vanilla-web', result.state.vanillaWeb], ['combined-web', result.state.combinedWeb]] as const).map(([name, gate]) => {
+      const ok = gate?.staticConfig === true && gate.runtime === true
+      const detail = gate
+        ? `config=${gate.staticConfig} boot=${gate.runtime} graph=${gate.graphEntries} bundles=${gate.servedBundles}/${gate.expectedClientPackages.length}`
+        : 'not run'
+      return finding(ok ? 'ok' : 'error', name, `${name}: ${detail}`, {
+        ...gate?.logFile ? { path: gate.logFile } : {},
+        ...gate?.reason ? { hint: gate.reason } : {},
+      })
+    })
+    : []
+  const gateOk = action === 'prepare'
+    ? result.state.plugins.every(plugin => plugin.build)
+    : candidateVerified(result.state)
   return [
     finding('ok', 'candidate', `${result.state.target.version} @ ${result.state.target.sha.slice(0, 12)} in ${result.state.candidateRoot}`),
     finding('ok', 'harness-install', 'candidate dependencies installed from the frozen lockfile'),
@@ -30,14 +48,20 @@ function candidateFindings(action: 'prepare' | 'verify', result: ReturnType<type
         : `build=${plugin.build} check=${plugin.staticCheck ?? false} cold-boot=${plugin.runtime ?? false}`
       return finding(ok ? 'ok' : 'error', `plugin-${action}`, `${plugin.name}: ${detail}`, { path: plugin.stagedPath })
     }),
-    failures.length === 0
-      ? finding('ok', `${action}-gate`, `${result.state.plugins.length}/${result.state.plugins.length} plugins passed the ${action} gate`)
-      : finding('error', `${action}-gate`, `${failures.length} plugin(s) failed: ${failures.map(plugin => plugin.name).join(', ')}`),
+    ...webFindings,
+    gateOk
+      ? finding('ok', `${action}-gate`, action === 'verify'
+        ? `${result.state.plugins.length}/${result.state.plugins.length} plugins plus vanilla and combined Web gates passed`
+        : `${result.state.plugins.length}/${result.state.plugins.length} plugins passed the ${action} gate`)
+      : finding('error', `${action}-gate`, [
+        ...failures.length > 0 ? [`${failures.length} plugin(s): ${failures.map(plugin => plugin.name).join(', ')}`] : [],
+        ...webFailures.length > 0 ? [`Web gate(s): ${webFailures.join(', ')}`] : [],
+      ].join('; ') || 'candidate gate is incomplete'),
     finding('info', 'source-safety', 'all plugin work used candidate copies; source plugin bytes were not edited'),
   ]
 }
 
-export function cmdUpdate(args: string[], options: CliOptions, root: string): number {
+export async function cmdUpdate(args: string[], options: CliOptions, root: string): Promise<number> {
   const action = updateAction(args[0])
   if (!action) {
     printReport(report('update', [finding('error', 'usage', 'dshx update plan|prepare|verify|apply|rollback [--target <dsh-v...>]')]), options.json)
@@ -78,7 +102,7 @@ export function cmdUpdate(args: string[], options: CliOptions, root: string): nu
       const plan = collectUpdatePlan(root, options.target)
       const result = action === 'prepare'
         ? prepareUpdateCandidate(root, options)
-        : verifyUpdateCandidate(root, options)
+        : await verifyUpdateCandidate(root, options)
       printReport(report(`update ${action}`, candidateFindings(action, result), candidateSummary(plan, result)), options.json)
       return result.ok ? 0 : 1
     } catch (error) {
@@ -101,7 +125,7 @@ export function cmdUpdate(args: string[], options: CliOptions, root: string): nu
         : finding('error', 'untracked-collisions', `${plan.checkout.targetCollisions.length} untracked path(s) collide with the target release`),
       finding('ok', 'plugins', `${plan.plugins.length} plugin entr${plan.plugins.length === 1 ? 'y' : 'ies'} inventoried`),
       ...plan.plugins.filter(plugin => !plugin.valid).map(plugin => finding('error', 'plugin-invalid', `${plugin.name}: ${plugin.issue ?? 'invalid plugin entry'}`, { path: plugin.path })),
-      ...plan.plugins.filter(plugin => plugin.marker === 'logger-only').map(plugin => finding('warn', 'marker-unobservable', `${plugin.name}: marker uses a logger path that RC2 launcher stdout may not expose`, {
+      ...plan.plugins.filter(plugin => plugin.marker === 'logger-only').map(plugin => finding('warn', 'marker-unobservable', `${plugin.name}: marker uses a logger path that the current Harness launcher stdout may not expose`, {
         path: plugin.path,
         hint: 'candidate verification will use a staging-only apply probe; source bytes stay unchanged',
       })),

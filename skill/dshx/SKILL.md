@@ -86,7 +86,7 @@ When the user asks to update DeepSeek Harness and retain local plugins, read `kb
 ./scripts/dshx.sh update apply [--target ...]
 ```
 
-`plan` is read-only. Do not run `apply` until candidate Harness install/full-build and every plugin's build/static/runtime proof pass. Web clients require the RC2-native profile package link, package-name Loader row, active `__DSH_BOOT__` entry (currently emitted as `globalThis["__DSH_BOOT__"]`), and served `client.js`; server-only plugins require a runtime `apply()` marker. `apply` must refuse a supervised Host and retain `.dshx/update-assistant/<tag>/rollback.json`. Do not run `update rollback` merely to test it: that command intentionally restores the previous checkout, dependencies, and plugin artifacts.
+`plan` is read-only. Do not run `apply` until candidate Harness install/full-build and every plugin's build/static/runtime proof pass. `verify` first cold-boots a vanilla Web candidate, then validates every plugin, then cold-boots the complete client graph. Web clients require the native profile package link, package-name Loader row, an authenticated current `globalThis["__DSH_BOOT__"]` entry (the startup token must first establish the local session cookie), and a served client bundle; server-only plugins require a runtime `apply()` marker. `apply` must refuse a supervised Host and retain `.dshx/update-assistant/<tag>/rollback.json`. Do not run `update rollback` merely to test it: that command intentionally restores the previous checkout, dependencies, and plugin artifacts.
 
 Report `candidate verified`, `applied locally`, `real runtime accepted`, and `production activated` as different states. The update assistant never silently restarts a production Host.
 
@@ -155,7 +155,7 @@ For a watched-row removal request inside Creator Mode+, replace activation steps
 - Object: default-export `{ apply, name?, inject? }` and set `kind: object`.
 - Class/service: default-export the constructor and set `kind: class`.
 - Tool: inject `tools` and register with `defineTool`.
-- Client: `exports["./client"]` must target built `lib/client.js` containing `window.__ModuleLoader__.load({ id, factory })`; source TSX is not a served client artifact. Every direct `ctx.<service>` read must appear in the client entry's Cordis `export const inject`; `package.json` `dsh.client.inject` is unrelated package metadata. RC8 external packages use dshx `externalClientBundle`, while official `packages/client/tsdown.client.ts` remains the in-repository workspace preset. RC2 runtime discovery additionally requires DSHX's profile-local package link and package-name Loader row; an absolute `src/*.ts` row can mount the Host half but is not client proof.
+- Client: `exports["./client"]` must target built `lib/client.js` containing `window.__ModuleLoader__.load({ id, factory })`; source TSX is not a served client artifact. Every direct `ctx.<service>` read must appear in the client entry's Cordis `export const inject`; `package.json` `dsh.client.inject` is unrelated package metadata. RC8 external packages use dshx `externalClientBundle`, while official `packages/client/tsdown.client.ts` remains the in-repository workspace preset. Current runtime discovery additionally requires DSHX's profile-local package link and package-name Loader row; an absolute `src/*.ts` row can mount the Host half but is not client proof.
 
 ## Hard guardrails
 

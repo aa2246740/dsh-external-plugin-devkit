@@ -15,7 +15,7 @@ import { loadJson, writeText } from './io.ts'
 import { stateDir } from './paths.ts'
 import type { CliOptions } from './types.ts'
 import { collectUpdatePlan } from './update.ts'
-import { loadUpdateCandidateState, pluginSourceHash } from './update-candidate.ts'
+import { candidateVerified, loadUpdateCandidateState, pluginSourceHash } from './update-candidate.ts'
 import type { CandidatePluginResult, UpdateCandidateState } from './update-candidate.ts'
 
 interface CommandResult {
@@ -157,10 +157,7 @@ function assertCandidateGate(root: string, options: CliOptions): UpdateCandidate
     throw new Error(`active Harness moved after prepare: ${state.sourceSha} != ${plan.checkout.sha}`)
   }
   if (state.target.sha !== plan.target.sha) throw new Error('prepared target no longer matches the selected release')
-  if (!state.verifiedAt || state.plugins.some(plugin => !plugin.build
-    || plugin.staticCheck !== true
-    || plugin.runtime !== true
-    || plugin.runtimeProof !== (plugin.client ? 'web-client-graph' : 'server-marker'))) {
+  if (!state.verifiedAt || !candidateVerified(state)) {
     throw new Error(`candidate gate is incomplete: run dshx update verify --target ${plan.target.tag}`)
   }
   for (const plugin of state.plugins) {

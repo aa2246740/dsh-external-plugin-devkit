@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, rmSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { dshEnv, dumpConfig, parseDumpEntries } from '../internal/dsh.ts'
@@ -10,6 +10,7 @@ import { writeOverlay } from '../internal/overlay.ts'
 import { hostLogPath, resolveDshHome } from '../internal/paths.ts'
 import { loadPlugin } from '../internal/plugin.ts'
 import { ensureRuntimePackageLink } from '../internal/runtime-package.ts'
+import { fetchAuthenticatedWebPage, fetchAuthenticatedWebResource, findWebStartupUrl, parseWebBootManifest } from '../internal/web-boot.ts'
 import type { CliOptions, PluginManifest, ProfileName } from '../internal/types.ts'
 
 function resolveProfile(args: string[], options: CliOptions): { profile: ProfileName; pluginArg?: string; rest: string[] } {
@@ -398,25 +399,22 @@ export async function cmdVerify(args: string[], options: CliOptions, root: strin
           ? finding('ok', 'http', `http://127.0.0.1:${options.port}/ accepted a request from the temporary Host`)
           : finding('error', 'http', `temporary Web Host did not accept HTTP within ${bootDeadline}ms`))
         if (httpOk && webClientPackage) {
-          const baseUrl = `http://127.0.0.1:${options.port}/`
-          const page = await fetch(baseUrl)
-          const html = await page.text()
-          const clientPath = `/plugins/${webClientPackage.name}/client.js`
-          const rowPattern = new RegExp(`(${clientPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\?rev=[^"'<\\s]+)`)
-          const row = rowPattern.exec(html)?.[1]
-          findings.push(row
+          const startupUrl = findWebStartupUrl(readFileSync(state.logFile, 'utf8'), options.port)
+          const page = startupUrl ? await fetchAuthenticatedWebPage(startupUrl) : undefined
+          const entry = page && parseWebBootManifest(page.html)?.entries.find(candidate => candidate.id === webClientPackage.name)
+          findings.push(entry
             ? finding('ok', 'client-graph', `temporary __DSH_BOOT__ contains ${webClientPackage.name}`)
             : finding('error', 'client-graph', `temporary __DSH_BOOT__ is missing ${webClientPackage.name}`))
           let bundleOk = false
-          if (row) {
-            const bundle = await fetch(new URL(row, baseUrl))
+          if (entry && page) {
+            const bundle = await fetchAuthenticatedWebResource(page, entry.url)
             const bytes = Buffer.byteLength(await bundle.text())
             bundleOk = bundle.ok && bytes > 0
             findings.push(bundleOk
-              ? finding('ok', 'client-http', `${row} returned ${bundle.status} (${bytes} bytes)`)
-              : finding('error', 'client-http', `${row} returned ${bundle.status} (${bytes} bytes)`))
+              ? finding('ok', 'client-http', `${entry.url} returned ${bundle.status} (${bytes} bytes)`)
+              : finding('error', 'client-http', `${entry.url} returned ${bundle.status} (${bytes} bytes)`))
           }
-          markerOk = row !== undefined && bundleOk
+          markerOk = entry !== undefined && bundleOk
         }
       }
       failed = logContains(state.logFile, 'duplicate loader entry id')

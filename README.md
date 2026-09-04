@@ -6,7 +6,7 @@ DeepSeek Harness 的进程外插件工作台。给 Cursor、Claude Code、Codex�
 
 官方 Creator Mode 适合在活进程里探针。dshx 管另一半：把插件写成文件、检查合同、看这次改的是哪一层，再决定要不要重启 Host、刷新页面。**不是 `dsh`，不是 Harness 的 fork，也不是 Creator Mode 的替代品。**
 
-0.7.0 加上事务化更新助手：官方 release、候选构建、插件冷启动、精确回滚分阶段过门。它**不会**替你重启正式 Host。
+0.7.4 的事务化更新助手把官方 release、候选构建、插件冷启动、完整 Web 组合图和精确回滚分阶段过门。它**不会**替你重启正式 Host。
 
 ![本机 xfce4-terminal：先 `dshx update plan`（rc.8 → rc.2），再 `dshx update verify --target dsh-v0.1.1-rc.2`，hello 插件 cold-boot 通过](docs/screenshots/update-plan.gif)
 
@@ -62,31 +62,31 @@ dshx update plan
 
 *2026-08-25 · 机器 `cursor`（Linux）· `dshx activation-plan hello --change patch`*
 
-## 0.7.0 更新助手
+## 0.7.4 更新助手与 RC1 Web 门禁
 
 更新不是一次 `git pull`。分阶段门禁；省略 `--target` 时会实时查询官方最新 `dsh-v*` release。
 
 ```sh
 dshx update plan
-dshx update prepare --target dsh-v0.1.1-rc.2
-dshx update verify --target dsh-v0.1.1-rc.2
-dshx update apply --target dsh-v0.1.1-rc.2
-dshx update rollback --target dsh-v0.1.1-rc.2
+dshx update prepare --target dsh-v0.1.2-rc.1
+dshx update verify --target dsh-v0.1.2-rc.1
+dshx update apply --target dsh-v0.1.2-rc.1
+dshx update rollback --target dsh-v0.1.2-rc.1
 ```
 
-这次本机从 `0.1.0-rc.8` 规划到 `0.1.1-rc.2`，1 个插件入账，没有监督中的 Host：
+下面的截图是历史 RC2 样例：本机从 `0.1.0-rc.8` 规划到 `0.1.1-rc.2`，1 个插件入账，没有监督中的 Host。它不替代当前 target 的候选结果：
 
 ![dshx update plan：current 0.1.0-rc.8 → target 0.1.1-rc.2；无 tracked dirty；1 个插件](docs/screenshots/update-plan.png)
 
 *2026-08-25 · 机器 `cursor`（Linux）· `dshx update plan`*
 
-`prepare` 在隔离 worktree 冻安装并完整构建目标 Harness，再复制构建全部插件；不切换当前 checkout。`verify` 对每个候选插件做静态合同和隔离冷启动——本机 `hello` 过了：
+`prepare` 在隔离 worktree 冻安装并完整构建目标 Harness，再复制构建全部插件；不切换当前 checkout。`verify` 先冷启动无插件的 Web candidate，再对每个候选插件做静态合同和隔离冷启动，最后加载全部候选插件的组合 Web 图。RC1 的 Web 页必须先用启动 URL 的 token 换取本地 cookie，之后才读取 `globalThis["__DSH_BOOT__"]` 和每个 bundle；裸 `HTTP 200/401` 都不算 client 验收。
 
 ![dshx update verify：candidate 构建通过；hello build/check/cold-boot 全 true；1/1 verify-gate；源插件字节未改](docs/screenshots/update-verify.png)
 
 *2026-08-25 · 机器 `cursor`（Linux）· `dshx update verify --target dsh-v0.1.1-rc.2`*
 
-`apply` 只接受完整候选门禁，拒绝正在监督的 Host，事务化切到 `dshx/<release>` 并留下精确备份。`rollback` 恢复升级前的分支、依赖和插件 `lib/`。
+`apply` 只接受完整候选门禁（包括 vanilla 与组合 Web），拒绝正在监督的 Host，事务化切到 `dshx/<release>` 并留下精确备份。`rollback` 恢复升级前的分支、依赖和插件 `lib/`。
 
 三件事情不要混：
 
@@ -113,7 +113,7 @@ dshx check demo
 dshx activation-plan demo --change patch
 ```
 
-DSHX 0.7.4 把 App、直接 `dsh web` 和 dshx 统一成启动入口，而不是三套 Host。`dshx start web` 先按真实 `DSH_HOME` 发现进程：已有一个就附着且不 spawn；多个或 Home 无法证明就失败关闭，换端口和 `--force` 都不能绕过。PID/端口的 `EPERM` 是 unknown，不再误报死亡或关闭。`verify-boot` 改用临时 Home，允许正式 Host 原 PID 继续运行，验完必停临时 Host并清理；`--keep` 已禁用。
+DSHX 0.7.4 把 App、直接 `dsh web` 和 dshx 统一成启动入口，而不是三套 Host。`dshx start web` 先按真实 `DSH_HOME` 发现进程：已有一个就附着且不 spawn；多个或 Home 无法证明就失败关闭，换端口和 `--force` 都不能绕过。PID/端口的 `EPERM` 是 unknown，不再误报死亡或关闭。`verify-boot` 改用临时 Home，允许正式 Host 原 PID 继续运行，验完必停临时 Host 并清理；RC1 client graph 会走启动 token → 本地 cookie 的真实请求链；`--keep` 已禁用。
 
 DSHX 0.7.3 修复 bundle 插件卸载顺序。外部 supervisor 使用 `dshx plugin remove <package> --profile web --port <当前端口>`：先让当前 `__DSH_BOOT__` 同 PID 脱载，再调用官方 remover，绝不先删 `client.js` 留旧 Loader 图。旧 boot 期间会保留精确 disable；用户以后正常重开 DSH.app 后重跑同一命令，只有证明新 Host 从干净 profile 启动才清掉它。命令还能续跑“dependency 已没、旧 live 图仍在”的半删除状态。Creator+ watched 插件仍走固定 `dshx_remove_plugin`，两条路径都不重启 Host、不删除源码。
 

@@ -126,7 +126,7 @@ export function loadPlugin(root: string, nameOrPath?: string): PluginManifest {
   }
 }
 
-/** RC2 discovers browser bundles from resolvable package names, not source-file loader rows. */
+/** Current Harness releases discover browser bundles from resolvable package names, not source-file loader rows. */
 export function runtimePluginSpecifier(plugin: PluginManifest): string {
   return plugin.runtimePackage?.webClient === true ? plugin.runtimePackage.name : plugin.entryAbs
 }

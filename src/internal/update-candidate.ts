@@ -5,6 +5,7 @@ import {
   existsSync,
   lstatSync,
   mkdirSync,
+  mkdtempSync,
   readFileSync,
   readlinkSync,
   realpathSync,
@@ -12,15 +13,21 @@ import {
   rmSync,
   symlinkSync,
 } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { basename, dirname, join, relative, resolve } from 'node:path'
 import yaml from 'js-yaml'
+import { dumpConfig, duplicateIds, parseDumpEntries } from './dsh.ts'
+import { logContains, probePort, startTransientHost, stopTransientHost, waitForHttp, waitForLog } from './host.ts'
 import { loadJson, writeText } from './io.ts'
+import { renderOverlay } from './overlay.ts'
 import { dshxPackageRoot, stateDir } from './paths.ts'
 import { loadPlugin } from './plugin.ts'
-import type { CliOptions } from './types.ts'
+import { ensureRuntimePackageLink } from './runtime-package.ts'
+import type { CliOptions, PluginManifest } from './types.ts'
 import { DEFAULT_PORT } from './types.ts'
 import { collectUpdatePlan } from './update.ts'
 import type { UpdatePlan, UpdatePluginInventory, UpdateTargetState } from './update.ts'
+import { fetchAuthenticatedWebPage, fetchAuthenticatedWebResource, findWebStartupUrl, parseWebBootManifest } from './web-boot.ts'
 
 interface CommandResult {
   ok: boolean
@@ -48,6 +55,19 @@ export interface CandidatePluginResult {
   runtimeLog?: string
   runtimeProof?: 'server-marker' | 'web-client-graph'
   probe?: 'direct-marker' | 'staging-wrapper'
+}
+
+export interface CandidateWebGateResult {
+  gate: 'vanilla-web' | 'combined-web'
+  staticConfig: boolean
+  runtime: boolean
+  expectedClientPackages: string[]
+  graphEntries: number
+  servedBundles: number
+  logFile: string
+  overlay?: string
+  reason?: string
+  preservedHome?: string
 }
 
 const SOURCE_HASH_EXCLUDES = new Set([
@@ -100,6 +120,8 @@ export interface UpdateCandidateState {
   installLog: string
   buildLog: string
   plugins: CandidatePluginResult[]
+  vanillaWeb?: CandidateWebGateResult
+  combinedWeb?: CandidateWebGateResult
 }
 
 export interface CandidateActionResult {
@@ -319,6 +341,116 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
+function candidateWebOverlay(candidate: string, gate: CandidateWebGateResult['gate'], plugins: readonly PluginManifest[]): string | undefined {
+  if (plugins.length === 0) return undefined
+  const path = join(candidate, '.dshx', 'update-probes', gate, 'cordis.yml')
+  writeText(path, plugins.map(renderOverlay).join('\n'))
+  return path
+}
+
+function webGateError(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
+}
+
+async function verifyCandidateWebGate(
+  candidate: string,
+  gate: CandidateWebGateResult['gate'],
+  pluginNames: readonly string[],
+  port: number,
+  timeoutMs: number,
+  logDir: string,
+): Promise<CandidateWebGateResult> {
+  const isolatedHome = mkdtempSync(join(tmpdir(), `dshx-update-${gate}-`))
+  const env = candidateEnv(candidate, { DSH_HOME: isolatedHome })
+  const logFile = join(logDir, `${gate}.log`)
+  let staticConfig = false
+  let runtime = false
+  let graphEntries = 0
+  let servedBundles = 0
+  let expectedClientPackages: string[] = []
+  let overlay: string | undefined
+  let reason: string | undefined
+  let cleanupHome = true
+  let transient: ReturnType<typeof startTransientHost> | undefined
+  try {
+    const plugins = pluginNames.map(name => loadPlugin(candidate, name))
+    expectedClientPackages = [...new Set(plugins.flatMap(plugin => plugin.runtimePackage?.webClient ? [plugin.runtimePackage.name] : []))]
+    const profile = dumpConfig(candidate, 'web', [], env)
+    if (profile.code !== 0) throw new Error(`temporary Web profile initialization exited ${profile.code}`)
+    for (const plugin of plugins) ensureRuntimePackageLink(plugin, isolatedHome, 'web')
+    const baseEntries = parseDumpEntries(profile.stdout)
+    const baseIds = new Set(baseEntries.filter(entry => entry.disabled !== true).map(entry => entry.id))
+    overlay = candidateWebOverlay(candidate, gate, plugins.filter(plugin => !baseIds.has(plugin.id)))
+    const composed = overlay ? dumpConfig(candidate, 'web', [overlay], env) : profile
+    if (composed.code !== 0) throw new Error(`combined temporary dump-config exited ${composed.code}`)
+    const entries = parseDumpEntries(composed.stdout)
+    const missing = plugins.filter(plugin => !entries.some(entry => entry.id === plugin.id && entry.disabled !== true)).map(plugin => plugin.id)
+    const duplicates = duplicateIds(entries)
+    if (missing.length > 0) throw new Error(`temporary composed tree is missing plugin ids: ${missing.join(', ')}`)
+    if (duplicates.length > 0) throw new Error(`temporary composed tree has duplicate ids: ${duplicates.join(', ')}`)
+    staticConfig = true
+
+    if (await probePort(port) !== 'closed') throw new Error(`port ${port} is busy or cannot be proved free for ${gate}`)
+    transient = startTransientHost(candidate, {
+      profile: 'web',
+      port,
+      overlay,
+      env,
+      logFile,
+    })
+    if (!await waitForHttp(port, timeoutMs)) throw new Error(`temporary Web Host did not accept HTTP within ${timeoutMs}ms`)
+    if (!await waitForLog(logFile, 'dsh web:', timeoutMs)) throw new Error(`temporary Web Host did not print a ready URL within ${timeoutMs}ms`)
+    const startupUrl = findWebStartupUrl(readFileSync(logFile, 'utf8'), port)
+    if (!startupUrl) throw new Error(`temporary Web Host did not print a valid local startup URL for port ${port}`)
+    const page = await fetchAuthenticatedWebPage(startupUrl)
+    const manifest = parseWebBootManifest(page.html)
+    if (!manifest) throw new Error('authenticated temporary Web page is missing globalThis["__DSH_BOOT__"]')
+    graphEntries = manifest.entries.length
+    const missingPackages = expectedClientPackages.filter(name => !manifest.entries.some(entry => entry.id === name))
+    if (missingPackages.length > 0) throw new Error(`temporary __DSH_BOOT__ is missing client packages: ${missingPackages.join(', ')}`)
+    for (const name of expectedClientPackages) {
+      const entry = manifest.entries.find(candidateEntry => candidateEntry.id === name)
+      if (!entry) continue
+      const response = await fetchAuthenticatedWebResource(page, entry.url)
+      const bytes = Buffer.byteLength(await response.text())
+      if (!response.ok || bytes === 0) throw new Error(`${entry.url} returned ${response.status} (${bytes} bytes)`)
+      servedBundles += 1
+    }
+    const brickPhrase = [
+      'duplicate loader entry id',
+      'Failed to load plugins',
+      'cannot resolve profile bundle',
+    ].find(phrase => logContains(logFile, phrase))
+    if (brickPhrase) throw new Error(`temporary Web Host log contains ${JSON.stringify(brickPhrase)}`)
+    runtime = true
+  } catch (error) {
+    reason = webGateError(error)
+  } finally {
+    if (transient) {
+      try {
+        await stopTransientHost(transient)
+      } catch (error) {
+        cleanupHome = false
+        const stopReason = `temporary Web Host could not be proved stopped: ${webGateError(error)}`
+        reason = reason ? `${reason}; ${stopReason}` : stopReason
+      }
+    }
+    if (cleanupHome) rmSync(isolatedHome, { recursive: true, force: true })
+  }
+  return {
+    gate,
+    staticConfig,
+    runtime,
+    expectedClientPackages,
+    graphEntries,
+    servedBundles,
+    logFile,
+    ...overlay ? { overlay } : {},
+    ...reason ? { reason } : {},
+    ...cleanupHome ? {} : { preservedHome: isolatedHome },
+  }
+}
+
 export function createApplyProbe(candidate: string, name: string): { dir: string; marker: string } {
   const plugin = loadPlugin(candidate, name)
   const dir = join(candidate, '.dshx', 'update-probes', name)
@@ -483,7 +615,7 @@ export function prepareUpdateCandidate(root: string, options: CliOptions): Candi
   return { state, statePath, ok: plugins.every(plugin => plugin.build) }
 }
 
-export function verifyUpdateCandidate(root: string, options: CliOptions): CandidateActionResult {
+export async function verifyUpdateCandidate(root: string, options: CliOptions): Promise<CandidateActionResult> {
   const plan = collectUpdatePlan(root, options.target)
   const state = loadUpdateCandidateState(root, plan.target.tag)
   if (options.candidate && resolve(options.candidate) !== state.candidateRoot) {
@@ -495,6 +627,7 @@ export function verifyUpdateCandidate(root: string, options: CliOptions): Candid
   const port = options.port === DEFAULT_PORT ? 43160 : options.port
   const timeoutSeconds = Math.max(1, Math.ceil(options.timeoutMs / 1000))
   const logDir = updateLogDir(root, state.target.tag)
+  const vanillaWeb = await verifyCandidateWebGate(state.candidateRoot, 'vanilla-web', [], port, options.timeoutMs, logDir)
   const plugins: CandidatePluginResult[] = []
   for (const item of state.plugins) {
     const currentProof = item.client ? 'web-client-graph' : 'server-marker'
@@ -534,17 +667,20 @@ export function verifyUpdateCandidate(root: string, options: CliOptions): Candid
       probe: 'staging-wrapper',
     })
   }
+  const combinedWeb = await verifyCandidateWebGate(state.candidateRoot, 'combined-web', state.plugins.map(plugin => plugin.name), port, options.timeoutMs, logDir)
   const verified: UpdateCandidateState = {
     ...state,
     verifiedAt: new Date().toISOString(),
     plugins,
+    vanillaWeb,
+    combinedWeb,
   }
   const statePath = updateStatePath(root, state.target.tag)
   writeText(statePath, `${JSON.stringify(verified, null, 2)}\n`)
   return {
     state: verified,
     statePath,
-    ok: plugins.every(plugin => plugin.build && plugin.staticCheck && plugin.runtime),
+    ok: candidateVerified(verified),
   }
 }
 
@@ -555,6 +691,10 @@ export function candidateSummary(plan: UpdatePlan, result: CandidateActionResult
     candidateRoot: result.state.candidateRoot,
     statePath: result.statePath,
     harness: { install: result.state.harnessInstall, build: result.state.harnessBuild },
+    web: {
+      vanilla: result.state.vanillaWeb,
+      combined: result.state.combinedWeb,
+    },
     plugins: result.state.plugins.map(plugin => ({
       name: plugin.name,
       sourceLocation: plugin.sourceLocation,
@@ -571,6 +711,22 @@ export function candidateSummary(plan: UpdatePlan, result: CandidateActionResult
 
 export function candidateFailures(state: UpdateCandidateState): CandidatePluginResult[] {
   return state.plugins.filter(plugin => !plugin.build || plugin.staticCheck === false || plugin.runtime === false)
+}
+
+export function candidateWebGateFailures(state: UpdateCandidateState): string[] {
+  const gates: readonly [CandidateWebGateResult['gate'], CandidateWebGateResult | undefined][] = [
+    ['vanilla-web', state.vanillaWeb],
+    ['combined-web', state.combinedWeb],
+  ]
+  return gates.filter(([, gate]) => gate?.staticConfig !== true || gate.runtime !== true).map(([name]) => name)
+}
+
+export function candidateVerified(state: UpdateCandidateState): boolean {
+  return state.plugins.every(plugin => plugin.build
+    && plugin.staticCheck === true
+    && plugin.runtime === true
+    && plugin.runtimeProof === (plugin.client ? 'web-client-graph' : 'server-marker'))
+    && candidateWebGateFailures(state).length === 0
 }
 
 export function candidatePluginNames(candidate: string): string[] {
