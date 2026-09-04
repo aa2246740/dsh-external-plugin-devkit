@@ -398,7 +398,15 @@ export async function cmdVerify(args: string[], options: CliOptions, root: strin
         findings.push(httpOk
           ? finding('ok', 'http', `http://127.0.0.1:${options.port}/ accepted a request from the temporary Host`)
           : finding('error', 'http', `temporary Web Host did not accept HTTP within ${bootDeadline}ms`))
-        if (httpOk && webClientPackage) {
+        const readyOk = webClientPackage
+          ? await waitForLog(state.logFile, 'dsh web:', bootDeadline)
+          : true
+        if (webClientPackage) {
+          findings.push(readyOk
+            ? finding('ok', 'web-ready', 'temporary Web Host printed its official ready URL')
+            : finding('error', 'web-ready', `temporary Web Host did not print a ready URL within ${bootDeadline}ms`))
+        }
+        if (httpOk && readyOk && webClientPackage) {
           const startupUrl = findWebStartupUrl(readFileSync(state.logFile, 'utf8'), options.port)
           const page = startupUrl ? await fetchAuthenticatedWebPage(startupUrl) : undefined
           const entry = page && parseWebBootManifest(page.html)?.entries.find(candidate => candidate.id === webClientPackage.name)
