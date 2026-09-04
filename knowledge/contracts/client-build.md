@@ -1,11 +1,11 @@
 ---
 type: Runtime Contract
-title: RC8 external client build boundary
-description: RC8 官方 clientBundle 只发现 packages/*/*；my-plugins 外部包使用 dshx externalClientBundle 保留 lazy-CJS、共享模块、CSS 和 HMR 合同。
-tags: [client, build, rc8, tsdown, external-plugin]
-aliases: [clientBundle, externalClientBundle, rc8 external client, packages glob, my-plugins build, no packages manifest]
+title: Target Harness external client build boundary
+description: 官方 clientBundle 只发现 packages/*/*；my-plugins 外部包使用 target-aware dshx externalClientBundle 保留 lazy-CJS、共享模块、CSS 和 HMR 合同。
+tags: [client, build, rc8, rc1, tsdown, external-plugin]
+aliases: [clientBundle, externalClientBundle, target aware client, rc8 external client, packages glob, my-plugins build, no packages manifest]
 status: stable
-verified_against: { tag: dsh-v0.1.0-rc.8, sha: 141eb6fef83422698aef7a981029e843e8161534, date: 2026-08-20 }
+verified_against: { tag: dsh-v0.1.2-rc.1, sha: a66e4702047846cdaa10c66c9d3df3951f5ea70d, date: 2026-09-04 }
 sources:
   - id: official-client-build
     resource: packages/client/tsdown.client.ts
@@ -15,7 +15,7 @@ sources:
     title: Shared browser module table
   - id: browser-boot
     resource: packages/client/web/src/boot.ts
-    title: RC8 browser boot graph
+    title: Browser boot graph
   - id: dshx-client-build
     resource: tools/dshx/src/client-build.js
     title: External package compatibility adapter
@@ -23,7 +23,7 @@ sources:
 
 # 边界，不是报错绕行
 
-RC8 官方 `packages/client/tsdown.client.ts` 的 `clientBundle()` 是仓库内部
+官方 `packages/client/tsdown.client.ts` 的 `clientBundle()` 是仓库内部
 workspace preset。它按包名扫描 `packages/*/*/package.json`，所以
 `my-plugins/<name>` 即使有正确 `package.json`，也会报：
 
@@ -34,10 +34,11 @@ tsdown: no packages/*/*/package.json declares the name <id>
 不要改 Harness 核心、不要把 scratch 插件搬进 `packages/`、也不要扩大
 官方 glob。外部插件属于另一条分发边界。
 
-# dshx 的 RC8 适配器
+# dshx 的目标版本适配器
 
 `dsh-external-plugin-devkit/client-build` 导出的 `externalClientBundle()` 从
-正在构建的外部包根读取 manifest，同时复用 RC8 的平台模块清单，并保持：
+正在构建的外部包根读取 manifest，同时从 `DSHX_HARNESS` 指向的目标 checkout
+读取 `packages/client/web/src/platform.ts`，并保持：
 
 - Host half 为 ESM，生产依赖保持外部引用；
 - browser half 为 `lib/client.js` lazy-CJS；
@@ -47,8 +48,10 @@ tsdown: no packages/*/*/package.json declares the name <id>
 - 未声明的 `@deepseek-ai/*` runtime import 失败关闭，避免把服务 identity 私自打包进去。
 - client entry 直接读取的 `ctx.<service>` 必须出现在该入口导出的 Cordis `inject` 中；构建和 `dshx check` 都会在产物进入 Host 前拒绝缺项。
 
-它是 dshx 的非官方兼容层，不是对官方私有 build helper 的重新命名。每次
-DSH RC 升级都要重新对照官方 preset、`platform.ts` 和真实 WebUI。
+它是 dshx 的非官方兼容层，不是对官方私有 build helper 的重新命名。`update
+prepare` 会把 `DSHX_HARNESS` 固定到 candidate，避免 candidate 的 `tools/dshx`
+符号链接反向读取当前旧 checkout 的平台表。每次 DSH RC 升级都要重新对照官方
+preset、`platform.ts` 和真实 WebUI。
 
 # 两个 inject 不可互换
 

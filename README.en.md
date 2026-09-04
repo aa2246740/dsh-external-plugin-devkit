@@ -80,7 +80,7 @@ The screenshots below are a historical RC2 example: this machine planned `0.1.0-
 
 *2026-08-25 · machine `cursor` (Linux) · `dshx update plan`*
 
-`prepare` does a frozen install and full target-Harness build in an isolated worktree, then copies and builds every plugin. It does not switch the active checkout. `verify` first cold-boots a vanilla Web candidate, then runs the static contract and isolated cold boot for every candidate plugin, then starts the complete candidate Web graph. An RC1 Web page must exchange the startup URL token for its local cookie before DSHX reads `globalThis["__DSH_BOOT__"]` and each served bundle; a bare `HTTP 200/401` is not client acceptance.
+`prepare` does a frozen install and full target-Harness build in an isolated worktree, then copies and builds every plugin. It does not switch the active checkout. During plugin builds, `DSHX_HARNESS` is pinned to the candidate so the external client adapter reads the target `platform.ts` instead of following the dshx symlink back to the active older checkout. `verify` first cold-boots a vanilla Web candidate, then runs the static contract and isolated cold boot for every candidate plugin, then starts the complete candidate Web graph. An RC1 Web page must exchange the startup URL token for its local cookie before DSHX reads `globalThis["__DSH_BOOT__"]` and each served bundle; a bare `HTTP 200/401` is not client acceptance.
 
 ![dshx update verify: candidate build passed; hello build/check/cold-boot all true; 1/1 verify-gate; source plugin bytes untouched](docs/screenshots/update-verify.png)
 
