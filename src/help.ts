@@ -37,18 +37,19 @@ export const HELP = `dshx — DeepSeek Harness 进程外插件工作台
   check [name]                  静态合同；client 必须是 built lazy-CJS lib/client.js
   activation-plan <target>      只读 inventory；--change 选择生命周期分支
   activate-new-client <plugin>  固定顺序 link → watched patch → 当前 Host manifest；不重启、不刷新页面
+  plugin remove <package>       同名 Loader id 的 bundle 安全卸载：live disable → 同 PID absence → 官方 remove
   overlay [name]                生成一次性绝对 --patch 文件；该文件不受 user-patch watcher 监听
   dump [name]                   离线合成；退出 0 不是 boot/live 证明
   verify-boot [name]            隔离冷启动：服务端 marker，或 Web client graph + bundle HTTP
   verify [name]                 verify-boot 兼容别名
   sync-artifact <dir|name>      link:/legacy file: 产物同步；live activation 未证明
   ship / recopy                 sync-artifact 兼容别名
-  start [web|headless] [name]   显式启动 workshop Host
+  start [web|headless] [name]   Web 优先附着同 Home 的 App/CLI Host；没有才启动
   stop                          停当前 supervised Host
   restart-supervised            只重启当前 supervised Web PID
   restart                       restart-supervised 兼容别名
   status / logs                 监督状态和 launcher log
-  creator                       Bridge v2 内部协议：watch/claim/recovery/disarm；无模型任意 argv
+  creator                       Bridge v2 内部协议：watch/claim/remove/recovery/disarm；无模型任意 argv
   doctor                        profile/workshop 诊断；不是官方 dsh doctor
   session list|inspect [id]
   which
@@ -60,10 +61,13 @@ export const HELP = `dshx — DeepSeek Harness 进程外插件工作台
   update rollback              恢复升级前 checkout、依赖树与插件生成物
 
 关键行为
-  verify-boot 遇到正在监督的 Host 会拒绝，绝不偷偷 stop。
+  同一个真实 DSH_HOME 只允许一个长期 Web Host；App、dsh web、dshx 只是启动入口。
+  start 会发现并附着同 Home 的 App/CLI Host；不把换端口当隔离，--force 也不能绕过。
+  verify-boot 始终使用临时 DSH_HOME，允许现有 Host 继续运行，验完自动 stop 并清理。
   restart-supervised 没有 live owned PID 时会拒绝，绝不复活 last-host.json。
   adopted 官方/App Host 不能被 stop/restart-supervised 手工控制；Guardian 只在真实失败后恢复一次。
   Creator+ session-start 自动武装 Guardian；不同插件可并行，同插件只允许一个 session 认领。
+  外部 bundle 卸载不会先删包再留下旧 Loader 图；旧 boot 的临时 disable 会留到下次正常重开，再重跑同一命令清理。
   sync-artifact 成功只输出 ARTIFACT_SYNCED; LIVE_ACTIVATION_UNPROVEN。
   ship --restart 已禁用；保持当前 PID，只有带精确证据的 manifest/server 分支才显式 restart-supervised。
 
@@ -72,7 +76,7 @@ export const HELP = `dshx — DeepSeek Harness 进程外插件工作台
   --profile web|headless
   --port 3080
   --timeout 60
-  --keep                         verify-boot 成功后保留它刚启动的 Host
+  --keep                         已禁用：verify-boot 不允许留下第二个长期 Host
   --force                        init 覆盖脚手架；start/verify 不应用来抢陌生端口
   --kind function|tool|client|object|class
   --change patch|manifest|preset|client|new-client|server|artifact

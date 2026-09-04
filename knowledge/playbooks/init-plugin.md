@@ -23,7 +23,8 @@ dshx init my-feature --force    # 覆盖已有脚手架文件
 Creator Mode+ 不从模型 shell 运行这些 mutating CLI。固定 `dshx_scaffold` 使用会话的
 可信 cwd：若它不包含 Harness `my-plugins`，源码建在 `<session-cwd>/<name>`，同时由
 DSHX 建立 `my-plugins/<name>` symlink。返回的源码路径是唯一编辑位置；不要另建项目，
-也不要让用户手工补 symlink。新项目 scaffold 成功后再运行 activation-plan。
+也不要让用户手工补 symlink。新项目 scaffold 成功后才能考虑 activation-plan；若是
+fresh `new-client`，必须先实现、构建并通过 `check`，再运行 plan 验证 built handoff。
 
 目录已存在且没有 `--force` 时，`init` 报 `already exists`，不会改文件。
 

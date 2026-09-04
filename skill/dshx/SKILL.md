@@ -4,7 +4,7 @@ description: >-
   Use the unofficial dshx CLI and its OKF bundle for DeepSeek Harness external
   plugin work. Trigger when the user says dshx, /dshx, dsh-external-plugin-devkit,
   my-plugins, Harness update, 更新 DeepSeek Harness, Creator Mode delivery,
-  plugin add/ship/check/verify, HMR, hot reload,
+  plugin add/ship/check/verify/remove/uninstall, 删除插件, HMR, hot reload,
   热重载, 热插拔, 不重启, Creator+ Guardian, 多个 Creator+, 自救, 自愈, or asks
   whether a DSH plugin needs a browser reload or Host restart. Before any
   ship/restart advice, classify the changed surface with contracts/live-activation.
@@ -13,9 +13,18 @@ description: >-
 
 # dshx
 
-Use `dshx` for profile-scoped, file-backed plugins developed by an external agent or through the optional Creator Mode+ safe bridge. The CLI and Guardian outside DSH are the supervisor; Creator Mode+ exposes six fixed operations, including plugin claims and bounded new-client activation, but never process control. Do not transfer the original Creator Mode's in-memory lifecycle assumptions to external packages.
+Use `dshx` for profile-scoped, file-backed plugins developed by an external agent or through the optional Creator Mode+ safe bridge. The CLI and Guardian outside DSH are the supervisor; Creator Mode+ exposes seven fixed operations, including plugin claims, bounded new-client activation, and source-preserving safe removal, but never process control. Do not transfer the original Creator Mode's in-memory lifecycle assumptions to external packages.
 
 Use a **same-PID default** for plugin work. Select the branch by the runtime surface that must change, not by prerequisite files a command happens to write. A plain profile dependency provides module resolution; it is not manifest activation or restart evidence. A first Web client remains `new-client` even though `activate-new-client` writes its dependency link: hot-mount the Host row, keep the DSH PID, then reload/reopen the page. Authorize a normal Host restart only when `activation-plan` names boot-captured bundle composition or a server module without tested module HMR as the reason.
+
+Treat DSH.app, direct `dsh web`, and `dshx start web` as launchers for one
+long-lived Web Host per real `DSH_HOME`. Before starting, use dshx discovery and
+attach to the single existing same-Home Host. Never create a workshop Host on a
+second port to coexist with it; a duplicate, an unproved Home, or denied process
+visibility is a stop condition that `--force` cannot override. For cold-boot
+proof, use `verify-boot`: it runs in a temporary `DSH_HOME`, leaves the user's
+Host PID untouched, and always removes the transient Host. `--keep` is unsafe and
+rejected.
 
 In Creator Mode+, session-start automatically arms the external Guardian. As soon
 as one plugin id is known, call `dshx_claim_plugin` before scaffold/edit/build/check.
@@ -26,12 +35,19 @@ Read `kb cat contracts/creator-guardian` for attribution and recovery semantics.
 For a new Creator+ project, call the fixed scaffold immediately after claim. It
 uses the immutable session cwd, returns the only source path the Agent edits, and
 creates the Harness `my-plugins` link when needed. Run activation-plan after that
-target exists and before implementation; existing projects skip scaffold.
+target exists. For a fresh `new-client`, read `contracts/client-build`, implement,
+build, and pass `dshx_check` before calling activation-plan, because the plan
+validates the built `lib/client.js` handoff. Existing built targets can plan before
+implementation.
 If a fixed tool throws `refusing an operation outside bridge v2`, treat it as a
 Creator Bridge integrity defect: quote the exact tool and error, preserve the
 current plugin location, and stop. It is not permission to use raw dshx, mount the
 plugin manually, move it to another workspace, or infer that the lifecycle step
 succeeded. Retry that fixed tool only after upgrading the bridge.
+
+For whole-plugin removal inside Creator Mode+, use only `dshx_remove_plugin` after the claim. It removes/quarantines the watched Host row first, proves same-PID absence, runs the official profile remover while the dependency exists, verifies dependency/link absence, detaches only verified plugin-owned symlinks, and preserves source. RC8 can remove the manifest dependency while leaving its `node_modules` symlink: DSHX labels the bounded recovery `detached-orphan-symlink` only after proving that the dependency is absent, the residual entry is a symlink, and its target is this claim's Harness/source path. A non-symlink or outside target fails closed. A partial attempt resumes from durable quarantine without rerunning package removal for an already-absent dependency. Do not use bash, `rm`, `unlink`, `mv`, manual Web-profile edits, or package-manager commands to tear down a plugin. Ordinary file/component cleanup inside the claimed source is still allowed. If raw teardown is denied, do not retry through a different shell or script.
+
+For an externally supervised Web bundle (`dsh.profile.bundles` / package `dsh.bundle`) whose package name is also its Loader id, use `dshx plugin remove <package> --profile web --port <current-web-port>`. This is not the Creator watched-row remover. It writes or resumes one exact live `disabled: true` tombstone, proves the current `__DSH_BOOT__` no longer names the package on the same PID, then runs the official profile remover and verifies dependency/bundle/link absence. A bundle whose client-row id cannot be proved from the same-name live entry fails closed instead of guessing. The command also repairs the specific dependency-gone/bundle-leftover seam. Never delete package files first. While the old boot remains alive, a DSHX-owned disable is intentionally retained; after the user later reopens DSH.app normally, rerun the same command and it removes the tombstone only when process-start and profile-removal times prove the new Host booted from the clean profile. Already-open failed pages still require a hard refresh or new page. Do not restart DSH merely to clean the tombstone.
 
 ## Resolve the checkout
 
@@ -70,18 +86,22 @@ When the user asks to update DeepSeek Harness and retain local plugins, read `kb
 ./scripts/dshx.sh update apply [--target ...]
 ```
 
-`plan` is read-only. Do not run `apply` until candidate Harness install/full-build and every plugin's build/static/runtime proof pass. Web clients require the RC2-native profile package link, package-name Loader row, active `window.__DSH_BOOT__` entry, and served `client.js`; server-only plugins require a runtime `apply()` marker. `apply` must refuse a supervised Host and retain `.dshx/update-assistant/<tag>/rollback.json`. Do not run `update rollback` merely to test it: that command intentionally restores the previous checkout, dependencies, and plugin artifacts.
+`plan` is read-only. Do not run `apply` until candidate Harness install/full-build and every plugin's build/static/runtime proof pass. Web clients require the RC2-native profile package link, package-name Loader row, active `__DSH_BOOT__` entry (currently emitted as `globalThis["__DSH_BOOT__"]`), and served `client.js`; server-only plugins require a runtime `apply()` marker. `apply` must refuse a supervised Host and retain `.dshx/update-assistant/<tag>/rollback.json`. Do not run `update rollback` merely to test it: that command intentionally restores the previous checkout, dependencies, and plugin artifacts.
 
 Report `candidate verified`, `applied locally`, `real runtime accepted`, and `production activated` as different states. The update assistant never silently restarts a production Host.
 
 ## Classify activation before acting
 
-When the target already exists and the request involves installation, delivery, HMR, hot-plugging, refresh, or restart, first run:
+When the target already exists, is build-ready, and the request involves installation, delivery, HMR, hot-plugging, refresh, or restart, run:
 
 ```sh
 ./scripts/dshx.sh kb cat contracts/live-activation
 ./scripts/dshx.sh activation-plan <plugin> --change <branch>
 ```
+
+A freshly scaffolded `new-client` is the one sequencing exception: classify it
+immediately, then implement, build, and pass `check` before activation-plan so
+the plan can validate the required `lib/client.js` handoff.
 
 Choose exactly one changed-surface branch:
 
@@ -117,14 +137,17 @@ Read only the selected branch:
 ## Develop and prove
 
 1. Read the relevant contract with `kb cat`; a `kb search` snippet is only an id pointer. In Creator Mode+, claim the chosen plugin before changing it.
-2. For a new Creator+ project, use `dshx_scaffold`, then plan the now-resolvable target. Edit only the returned session-workspace path; never ask the user to create a symlink.
+2. For a new Creator+ project, use `dshx_scaffold`. Edit only the returned session-workspace path; never ask the user to create a symlink. Do not require activation-plan to pass while a fresh client scaffold still lacks its built handoff.
 3. For an existing project, edit `my-plugins/<name>/` or the named package. Keep committed `cordis.yml` portable.
 4. For a client package, read `kb cat contracts/client-build`. On RC8, an out-of-tree package must build with dshx `externalClientBundle`; do not import the repository-internal official `clientBundle()` or move the plugin under `packages/`.
 5. Run `check <name>`. Completion: no static contract errors; a client package also passes `client-cordis-inject` and has a built lazy-CJS `lib/client.js` handoff.
-6. Run `verify-boot <name>` only when an isolated cold boot is needed. Completion: server-only plugins show the runtime marker; Web clients appear in the active boot graph and their bundle returns HTTP 200. It refuses to stop an existing supervised Host and does not prove current-host activation.
-7. If package bytes must reach a profile, run `sync-artifact <dir>` (`ship` is a compatibility alias). Completion: content hash matches; activation remains unproven.
-8. Execute the previously selected activation branch. For `new-client`, use only `activate-new-client`; restart only when a different branch requires it.
-9. Report evidence by layer: `SOURCE_BUILT`, `ARTIFACT_SYNCED`, `NEXT_BOOT_REGISTERED`, `HOST_TREE_ACTIVE`, `CLIENT_LOADED`, `VISUAL_BEHAVIOR_VERIFIED`. Omit unobserved layers.
+6. Run `activation-plan <name> --change <branch>` now if this is a freshly built `new-client`; for an existing built target it may already have run before editing. Do not begin live mutation unless the selected plan exits `0`.
+7. Run `verify-boot <name>` only when an isolated cold boot is needed. Completion: server-only plugins show the runtime marker; Web clients appear in the active boot graph and their bundle returns HTTP 200. It uses a temporary Home while an existing Host stays on the same PID, then stops and removes the transient Host; it does not prove current-host activation.
+8. If package bytes must reach a profile, run `sync-artifact <dir>` (`ship` is a compatibility alias). Completion: content hash matches; activation remains unproven.
+9. Execute the selected activation branch. For `new-client`, use only `activate-new-client`; restart only when a different branch requires it.
+10. Report evidence by layer: `SOURCE_BUILT`, `ARTIFACT_SYNCED`, `NEXT_BOOT_REGISTERED`, `HOST_TREE_ACTIVE`, `CLIENT_LOADED`, `VISUAL_BEHAVIOR_VERIFIED`. Omit unobserved layers.
+
+For a watched-row removal request inside Creator Mode+, replace activation steps 6–9 with the fixed `dshx_remove_plugin` operation. For an external boot-captured bundle, use `dshx plugin remove` from the supervisor instead. Completion requires `HOST_TREE_INACTIVE` and `PROFILE_DEPENDENCY_REMOVED`; report `SOURCE_PRESERVED` only when observed. Neither operation proves the source was deleted, restarts the Host, or controls the browser.
 
 ## Plugin-form checks
 
@@ -137,10 +160,16 @@ Read only the selected branch:
 ## Hard guardrails
 
 - Never kill or restart `dsh` from inside a Harness session.
+- Never run two long-lived Web Hosts against one `DSH_HOME`, even on different
+  ports. Attach to the user's App/CLI Host; use a temporary Home for verification.
+- Treat PID/port access denial or timeout as unknown and fail closed. Only
+  `ESRCH` proves a PID dead and only `ECONNREFUSED` proves a port closed.
 - A raw `dshx` process launched by a DSH-managed shell (`DSH_SHELL=1`) is still inside the Host boundary. DSHX rejects its mutating/process commands; use the fixed Creator+ tools or an external terminal. Never unset managed environment markers to bypass this guard.
+- Creator-scoped bash rejects teardown of the claimed plugin root, its Harness link, or the active DSH profile. This is a final routing decision to `dshx_remove_plugin`, not an invitation to encode the deletion through Node, Python, or another shell.
 - A fixed-tool `outside bridge v2` rejection is a bridge defect, not a supervisor denial. Stop at that tool; do not substitute manual profile installation or report downstream success.
 - If a `[Creator+ Guardian incident ...]` steering message arrives, pause the prior task, inspect its confidence/plugin/rollback/log evidence, repair the preserved source, and run `dshx_check` before retrying the same activation branch.
 - Guardian may quarantine and restore a failed Web Host once from outside DSH. Its same-origin browser sentry may also quarantine one uniquely attributed official Loader `FAILED` entry and reload only after the live manifest proves it absent. Neither path makes process control model-facing or proves visual/functional correctness.
+- While the Host remains healthy, Guardian also detects a claimed watched client whose profile link/source package disappears. It quarantines the stale row before a later cold boot and steers the owning session; it does not delete source or restart the Host.
 - Manual `stop` / `restart-supervised` must refuse an adopted official Host; normal launcher exit disarms Guardian.
 - Never bypass a failed `activate-new-client` by manually editing profile `package.json` or `cordis.patch.yml`; fix the reported blocker and retry the bounded command.
 - `restart-supervised` may restart only the currently live dshx-owned Web Host. It must not resurrect stale `last-host.json` or reconstruct a headless task.

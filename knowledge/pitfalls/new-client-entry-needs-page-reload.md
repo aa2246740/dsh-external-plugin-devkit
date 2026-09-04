@@ -5,7 +5,7 @@ description: Host graph 可变化，但当前浏览器页面忽略 graph SSE 增
 tags: [client, browser, graph, reload]
 aliases: [client reload, refresh page, new client missing, 新插件页面不显示, graph frame]
 status: stable
-verified_against: { tag: dsh-v0.1.0-rc.8, sha: 141eb6fef83422698aef7a981029e843e8161534 }
+verified_against: { tag: dsh-v0.1.1-rc.2, sha: b150a551b8d465e31e418e1b2eaf5e79bbb7d28e }
 sources:
   - id: client-hmr
     resource: packages/client/hmr/src/client/index.ts
@@ -21,7 +21,7 @@ Host entry 已在同一 PID 内 active，新 `lib/client.js` 也存在，但已�
 
 # 根因
 
-页面启动时从 `window.__DSH_BOOT__` 建一次 loader tree。当前 client HMR 只处理已知 id 的 `rebuilt`，不会把后续 graph 新行加进该页面。
+页面启动时从 `__DSH_BOOT__` 建一次 loader tree；RC2 的官方 Host 以 `globalThis["__DSH_BOOT__"]` 注入它。当前 client HMR 只处理已知 id 的 `rebuilt`，不会把后续 graph 新行加进该页面。
 
 # 修复
 

@@ -113,9 +113,32 @@ dshx check demo
 dshx activation-plan demo --change patch
 ```
 
+## Harness update assistant
+
+An update is more than `git pull`. DSHX 0.7.0 gates the official release, the Harness build, every local plugin, and exact rollback as separate phases:
+
+```sh
+dshx update plan
+dshx update prepare --target dsh-v0.1.1-rc.2
+dshx update verify --target dsh-v0.1.1-rc.2
+dshx update apply --target dsh-v0.1.1-rc.2
+```
+
+- `plan` reads official `dsh-v*` tags, the current checkout, tracked-dirty risk, and directory/symlink plugin inventory without mutation.
+- `prepare` performs a frozen install and full target-Harness build in an isolated worktree, then copies and builds every plugin. It does not switch the active Harness.
+- `verify` runs the static contract and an isolated cold boot for every candidate plugin. RC2 Web clients use the native profile package seam and must appear in the boot graph with a 200 `client.js`; server-only plugins must emit their `apply()` marker.
+- `apply` accepts only a complete candidate gate, refuses a supervised Host, transactionally switches to `dshx/<release>`, rebuilds the actual plugins, and saves exact checkout, dependency-tree, and plugin-`lib/` backups.
+- `rollback` restores the pre-update branch, dependencies, and generated plugin artifacts: `dshx update rollback --target <release>`.
+
+Without `--target`, DSHX queries the latest official release live. The assistant does not restart a production Host: applied bytes, real-runtime acceptance, and production activation remain separate states. See [knowledge/contracts/harness-update.md](knowledge/contracts/harness-update.md).
+
+DSHX 0.7.4 treats DSH.app, direct `dsh web`, and dshx as launchers, not separate Hosts. `dshx start web` first discovers processes by their real `DSH_HOME`: it attaches to one existing Host without spawning, and fails closed on duplicates or an unproved Home. Another port and `--force` cannot bypass that gate. PID/port `EPERM` is unknown, never falsely dead or closed. `verify-boot` now uses a temporary Home while the production PID keeps running, then always stops and removes its transient Host; `--keep` is disabled.
+
+DSHX 0.7.3 fixes bundle-plugin removal ordering. The external supervisor runs `dshx plugin remove <package> --profile web --port <current-port>`: it removes the package from the current `__DSH_BOOT__` on the same PID before invoking the official remover, so a stale Loader graph never points at a deleted `client.js`. One exact disable stays for the lifetime of the old boot; rerunning the same command after a later normal DSH.app reopen removes it only when the new Host is proved to have booted from the clean profile. The command also resumes the dependency-gone/live-row-still-present half-removal state. Creator+ watched plugins continue to use the fixed `dshx_remove_plugin`; neither path restarts the Host or deletes source.
+
 Use `verify-boot` only when you need an isolated cold-boot proof. Use `sync-artifact` only when a package must land in the profile — it will say `ARTIFACT_SYNCED; LIVE_ACTIVATION_UNPROVEN` and stop there.
 
-Optional Creator Mode+ is a user preset that exposes six fixed tools. See [knowledge/contracts/creator-mode-plus.md](knowledge/contracts/creator-mode-plus.md).
+Optional Creator Mode+ is a user preset that exposes seven fixed tools. See [knowledge/contracts/creator-mode-plus.md](knowledge/contracts/creator-mode-plus.md).
 
 More: [start here](knowledge/start-here.md) · [why work outside Creator Mode](knowledge/why-external.md) · [command surface](knowledge/references/dshx-cli.md) · [standing orders](AGENTS.md)
 

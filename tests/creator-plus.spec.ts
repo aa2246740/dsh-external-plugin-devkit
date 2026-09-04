@@ -16,8 +16,15 @@ import {
   runClientFailureDshx,
   runDshx,
 } from '../src/creator-plus/runner.js'
+import {
+  creatorDestructiveCommandReason,
+  rememberCreatorClaim,
+} from '../src/creator-plus/safety.js'
 
 const temporaryRoots: string[] = []
+const LEGACY_SIX_TOOL_PERSONA = 'Create file-backed DeepSeek Harness plugins through the six-tool DSHX v0.7 fixed bridge. Treat the official browser WebUI and public Cordis/client extension points as the compatibility target. App-shell APIs and wrapper-specific behavior are outside the supported surface. Harness update planning is read-only inside this session; prepare, verify, apply, rollback, and process control belong to the external DSHX supervisor.'
+const SEVEN_TOOL_PERSONA = 'Create and safely remove file-backed DeepSeek Harness plugins through the seven-tool DSHX v0.7 fixed bridge. Treat the official browser WebUI and public Cordis/client extension points as the compatibility target. App-shell APIs and wrapper-specific behavior are outside the supported surface. Whole-plugin teardown must use dshx_remove_plugin so the live Host deactivates first and source is preserved. Harness update planning is read-only inside this session; prepare, verify, apply, rollback, and process control belong to the external DSHX supervisor.'
+const CURRENT_PERSONA = `${SEVEN_TOOL_PERSONA} DSH.app, direct dsh web, and dshx are launchers for one long-lived Web Host per DSH_HOME; never start a second same-Home Host or keep an isolated verifier alive.`
 
 function temporaryDirectory(label: string): string {
   const path = mkdtempSync(join(tmpdir(), label))
@@ -67,6 +74,7 @@ describe('Creator Mode+ bridge', () => {
       'dshx_check',
       'dshx_activation_plan',
       'dshx_activate_new_client',
+      'dshx_remove_plugin',
       'dshx_status',
     ])
     assert.equal(tools.some(tool => /start|stop|restart|shell|command/.test(String(tool.name))), false)
@@ -110,6 +118,7 @@ describe('Creator Mode+ bridge', () => {
       ['check', 'demo'],
       ['activation-plan', 'demo', '--change', 'new-client'],
       ['activate-new-client', 'demo', '--profile', 'web', '--port', '43127'],
+      ['creator', 'remove', 'demo'],
       ['creator', 'watch', '--json'],
       ['creator', 'release', '--json'],
       ['creator', 'recovery', 'pull', '--json'],
@@ -128,6 +137,21 @@ describe('Creator Mode+ bridge', () => {
       assert.equal(result.exitCode, 0)
     }
     assert.deepEqual(spawned.map(argv => argv.slice(3)), operations)
+  })
+
+  it('denies the observed plugin-root/profile teardown but permits file-level cleanup', () => {
+    const agent = { id: 'session-a', session: { header: { cwd: '/Users/wu/Documents/DSH/mmx3' } } }
+    const execution = (command: string) => ({ name: 'bash', arguments: { command }, agent })
+    rememberCreatorClaim({ agent }, 'emoji-rain')
+    assert.match(
+      creatorDestructiveCommandReason(execution('rm -rf /Users/wu/Documents/DSH/mmx3/emoji-rain')),
+      /dshx_remove_plugin/,
+    )
+    assert.match(
+      creatorDestructiveCommandReason(execution('rm -f /Users/wu/.dsh/profiles/web/node_modules/emoji-rain')),
+      /active DSH profile/,
+    )
+    assert.equal(creatorDestructiveCommandReason(execution('rm emoji-rain/src/old-component.ts')), undefined)
   })
 
   it('forwards browser failure data with fixed argv and Host-owned identity', async () => {
@@ -371,6 +395,7 @@ describe('Creator Mode+ bridge', () => {
 
     assert.equal(readFileSync(source, 'utf8'), before)
     assert.match(composition, /You are Creator Mode\+/)
+    assert.match(composition, /Harness update planning is read-only/)
     assert.match(composition, /name: dsh-external-plugin-devkit\n/)
     assert.equal(existsSync(join(target, 'skills/creator-mode-plus/SKILL.md')), true)
     assert.match(readFileSync(join(target, 'preset.yml'), 'utf8'), /Creator Mode\+/)
@@ -385,10 +410,10 @@ describe('Creator Mode+ bridge', () => {
     const skillPath = join(target, 'skills/creator-mode-plus/SKILL.md')
     writeFileSync(
       compositionPath,
-      `${readFileSync(compositionPath, 'utf8').replace(
-        'name: dsh-external-plugin-devkit\n',
-        'name: dsh-external-plugin-devkit/creator-plus\n',
-      )}\n# user-preserved\n`,
+      `${readFileSync(compositionPath, 'utf8')
+        .replace('name: dsh-external-plugin-devkit\n', 'name: dsh-external-plugin-devkit/creator-plus\n')
+        .replace(CURRENT_PERSONA, LEGACY_SIX_TOOL_PERSONA)
+        .replace('# Bridge v2: seven fixed dshx tools plus external Guardian lifecycle hooks; no arbitrary argv, raw plugin teardown, or model process control.', '# Bridge v2: six fixed dshx tools plus external Guardian lifecycle hooks; no shell, arbitrary argv, or model process control.')}\n# user-preserved\n`,
     )
     writeFileSync(skillPath, '# stale managed skill\n')
 
@@ -396,8 +421,12 @@ describe('Creator Mode+ bridge', () => {
     assert.match(readFileSync(compositionPath, 'utf8'), /# user-preserved/)
     assert.match(readFileSync(compositionPath, 'utf8'), /name: dsh-external-plugin-devkit\n/)
     assert.doesNotMatch(readFileSync(compositionPath, 'utf8'), /dsh-external-plugin-devkit\/creator-plus/)
+    assert.match(readFileSync(compositionPath, 'utf8'), /seven-tool DSHX v0\.7 fixed bridge/)
+    assert.match(readFileSync(compositionPath, 'utf8'), /one long-lived Web Host per DSH_HOME/)
+    assert.doesNotMatch(readFileSync(compositionPath, 'utf8'), /six-tool DSHX v0\.7 fixed bridge/)
     assert.match(readFileSync(skillPath, 'utf8'), /dshx_activate_new_client/)
-    assert.match(readFileSync(join(target, 'preset.yml'), 'utf8'), /会话认领.*外部 Guardian/)
+    assert.match(readFileSync(skillPath, 'utf8'), />=0\.7\.4 <0\.8\.0/)
+    assert.match(readFileSync(join(target, 'preset.yml'), 'utf8'), /单 Home 单 Web Host.*会话认领.*外部 Guardian/)
   })
 
   it('keeps the composition stamp stable when an upgrade changes only managed assets', () => {

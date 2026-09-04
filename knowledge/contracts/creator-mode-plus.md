@@ -1,7 +1,7 @@
 ---
 type: Runtime Contract
 title: Creator Mode+ safe bridge
-description: Creator Mode+ 是 user preset 加六个固定 dshx 工具；官方浏览器 WebUI 是兼容面，进程外 Guardian 负责失败恢复，DSH 会话不能控制自身进程。
+description: Creator Mode+ 是 user preset 加七个固定 dshx 工具；官方浏览器 WebUI 是兼容面，安全卸载保留源码，进程外 Guardian 负责失败恢复，DSH 会话不能控制自身进程。
 tags: [creator-mode-plus, preset, webui, supervisor, safety]
 aliases: [Creator Mode+, 创造模式+, dshx plugin, dshx preset, supervisor]
 status: stable
@@ -35,7 +35,7 @@ Creator Mode+ 不修改也不替换 shipped `cordis` preset。它是独立的用
 
 | 角色 | 可以做什么 | 不可以做什么 |
 |---|---|---|
-| Creator Mode+ 会话 | claim-plugin、scaffold、check、activation-plan、activate-new-client、status | 任意 shell/argv/path；start/stop/restart DSH |
+| Creator Mode+ 会话 | claim-plugin、scaffold、check、activation-plan、activate-new-client、remove-plugin、status | 任意 shell/argv/path；手工拆 profile/plugin root；start/stop/restart DSH |
 | 外部 dshx + Guardian | 文件化构建、静态检查、事务日志、Host 恢复、官方 Loader 失败隔离 | 把 manifest/Loader 恢复冒充视觉或功能正确 |
 | 用户 | 批准有影响的激活、重启和回滚 | 不承担插件内部运行时职责 |
 
@@ -56,7 +56,7 @@ official WebUI
   -> new/blank Creator Mode+ session
   -> bridge v2 arms external Guardian with exact session identity
   -> claim one plugin for this session
-  -> one of six fixed dshx tools
+  -> one of seven fixed dshx tools
   -> child dshx CLI with bounded output
   -> file-backed plugin and layered evidence
 
@@ -64,17 +64,29 @@ external dshx / Guardian
   -> normal path follows only the planned lifecycle branch
   -> Host failure path quarantines the causal transaction and recovers once
   -> official client-Loader failure path quarantines one exact row before one reload
+  -> missing claimed profile link path quarantines its row while Host is still healthy
   -> incident is steered back to the exact persisted session
 ```
 
 # 固定 argv 合同
 
-六个模型可见工具分别只允许 `status`、`creator claim <id>`、
+七个模型可见工具分别只允许 `status`、`creator claim <id>`、
 `creator scaffold <id> <kind>`、`check <id>`、
 `activation-plan <id> --change <branch>` 和
-`activate-new-client <id> --profile web --port <Host 派生端口>`。会话生命周期另有固定的
+`activate-new-client <id> --profile web --port <Host 派生端口>`、
+`creator remove <id>`。会话生命周期另有固定的
 watch、release、recovery pull 和 recovery ack 形状。发布测试必须让每个形状真正穿过
 bridge allowlist；只验证工具名称已经注册不算通过。
+
+整插件删除只能走 `dshx_remove_plugin({ name })`。固定顺序是先 remove/disable watched
+Host row，证明同 PID manifest 已无该 id，再调用官方 profile remover，证明 dependency
+与 node_modules link 消失，最后只断开 Harness symlink 并保留源码。RC8 的官方 remover
+可能先删 dependency 却留下 `node_modules` symlink；此时只有 dependency 已无、残留项是
+symlink、且目标精确落在本 claim 的 Harness/source 路径内，才允许标记
+`detached-orphan-symlink` 并解绑。目录或越界目标立即失败关闭。失败后的 durable
+quarantine 支持续跑；dependency 已无时不得再次调用 package remover。模型不可输入 path、
+argv 或删除命令。普通组件/文件清理仍可在认领源码内部进行；插件根、Harness link 和
+active profile 的 teardown 会被 preset-scoped guard 拒绝，不能换 shell/脚本绕过。
 
 固定工具返回 `refusing an operation outside bridge v2` 说明 bridge 合同自身损坏。
 会话必须原样报告工具名和错误，保留 claim 与源代码位置并停止；不得把它解释成
@@ -85,6 +97,8 @@ scaffold 的目标路径来自 `exec.agent.session.header.cwd` 这一不可变�
 如果 Harness 的 `my-plugins/<id>` 不在该可写工作区内，DSHX 在会话工作区创建源码并
 原子建立 Harness symlink；Agent 不再绕到另一目录建项目，也不让用户手工执行 `ln -s`。
 新项目必须先 scaffold 才能 activation-plan，因为不存在的目标无法被 plan 检查。
+其中 fresh `new-client` 在 scaffold 后先实现、构建并通过 `check`，再跑 activation-plan；
+plan 会验证 `lib/client.js` handoff，不能要求未构建 scaffold 先通过。
 
 # 激活合同
 
@@ -131,6 +145,16 @@ package，Loader 可能保留负解析缓存；命令会明确命名这个 scar�
 
 `CLIENT_MANIFEST_PRESENT` 只说明当前 Host 提供了 bundle。刷新后的页面没有实际加载
 package id 和功能之前，Creator Mode+ 只能报告“已注册”，不能报告“可用”或“完成”。
+
+# 整插件移除的唯一安全动作
+
+Creator Mode+ 只调用 `dshx_remove_plugin({ name })`。exit code `0` 至少证明
+`HOST_TREE_INACTIVE` 和 `PROFILE_DEPENDENCY_REMOVED`；只有实际仍能观察到源码目录时才
+报告 `SOURCE_PRESERVED`。该动作不删除源码、不重启 Host、不控制浏览器。无法证明同
+Host 脱载时立即失败关闭：live row 保持 quarantine，profile dependency 与源码不再继续
+处理。后续重试从 durable quarantine 恢复，已消失的 dependency 不再交给 pnpm 重删；
+只允许解绑目标仍属于该 claim 的孤儿 symlink。Creator 基础设施包不能由该工具自删除，
+必须交给外部 supervisor 管理 preset。
 
 # RC8 兼容结论
 

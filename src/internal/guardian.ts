@@ -19,6 +19,7 @@ import {
   latestCreatorTransaction,
   listCreatorClaims,
   markCreatorTransactionRecovered,
+  quarantineClaimedPlugin,
   readActiveCreatorTransaction,
   recordCreatorIncident,
   quarantineCreatorTransaction,
@@ -27,6 +28,7 @@ import {
   type CreatorIncident,
 } from './creator.ts'
 import { waitForClientAbsent } from './new-client.ts'
+import { claimedPluginIntegrityFailure } from './remove-plugin.ts'
 import {
   clearHostState,
   currentHost,
@@ -97,7 +99,7 @@ export interface GuardianStatus {
 }
 
 export interface GuardianCycleResult {
-  action: 'disabled' | 'suppressed' | 'superseded' | 'launcher-exited' | 'healthy' | 'waiting' | 'restarted' | 'fused' | 'recovered-elsewhere'
+  action: 'disabled' | 'suppressed' | 'superseded' | 'launcher-exited' | 'healthy' | 'integrity-quarantined' | 'waiting' | 'restarted' | 'fused' | 'recovered-elsewhere'
   incident?: CreatorIncident
   host?: HostState
 }
@@ -116,6 +118,8 @@ interface GuardianDependencies {
   waitForHttp?: (port: number, timeoutMs: number) => Promise<boolean>
   waitForExternalRecovery?: (port: number, timeoutMs: number) => Promise<boolean>
   readLogTail?: (path: string, maxLines?: number) => string
+  dshHome?: string
+  waitForClientAbsent?: typeof waitForClientAbsent
 }
 
 interface EnsureDependencies {
@@ -406,6 +410,10 @@ export async function adoptOrArmCreatorHost(
       }
       writeHostState(root, host)
       adopted = true
+    } else if (existing.ownership === 'adopted' && existing.launcherPid !== context.hostParentPid) {
+      host = { ...existing, launcherPid: context.hostParentPid }
+      writeHostState(root, host)
+      adopted = true
     } else {
       host = existing
     }
@@ -460,6 +468,45 @@ function causalTransaction(root: string, port: number, now: number) {
       ? 'probable'
       : 'ambiguous'
   return { transaction, confidence }
+}
+
+async function quarantineMissingClaimedPlugin(
+  root: string,
+  host: HostState,
+  now: number,
+  dependencies: GuardianDependencies,
+): Promise<GuardianCycleResult | undefined> {
+  const claim = listCreatorClaims(root, now).find(item => (
+    claimedPluginIntegrityFailure(root, item.pluginId, dependencies.dshHome) !== undefined
+  ))
+  if (!claim) return undefined
+  const failure = claimedPluginIntegrityFailure(root, claim.pluginId, dependencies.dshHome)
+  if (!failure) return undefined
+  const repaired = quarantineClaimedPlugin(
+    root,
+    claim,
+    failure.patchPath,
+    host.pid,
+    host.port,
+    `profile entry disappeared while claimed plugin ${claim.pluginId} remained in the watched patch`,
+    now,
+  )
+  if (!repaired) return undefined
+  const absent = await (dependencies.waitForClientAbsent ?? waitForClientAbsent)(claim.pluginId, host.port, 8_000)
+  const incident = recordCreatorIncident(root, {
+    reason: 'plugin-integrity-failed',
+    confidence: 'high',
+    sessionIds: [claim.sessionId],
+    pluginId: claim.pluginId,
+    transactionId: repaired.transaction.id,
+    summary: absent
+      ? `Creator+ Guardian detected that claimed plugin ${claim.pluginId} lost its profile link while the Host was still healthy, quarantined its live row, and proved same-Host removal.`
+      : `Creator+ Guardian detected that claimed plugin ${claim.pluginId} lost its profile link and quarantined its live row, but same-Host removal was not proved before timeout. The cold-boot configuration remains quarantined.`,
+    rollback: repaired.quarantine.mode,
+    port: host.port,
+    logExcerpt: `missing profile entry: ${failure.installedPath}`,
+  }, now)
+  return { action: 'integrity-quarantined', incident, host }
 }
 
 /** Quarantine a browser FAILED entry while the Host itself remains healthy. */
@@ -615,6 +662,8 @@ export async function runGuardianCycle(root: string, dependencies: GuardianDepen
     delete control.unhealthySince
     delete control.suppressUntil
     if (!writeGuardianControlIfCurrent(root, generation, control)) return { action: 'superseded' }
+    const integrity = await quarantineMissingClaimedPlugin(root, stored!, now, dependencies)
+    if (integrity) return integrity
     return { action: 'healthy', host: stored }
   }
 

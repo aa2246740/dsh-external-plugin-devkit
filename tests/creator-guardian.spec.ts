@@ -292,6 +292,38 @@ describe('Creator+ Guardian', () => {
     assert.equal(readGuardianControl(harness).enabled, true)
   })
 
+  it('quarantines a claimed client whose profile link disappears while the Host is still healthy', async () => {
+    const harness = root()
+    const home = root()
+    const profile = join(home, 'profiles/web')
+    const patch = join(profile, 'cordis.patch.yml')
+    mkdirSync(join(profile, 'node_modules'), { recursive: true })
+    writeFileSync(join(profile, 'package.json'), JSON.stringify({ dependencies: { 'plugin-a': 'link:/deleted/plugin-a' } }))
+    writeFileSync(patch, '- insert:\n    - id: "plugin-a"\n      name: "plugin-a"\n')
+    const now = Date.now()
+    claimCreatorPlugin(harness, 'plugin-a', context('session-a'), now)
+    const host = { ...deadHost(process.pid), startedAt: new Date(now - 60_000).toISOString() }
+    writeHostState(harness, host)
+    armGuardian(harness, host, now)
+
+    const result = await runGuardianCycle(harness, {
+      now: () => now + 1,
+      pidAlive: pid => pid === process.pid,
+      portOpen: async () => true,
+      dshHome: home,
+      waitForClientAbsent: async () => true,
+      startHost: () => { throw new Error('healthy-Host integrity repair must not restart') },
+      stopHost: async () => { throw new Error('healthy-Host integrity repair must not stop') },
+    })
+
+    assert.equal(result.action, 'integrity-quarantined')
+    assert.equal(result.incident?.reason, 'plugin-integrity-failed')
+    assert.equal(result.incident?.pluginId, 'plugin-a')
+    assert.equal(result.incident?.rollback, 'removed')
+    assert.doesNotMatch(readFileSync(patch, 'utf8'), /id:\s*["']?plugin-a/)
+    assert.equal(pendingCreatorIncidents(harness, 'session-a').length, 1)
+  })
+
   it('attributes a dead Host to the active transaction, quarantines it, restarts once, and records steering evidence', async () => {
     const harness = root()
     const patch = join(harness, 'profile/cordis.patch.yml')

@@ -16,6 +16,7 @@ import { cmdActivationPlan } from './commands/activation.ts'
 import { cmdActivateNewClient } from './commands/new-client.ts'
 import { cmdCreator } from './commands/creator.ts'
 import { cmdUpdate } from './commands/update.ts'
+import { cmdPlugin } from './commands/plugin.ts'
 import { dshManagedShellAllows, finding, parseCli, printReport, report } from './internal/io.ts'
 import { logObserve } from './internal/observe.ts'
 import { findRepoRoot } from './internal/paths.ts'
@@ -94,6 +95,8 @@ async function main(): Promise<number> {
       return cmdActivateNewClient(args, options, root)
     case 'creator':
       return cmdCreator(args, options, root)
+    case 'plugin':
+      return cmdPlugin(args, options, root)
     case 'doctor':
       return cmdDoctor(args, options, root)
     case 'session':

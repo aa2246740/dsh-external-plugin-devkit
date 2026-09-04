@@ -27,7 +27,7 @@ stale_after: 2026-11-24
 - 只接受官方 `deepseek-ai/deepseek-harness` origin 和 `dsh-v*` release tag。
 - tracked Harness dirty、会被目标覆盖的 untracked 路径、无效插件清单都阻断 apply。
 - `my-plugins` 的真实目录和 symlink 都进入矩阵；候选验证不改插件源字节。
-- Web client 必须通过 RC2 原生 profile package resolution：本地包链接、package-name Loader row、`window.__DSH_BOOT__` 条目和可读取的 `client.js`。
+- Web client 必须通过 RC2 原生 profile package resolution：本地包链接、package-name Loader row、当前官方 `globalThis["__DSH_BOOT__"]` 条目和可读取的 `client.js`。
 - apply 前重新核对候选 SHA 与插件 source hash；任何漂移都要求重新 prepare/verify。
 - apply 时若安装、完整构建、任一插件构建或检查失败，自动恢复备份并把状态记为 `auto-rolled-back`。
 - live dshx-supervised Host 存在时 apply/rollback 都拒绝；更新助手不暗中 stop/restart 正式进程。

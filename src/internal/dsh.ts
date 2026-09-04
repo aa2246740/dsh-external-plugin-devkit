@@ -21,12 +21,17 @@ export function dshBin(root: string): { cmd: string; prefix: string[] } {
   return { cmd: process.execPath, prefix: ['--import', 'tsx/esm', bin] }
 }
 
-export function runDsh(root: string, args: readonly string[], timeoutMs = 30_000): DshResult {
+export function runDsh(
+  root: string,
+  args: readonly string[],
+  timeoutMs = 30_000,
+  env: NodeJS.ProcessEnv = dshEnv(root),
+): DshResult {
   const { cmd, prefix } = dshBin(root)
   const result = spawnSync(cmd, [...prefix, ...args], {
     cwd: root,
     encoding: 'utf8',
-    env: dshEnv(root),
+    env,
     timeout: timeoutMs,
     maxBuffer: 8 * 1024 * 1024,
   })
@@ -37,11 +42,16 @@ export function runDsh(root: string, args: readonly string[], timeoutMs = 30_000
   }
 }
 
-export function dumpConfig(root: string, profile: ProfileName, patches: readonly string[] = []): DshResult {
+export function dumpConfig(
+  root: string,
+  profile: ProfileName,
+  patches: readonly string[] = [],
+  env: NodeJS.ProcessEnv = dshEnv(root),
+): DshResult {
   const args = ['--profile', profile]
   for (const patch of patches) args.push('--patch', patch)
   args.push('--dump-config')
-  return runDsh(root, args)
+  return runDsh(root, args, 30_000, env)
 }
 
 export function dumpDefaultConfig(root: string, profile: ProfileName): DshResult {

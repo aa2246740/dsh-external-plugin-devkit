@@ -1,7 +1,13 @@
 # Directory Update Log
 
+## 2026-08-26
+
+* **Creator+ safe removal and pre-crash integrity quarantine (0.7.2)**: added the seventh fixed tool, `dshx_remove_plugin`, with live-row quarantine → same-PID absence → official profile remove → verified symlink-only detach → source-preservation ordering. RC8 live acceptance exposed that pnpm can remove the dependency yet leave its root `node_modules` symlink; the removal transaction now resumes from durable quarantine, skips a second package-manager removal when the dependency is already absent, and detaches the orphan only when it is a symlink targeting the claimed Harness/source path. Creator-scoped bash denies claimed plugin-root, Harness-link, and active-profile teardown while allowing ordinary file/component cleanup. Guardian detects a claimed watched client whose profile package disappears while the Host is still healthy and quarantines the stale row before cold boot. Regression tests reproduce both the raw deletion crash chain and the partial official-removal seam.
+* **RC2 new-client activation repair (0.7.1)**: boot-manifest verification now accepts both the RC8 `window.__DSH_BOOT__` assignment and RC2's official `globalThis["__DSH_BOOT__"]` injection without evaluating script text. Fresh Creator+ client instructions now build and pass `check` before `activation-plan`, so the plan can validate the required lazy-CJS handoff instead of blocking an unbuilt scaffold.
+
 ## 2026-08-24
 
+* **Single-Home Host ownership (0.7.4)**: App, direct CLI, and dshx are launchers for one long-lived Web Host per real `DSH_HOME`. `start` discovers and attaches instead of spawning another port, duplicates/unknown visibility fail closed, and EPERM is no longer false death. `verify-boot` now runs in a temporary Home and always tears it down; `--keep` is rejected.
 * **Harness update assistant and RC2 native client proof (0.7.0)**: added read-only release planning, isolated Harness/plugin preparation, resumable per-plugin verification, transactional apply, and exact rollback. Web client plugins now link into the selected profile and load by package name, matching RC2 client discovery; `verify-boot` proves the active boot-graph row and served client bundle instead of waiting for suppressed `ctx.logger.info` output. The first real update moved the local Harness to official `dsh-v0.1.1-rc.2`; a combined cold boot loaded 13 Host plugins and 11 Web clients with no page, console, or request failures.
 
 ## 2026-08-21
@@ -53,3 +59,4 @@
 * **Creation**: Playbooks for the external loop, out-of-process restart, real boot verify, and new-session recovery.
 * **Creation**: Pitfalls distilled from community-reproduced failures (orphan `tool_call`, host suicide, duplicate loader id, leftover bundles, dump false negative).
 * **Creation**: Attested computations for `dshx verify`, `dshx dump`, and `dshx doctor`.
+* **Bundle removal order repair (0.7.3)**: added external `dshx plugin remove` for Web bundles. It installs/resumes a byte-bounded live disable, proves `__DSH_BOOT__` absence on the same PID, then invokes official profile removal and validates dependency/bundle/link cleanup. A tombstone survives the old boot and is removed only when Host start time is later than persistent profile removal; the same command therefore repairs and resumes the `client.js`-gone/stale-Loader half-removal without restarting DSH.

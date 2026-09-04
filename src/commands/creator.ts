@@ -14,6 +14,7 @@ import {
   guardianCreatorSnapshot,
   recoverCreatorClientFailure,
 } from '../internal/guardian.ts'
+import { removeCreatorPlugin } from '../internal/remove-plugin.ts'
 import { finding, printReport, report } from '../internal/io.ts'
 import type { CliOptions } from '../internal/types.ts'
 
@@ -62,6 +63,28 @@ export async function cmdCreator(args: string[], options: CliOptions, root: stri
           ? finding('warn', 'client-build-required', 'install dependencies and build lib/client.js before dshx_check')
           : finding('info', 'next', `run dshx_check for ${pluginId}`),
       ], { scaffold }), options.json)
+      return 0
+    }
+
+    if (action === 'remove') {
+      const pluginId = args[1]
+      if (!pluginId || args.length !== 2) throw new Error('usage: dshx creator remove <plugin>')
+      const context = requireContext()
+      const removed = await removeCreatorPlugin(root, pluginId, context, options.timeoutMs)
+      releaseCreatorClaim(root, context.sessionId)
+      printReport(report('creator remove', [
+        finding('ok', 'host-tree-inactive', `HOST_TREE_INACTIVE: current Web Host no longer contains ${pluginId}`),
+        finding('ok', 'profile-dependency-removed', `PROFILE_DEPENDENCY_REMOVED: ${removed.profileDependencyAction}`, { path: removed.profileDir }),
+        finding('info', 'profile-entry', `Profile node_modules action: ${removed.profileEntryAction}`),
+        removed.sourcePreserved
+          ? finding('ok', 'source-preserved', `SOURCE_PRESERVED: ${removed.sourcePath ?? removed.harnessPath}`, { path: removed.sourcePath ?? removed.harnessPath })
+          : finding('warn', 'source-already-missing', 'SOURCE_PRESERVED cannot be claimed because no source path remains; Creator+ did not delete it'),
+        finding('info', 'harness-link', `Harness path action: ${removed.harnessLinkAction}`, { path: removed.harnessPath }),
+        finding('info', 'no-restart', 'No Host restart or browser control was attempted.'),
+      ], {
+        evidence: ['HOST_TREE_INACTIVE', 'PROFILE_DEPENDENCY_REMOVED', ...(removed.sourcePreserved ? ['SOURCE_PRESERVED'] : [])],
+        removed,
+      }), options.json)
       return 0
     }
 
@@ -138,7 +161,7 @@ export async function cmdCreator(args: string[], options: CliOptions, root: stri
       return 0
     }
 
-    throw new Error('usage: dshx creator <watch|claim|scaffold|status|release|disarm|client-failure|recovery>')
+    throw new Error('usage: dshx creator <watch|claim|scaffold|remove|status|release|disarm|client-failure|recovery>')
   } catch (error) {
     printReport(report('creator', [finding('error', 'creator', error instanceof Error ? error.message : String(error))]), options.json)
     return 1
