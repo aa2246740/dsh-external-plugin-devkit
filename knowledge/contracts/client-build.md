@@ -45,6 +45,7 @@ tsdown: no packages/*/*/package.json declares the name <id>
 - `window.__ModuleLoader__.load({ id, factory })` 注册；
 - React、Cordis 和其他共享模块保持同一运行时 identity；
 - CSS Modules、全局 CSS 与 `?inline` CSS 由插件拥有并可随 fiber 清理；
+- 官方声明为 browser-safe 的纯函数包（当前包括 `dsh-util-workspace-path`）随插件内联，不生成 Loader module-table 请求；
 - 未声明的 `@deepseek-ai/*` runtime import 失败关闭，避免把服务 identity 私自打包进去。
 - client entry 直接读取的 `ctx.<service>` 必须出现在该入口导出的 Cordis `inject` 中；构建和 `dshx check` 都会在产物进入 Host 前拒绝缺项。
 

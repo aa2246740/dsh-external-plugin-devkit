@@ -63,6 +63,22 @@ export function apply(ctx) { ctx.locale.register('demo', { en: {} }) }
     )
   })
 
+  it('bundles the official browser-safe Workspace path helper instead of requesting a Loader module row', () => {
+    const root = packageRoot({
+      name: 'external-demo',
+      peerDependencies: { '@deepseek-ai/dsh-util-workspace-path': '^0.1.2-rc.1' },
+      dsh: { client: { platform: 'web' } },
+    })
+    const [, client] = externalClientBundle('external-demo', ['lib/types/index.js'], { packageRoot: root })
+    assert.equal(client.deps.neverBundle('@deepseek-ai/dsh-util-workspace-path'), false)
+    assert.equal(client.deps.alwaysBundle('@deepseek-ai/dsh-util-workspace-path'), true)
+    assert.equal(client.plugins[0].resolveId('@deepseek-ai/dsh-util-workspace-path'), null)
+    assert.throws(
+      () => client.plugins[0].resolveId('@deepseek-ai/dsh-unapproved-runtime'),
+      /not a shared baseline or dsh\.client\.external request/,
+    )
+  })
+
   it('uses the target Harness platform table when dshx is symlinked from another checkout', () => {
     const harness = mkdtempSync(join(tmpdir(), 'dshx-target-platform-'))
     const platform = join(harness, 'packages/client/web/src/platform.ts')
