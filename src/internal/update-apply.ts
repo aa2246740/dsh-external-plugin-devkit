@@ -149,6 +149,16 @@ function git(root: string, args: readonly string[]): CommandResult {
   return runCommand(root, 'git', ['-C', root, ...args])
 }
 
+function harnessBuildEnvironment(root: string): NodeJS.ProcessEnv {
+  return {
+    ...process.env,
+    CI: '1',
+    LEFTHOOK: '0',
+    DSHX_HARNESS: root,
+    PATH: `${join(root, 'node_modules/.bin')}:${process.env.PATH ?? ''}`,
+  }
+}
+
 export function assertNoStagingOnlyPluginSources(state: UpdateCandidateState): void {
   const overrides = state.plugins.filter(plugin => plugin.sourceOverride)
   if (overrides.length > 0) {
@@ -226,6 +236,23 @@ function createPluginDependencyView(root: string, backup: PathBackup): void {
   }
 }
 
+function replaceWithTargetDependency(root: string, pluginDir: string, name: string): void {
+  const source = targetDependency(root, name)
+  if (!source) return
+  const path = join(pluginDir, 'node_modules', name)
+  rmSync(path, { recursive: true, force: true })
+  mkdirSync(dirname(path), { recursive: true })
+  symlinkSync(source, path, 'dir')
+}
+
+function installPluginDependencies(root: string, pluginDir: string, env: NodeJS.ProcessEnv): CommandResult {
+  rmSync(join(pluginDir, 'node_modules'), { recursive: true, force: true })
+  const installed = runCommand(pluginDir, 'pnpm', ['install', '--ignore-workspace', '--frozen-lockfile', '--ignore-scripts'], env)
+  if (!installed.ok) return installed
+  for (const name of TARGET_RUNTIME_DEPENDENCIES) replaceWithTargetDependency(root, pluginDir, name)
+  return installed
+}
+
 function packageBuildScript(pluginDir: string): string | undefined {
   const path = join(pluginDir, 'package.json')
   if (!existsSync(path)) return undefined
@@ -263,6 +290,14 @@ function restoreTransaction(state: UpdateRollbackState): void {
       throw new Error(`original branch moved during update: expected ${state.original.sha}, found ${head.stdout.trim()}`)
     }
   }
+  const logs = join(stateDir(state.sourceRoot), 'update-assistant', safeTag(state.target.tag), 'logs')
+  const env = harnessBuildEnvironment(state.sourceRoot)
+  const cleaned = runCommand(state.sourceRoot, 'pnpm', ['run', 'clean'], env)
+  const cleanLog = recordCommand(join(logs, 'rollback-harness-clean.log'), cleaned)
+  if (!cleaned.ok) throw new Error(`restored Harness clean failed; see ${cleanLog}`)
+  const built = runCommand(state.sourceRoot, 'pnpm', ['run', 'build'], env)
+  const buildLog = recordCommand(join(logs, 'rollback-harness-build.log'), built)
+  if (!built.ok) throw new Error(`restored Harness build failed; see ${buildLog}`)
 }
 
 function updateBranchName(tag: string): string {
@@ -294,7 +329,7 @@ function pluginBackups(state: UpdateCandidateState, backupRoot: string): PluginB
 function cliCheck(root: string, plugin: CandidatePluginResult, env: NodeJS.ProcessEnv): CommandResult {
   return runCommand(root, process.execPath, [
     '--import', 'tsx/esm', join(root, 'tools/dshx/src/cli.ts'),
-    'check', plugin.name,
+    'check', plugin.sourcePath,
     '--harness', root,
     '--json',
   ], env)
@@ -338,15 +373,13 @@ export function applyUpdate(root: string, options: CliOptions): UpdateApplyResul
     persistRollback(rollbackPath, state)
     switchToTarget(root, state.updateBranch, candidate.target.sha)
     const logs = join(stateDir(root), 'update-assistant', safeTag(candidate.target.tag), 'logs')
-    const env: NodeJS.ProcessEnv = {
-      ...process.env,
-      CI: '1',
-      LEFTHOOK: '0',
-      PATH: `${join(root, 'node_modules/.bin')}:${process.env.PATH ?? ''}`,
-    }
+    const env = harnessBuildEnvironment(root)
     const installed = runCommand(root, 'pnpm', ['install', '--frozen-lockfile'], env)
     const installLog = recordCommand(join(logs, 'apply-harness-install.log'), installed)
     if (!installed.ok) throw new Error(`target Harness install failed; see ${installLog}`)
+    const cleaned = runCommand(root, 'pnpm', ['run', 'clean'], env)
+    const cleanLog = recordCommand(join(logs, 'apply-harness-clean.log'), cleaned)
+    if (!cleaned.ok) throw new Error(`target Harness clean failed; see ${cleanLog}`)
     const built = runCommand(root, 'pnpm', ['run', 'build'], env)
     const buildLog = recordCommand(join(logs, 'apply-harness-build.log'), built)
     if (!built.ok) throw new Error(`target Harness build failed; see ${buildLog}`)
@@ -363,8 +396,16 @@ export function applyUpdate(root: string, options: CliOptions): UpdateApplyResul
         pluginBuilds[plugin.name] = true
         continue
       }
-      const result = runCommand(plugin.sourcePath, '/bin/sh', ['-c', script], env)
+      let result = runCommand(plugin.sourcePath, '/bin/sh', ['-c', script], env)
       recordCommand(join(logs, `apply-${plugin.name}-build.log`), result)
+      if (!result.ok) {
+        const installed = installPluginDependencies(root, plugin.sourcePath, env)
+        recordCommand(join(logs, `apply-${plugin.name}-dependencies.log`), installed)
+        if (installed.ok) {
+          result = runCommand(plugin.sourcePath, '/bin/sh', ['-c', script], env)
+          recordCommand(join(logs, `apply-${plugin.name}-build-retry.log`), result)
+        }
+      }
       pluginBuilds[plugin.name] = result.ok
     }
     for (const plugin of candidate.plugins) {
