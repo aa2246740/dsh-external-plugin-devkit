@@ -90,7 +90,7 @@ describe('update plan', () => {
     const plan = collectUpdatePlan(root, 'dsh-v0.1.1-rc.2', isolatedEnv(root))
     assert.equal(plan.plugins.find(plugin => plugin.name === 'profile-only')?.location, 'profile-link')
     assert.equal(plan.plugins.find(plugin => plugin.name === 'profile-only')?.realPath, realpathSync(source))
-    assert.equal(plan.plugins.find(plugin => plugin.name === 'profile-only')?.activeInProfile, true)
+    assert.equal(plan.plugins.find(plugin => plugin.name === 'profile-only')?.activeInProfile, false)
   })
 
   it('marks a workspace plugin active when the Web profile bundle list enables its package', () => {
@@ -102,6 +102,21 @@ describe('update plan', () => {
     const plan = collectUpdatePlan(root, 'dsh-v0.1.1-rc.2', isolatedEnv(root))
     assert.equal(plan.plugins.find(plugin => plugin.name === 'local')?.activeInProfile, true)
     assert.equal(plan.plugins.find(plugin => plugin.name === 'linked')?.activeInProfile, false)
+  })
+
+  it('marks patch-inserted plugins active and respects a later home-level disable', () => {
+    const root = fakeHarness()
+    const home = join(root, '.test-dsh-home')
+    const profile = join(home, 'profiles/web')
+    write(join(profile, 'package.json'), JSON.stringify({ dependencies: {} }))
+    write(join(profile, 'cordis.patch.yml'), '- insert:\n    - id: local\n      name: local\n')
+
+    let plan = collectUpdatePlan(root, 'dsh-v0.1.1-rc.2', isolatedEnv(root))
+    assert.equal(plan.plugins.find(plugin => plugin.name === 'local')?.activeInProfile, true)
+
+    write(join(home, 'cordis.patch.yml'), '- id: local\n  disabled: true\n')
+    plan = collectUpdatePlan(root, 'dsh-v0.1.1-rc.2', isolatedEnv(root))
+    assert.equal(plan.plugins.find(plugin => plugin.name === 'local')?.activeInProfile, false)
   })
 
   it('reports but does not stage a missing local profile dependency', () => {

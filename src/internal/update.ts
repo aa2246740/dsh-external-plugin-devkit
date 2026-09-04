@@ -1,6 +1,7 @@
 import { existsSync, lstatSync, readFileSync, readdirSync, realpathSync, statSync } from 'node:fs'
 import { isAbsolute, join, relative, resolve } from 'node:path'
 import { spawnSync } from 'node:child_process'
+import yaml from 'js-yaml'
 import { currentHost } from './host.ts'
 import { resolveLocalSpec } from './file-copy.ts'
 import { pluginsDir, profileDir, resolveDshHome } from './paths.ts'
@@ -79,6 +80,41 @@ function packageJson(path: string): Record<string, unknown> | undefined {
 function stringField(record: Record<string, unknown> | undefined, key: string): string | undefined {
   const value = record?.[key]
   return typeof value === 'string' ? value : undefined
+}
+
+const jsExpressionType = new yaml.Type('tag:yaml.org,2002:js', {
+  kind: 'scalar',
+  construct: value => value ?? '',
+})
+const patchSchema = yaml.DEFAULT_SCHEMA.extend([jsExpressionType])
+
+interface ProfileActivation {
+  labels: Set<string>
+  disabledIds: Set<string>
+}
+
+function applyActivationPatch(path: string, activation: ProfileActivation): void {
+  if (!existsSync(path)) return
+  const parsed = yaml.load(readFileSync(path, 'utf8'), { schema: patchSchema })
+  if (parsed === undefined || parsed === null) return
+  if (!Array.isArray(parsed)) throw new Error(`profile patch must be a top-level YAML array: ${path}`)
+  for (const value of parsed) {
+    const patch = isRecord(value) ? value : undefined
+    if (!patch) continue
+    if (Array.isArray(patch.insert)) {
+      for (const rowValue of patch.insert) {
+        const row = isRecord(rowValue) ? rowValue : undefined
+        if (!row || typeof row.id !== 'string') continue
+        activation.labels.add(row.id)
+        if (typeof row.name === 'string') activation.labels.add(row.name)
+        if (row.disabled === true) activation.disabledIds.add(row.id)
+        else activation.disabledIds.delete(row.id)
+      }
+    }
+    if (typeof patch.id !== 'string') continue
+    if (patch.disabled === true) activation.disabledIds.add(patch.id)
+    else if (patch.disabled === false) activation.disabledIds.delete(patch.id)
+  }
 }
 
 function git(root: string, args: readonly string[]): GitResult {
@@ -303,6 +339,9 @@ function pluginInventory(root: string, env: NodeJS.ProcessEnv): {
   const activeBundles = new Set(Array.isArray(profileConfig?.bundles)
     ? profileConfig.bundles.filter((value): value is string => typeof value === 'string')
     : [])
+  const activation: ProfileActivation = { labels: activeBundles, disabledIds: new Set() }
+  applyActivationPatch(join(profile, 'cordis.patch.yml'), activation)
+  applyActivationPatch(join(resolveDshHome(env), 'cordis.patch.yml'), activation)
   for (const [name, raw] of Object.entries(dependencies).sort(([left], [right]) => left.localeCompare(right))) {
     if (typeof raw !== 'string') continue
     const source = resolveLocalSpec(raw, profile)
@@ -326,10 +365,11 @@ function pluginInventory(root: string, env: NodeJS.ProcessEnv): {
   plugins = plugins.filter(plugin => (plugin.location === 'profile-file' || plugin.location === 'profile-link') || !plugin.id || !activeIds.has(plugin.id))
   plugins = plugins.map(plugin => ({
     ...plugin,
-    activeInProfile: plugin.location === 'profile-file'
-      || plugin.location === 'profile-link'
-      || activeBundles.has(plugin.packageName ?? plugin.name)
-      || activeBundles.has(plugin.name),
+    activeInProfile: !plugin.id || !activation.disabledIds.has(plugin.id)
+      ? activation.labels.has(plugin.id ?? '')
+        || activation.labels.has(plugin.packageName ?? plugin.name)
+        || activation.labels.has(plugin.name)
+      : false,
   }))
   markDuplicateIds(plugins)
   return {

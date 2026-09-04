@@ -29,7 +29,7 @@ stale_after: 2026-11-24
 - `my-plugins` 的真实目录和 symlink，以及活动 Web profile 依赖中的本地 `file:` / `link:` 源都进入矩阵；同名或同一稳定 plugin ID 时 profile 的活动源优先，避免验证过期副本。两个活动 profile 包声明同一 ID 属于真实组合冲突，必须在 plan 阶段失败关闭。缺失的 profile 本地目标必须显式告警且不进入候选 staging。候选验证不改插件源字节。
 - `update plan` / `prepare` 可用重复的 `--plugin-source name=/absolute/compatible/source` 显式替换候选 staging 源；替代源必须与活动源的 package name 和稳定 plugin ID 一致，state 会保留活动源与替代源的边界。它只证明隔离 candidate，`apply` 必须拒绝，直到用户将兼容源码显式提升为活动 profile 源。
 - Web client 必须通过当前原生 profile package resolution：本地包链接、package-name Loader row、启动 token 换得本地 cookie 后读取的官方 `globalThis["__DSH_BOOT__"]` 条目，以及可读取的 client bundle。候选 probe 精确采用 `exports["./client"]` 声明的 `.js` lazy-CJS 入口；脚手架默认是 `lib/client.js`，已经通过静态合同的手写 `src/client.js` 也不得因目录名被拒绝。
-- `verify` 必须逐个验证全部盘点插件，但 combined Web 只加载当前 profile 的本地 `file:` / `link:` 依赖与 `dsh.profile.bundles` 点名的活动插件；磁盘上的休眠或互斥实现不能被强行共载。vanilla Web 与活动组合 Web 任一 gate 缺失、失败或只证明 HTTP 可达，都不能 `apply`。
+- `verify` 必须逐个验证全部盘点插件，但 combined Web 只加载当前 profile 的 `dsh.profile.bundles` 与 profile/home patch 中未禁用 insert 点名的活动插件；仅安装为依赖、磁盘上的休眠或互斥实现不能被强行共载。vanilla Web 与活动组合 Web 任一 gate 缺失、失败或只证明 HTTP 可达，都不能 `apply`。
 - apply 前重新核对候选 SHA 与插件 source hash；任何漂移都要求重新 prepare/verify。
 - apply 时若安装、完整构建、任一插件构建或检查失败，自动恢复备份并把状态记为 `auto-rolled-back`。
 - live dshx-supervised Host 存在时 apply/rollback 都拒绝；更新助手不暗中 stop/restart 正式进程。
