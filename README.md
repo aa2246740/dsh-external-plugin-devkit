@@ -80,7 +80,7 @@ dshx update rollback --target dsh-v0.1.2-rc.1
 
 *2026-08-25 · 机器 `cursor`（Linux）· `dshx update plan`*
 
-`plan` / `prepare` 同时盘点 `my-plugins` 和活动 Web profile 里的本地 `file:` / `link:` 插件；同名时以 profile 正在使用的源为准，缺失目标会明确告警且不会把过期副本装进候选环境。`prepare` 在隔离 worktree 冻安装并完整构建目标 Harness，再复制构建全部插件；不切换当前 checkout。插件构建期间 `DSHX_HARNESS` 固定为 candidate，外部 client adapter 读取目标版本的 `platform.ts`，不会经由 dshx 符号链接误用当前旧 checkout 的平台表。`verify` 先冷启动无插件的 Web candidate，再对每个候选插件做静态合同和隔离冷启动，最后加载全部候选插件的组合 Web 图。RC1 的 Web 页必须先用启动 URL 的 token 换取本地 cookie，之后才读取 `globalThis["__DSH_BOOT__"]` 和每个 bundle；裸 `HTTP 200/401` 都不算 client 验收。
+`plan` / `prepare` 同时盘点 `my-plugins` 和活动 Web profile 里的本地 `file:` / `link:` 插件；同名时以 profile 正在使用的源为准，缺失目标会明确告警且不会把过期副本装进候选环境。`prepare` 在隔离 worktree 冻安装并完整构建目标 Harness，再复制构建全部插件；不切换当前 checkout。插件构建期间 `DSHX_HARNESS` 固定为 candidate，外部 client adapter 读取目标版本的 `platform.ts`，不会经由 dshx 符号链接误用当前旧 checkout 的平台表。`verify` 先冷启动无插件的 Web candidate，再对每个候选插件做静态合同和隔离冷启动，最后加载全部候选插件的组合 Web 图；probe 使用包声明的 `exports["./client"]` `.js` lazy-CJS 入口，不硬编码 `lib/`。RC1 的 Web 页必须先用启动 URL 的 token 换取本地 cookie，之后才读取 `globalThis["__DSH_BOOT__"]` 和每个 bundle；裸 `HTTP 200/401` 都不算 client 验收。
 
 ![dshx update verify：candidate 构建通过；hello build/check/cold-boot 全 true；1/1 verify-gate；源插件字节未改](docs/screenshots/update-verify.png)
 

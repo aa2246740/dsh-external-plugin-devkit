@@ -14,7 +14,7 @@ import {
   symlinkSync,
 } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { basename, dirname, join, relative, resolve } from 'node:path'
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import yaml from 'js-yaml'
 import { dumpConfig, duplicateIds, parseDumpEntries } from './dsh.ts'
 import { logContains, probePort, startTransientHost, stopTransientHost, waitForHttp, waitForLog } from './host.ts'
@@ -500,9 +500,31 @@ export function createApplyProbe(candidate: string, name: string): { dir: string
       if (!isRecord(parsed.exports) || !('./client' in parsed.exports)) {
         throw new Error(`web client probe needs package.json exports["./client"]: ${packagePath}`)
       }
-      const lib = join(plugin.dir, 'lib')
-      if (!existsSync(lib)) throw new Error(`web client probe needs built lib/: ${lib}`)
-      symlinkSync(lib, join(dir, 'lib'), 'dir')
+      const clientExport = parsed.exports['./client']
+      const declared = typeof clientExport === 'string'
+        ? clientExport
+        : isRecord(clientExport) && typeof clientExport.default === 'string'
+          ? clientExport.default
+          : undefined
+      if (!declared?.startsWith('./')) {
+        throw new Error(`web client probe needs a relative default exports["./client"] path: ${packagePath}`)
+      }
+      const sourceClient = resolve(plugin.dir, declared)
+      const sourceRelative = relative(resolve(plugin.dir), sourceClient)
+      if (sourceRelative === '' || sourceRelative === '..' || sourceRelative.startsWith(`..${sep}`) || isAbsolute(sourceRelative)) {
+        throw new Error(`web client probe export escapes the plugin package: ${declared}`)
+      }
+      if (!existsSync(sourceClient) || !lstatSync(sourceClient).isFile()) {
+        throw new Error(`web client probe export is missing or not a file: ${sourceClient}`)
+      }
+      const probeClient = resolve(dir, declared)
+      const probeRelative = relative(resolve(dir), probeClient)
+      if (probeRelative === '' || probeRelative === '..' || probeRelative.startsWith(`..${sep}`) || isAbsolute(probeRelative)) {
+        throw new Error(`web client probe export escapes the probe package: ${declared}`)
+      }
+      if (existsSync(probeClient)) throw new Error(`web client probe export collides with probe files: ${probeClient}`)
+      mkdirSync(dirname(probeClient), { recursive: true })
+      symlinkSync(sourceClient, probeClient, 'file')
       writeText(join(dir, 'package.json'), `${JSON.stringify({
         ...parsed,
         main: './src/probe.ts',

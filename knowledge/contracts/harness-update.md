@@ -27,7 +27,7 @@ stale_after: 2026-11-24
 - 只接受官方 `deepseek-ai/deepseek-harness` origin 和 `dsh-v*` release tag。
 - tracked Harness dirty、会被目标覆盖的 untracked 路径、无效插件清单都阻断 apply。
 - `my-plugins` 的真实目录和 symlink，以及活动 Web profile 依赖中的本地 `file:` / `link:` 源都进入矩阵；同名时 profile 的活动源优先，避免验证过期副本。缺失的 profile 本地目标必须显式告警且不进入候选 staging。候选验证不改插件源字节。
-- Web client 必须通过当前原生 profile package resolution：本地包链接、package-name Loader row、启动 token 换得本地 cookie 后读取的官方 `globalThis["__DSH_BOOT__"]` 条目，以及可读取的 client bundle。
+- Web client 必须通过当前原生 profile package resolution：本地包链接、package-name Loader row、启动 token 换得本地 cookie 后读取的官方 `globalThis["__DSH_BOOT__"]` 条目，以及可读取的 client bundle。候选 probe 精确采用 `exports["./client"]` 声明的 `.js` lazy-CJS 入口；脚手架默认是 `lib/client.js`，已经通过静态合同的手写 `src/client.js` 也不得因目录名被拒绝。
 - `verify` 必须分别记录 vanilla Web 与全插件组合 Web 的结果；任一 gate 缺失、失败或只证明 HTTP 可达，都不能 `apply`。
 - apply 前重新核对候选 SHA 与插件 source hash；任何漂移都要求重新 prepare/verify。
 - apply 时若安装、完整构建、任一插件构建或检查失败，自动恢复备份并把状态记为 `auto-rolled-back`。

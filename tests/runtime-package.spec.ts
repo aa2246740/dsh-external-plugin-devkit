@@ -68,7 +68,34 @@ describe('native runtime package seam', () => {
     assert.equal(plugin.runtimePackage?.name, 'demo-client')
     assert.equal(plugin.runtimePackage?.webClient, true)
     assert.equal(runtimePluginSpecifier(plugin), 'demo-client')
-    assert.equal(realpathSync(join(probe.dir, 'lib')), realpathSync(join(pluginDir, 'lib')))
+    assert.equal(realpathSync(join(probe.dir, 'lib/client.js')), realpathSync(join(pluginDir, 'lib/client.js')))
+    assert.equal(linked?.entry, realpathSync(join(probe.dir, 'src/probe.ts')))
+  })
+
+  it('probes a declared source lazy-CJS client without requiring lib', () => {
+    const root = mkdtempSync(join(tmpdir(), 'dshx-runtime-source-client-'))
+    write(join(root, 'apps/cli/src/bin.ts'), 'export {}\n')
+    write(join(root, 'tools/dshx/src/cli.ts'), 'export {}\n')
+    const pluginDir = join(root, 'my-plugins', 'source-client')
+    write(join(pluginDir, 'src/index.js'), 'export function apply() {}\n')
+    write(join(pluginDir, 'src/client.js'), 'window.__ModuleLoader__.load({ id: "source-client", factory: () => ({}) })\n')
+    write(join(pluginDir, 'dshx.yml'), 'id: source-client\nentry: src/index.js\nmarker: "[source-client] loaded"\nkind: client\nprofile: web\n')
+    write(join(pluginDir, 'package.json'), JSON.stringify({
+      name: 'source-client',
+      version: '1.0.0',
+      type: 'module',
+      exports: {
+        '.': './src/index.js',
+        './client': './src/client.js',
+        './package.json': './package.json',
+      },
+      dsh: { client: { platform: 'web' } },
+    }))
+
+    const probe = createApplyProbe(root, 'source-client')
+    const plugin = loadPlugin(root, probe.dir)
+    const linked = ensureRuntimePackageLink(plugin, join(root, 'probe-home'), 'web')
+    assert.equal(realpathSync(join(probe.dir, 'src/client.js')), realpathSync(join(pluginDir, 'src/client.js')))
     assert.equal(linked?.entry, realpathSync(join(probe.dir, 'src/probe.ts')))
   })
 })
