@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict'
-import { mkdtempSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
+import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { describe, it } from 'node:test'
 import { externalClientBundle } from '../src/client-build.js'
 import { writeText } from '../src/internal/io.ts'
@@ -59,5 +61,32 @@ export function apply(ctx) { ctx.locale.register('demo', { en: {} }) }
       }),
       /entry-level export const inject.*package\.json dsh\.client\.inject/u,
     )
+  })
+
+  it('uses the target Harness platform table when dshx is symlinked from another checkout', () => {
+    const harness = mkdtempSync(join(tmpdir(), 'dshx-target-platform-'))
+    const platform = join(harness, 'packages/client/web/src/platform.ts')
+    mkdirSync(dirname(platform), { recursive: true })
+    writeFileSync(platform, [
+      "export const PLATFORM_MODULES = ['react', '@deepseek-ai/dsh-client-store'] as const",
+      "export const PRELOADED_CLIENT_EXTERNALS = ['react/jsx-runtime'] as const",
+      '',
+    ].join('\n'))
+    const plugin = packageRoot({
+      name: 'external-demo',
+      dsh: { client: { platform: 'web' } },
+    })
+    const adapter = pathToFileURL(join(process.cwd(), 'src/client-build.js')).href
+    const script = [
+      `const { externalClientBundle } = await import(${JSON.stringify(adapter)})`,
+      `const configs = externalClientBundle('external-demo', ['lib/types/index.js'], { packageRoot: ${JSON.stringify(plugin)} })`,
+      "process.stdout.write(String(configs[1].deps.neverBundle('@deepseek-ai/dsh-client-store')))",
+    ].join('\n')
+    const output = execFileSync(process.execPath, ['--import', 'tsx/esm', '--input-type=module', '--eval', script], {
+      cwd: process.cwd(),
+      env: { ...process.env, DSHX_HARNESS: harness },
+      encoding: 'utf8',
+    })
+    assert.equal(output, 'true')
   })
 })

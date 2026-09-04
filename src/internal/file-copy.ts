@@ -173,12 +173,12 @@ export function clientEntryFindings(pluginDir: string): Finding[] {
   if (existsSync(buildConfigPath)) {
     const buildConfig = readFileSync(buildConfigPath, 'utf8')
     if (/packages\/client\/tsdown\.client/.test(buildConfig)) {
-      findings.push(finding('error', 'rc8-external-client-build', 'RC8 repository clientBundle only accepts packages/*/* and cannot build my-plugins/*', {
+      findings.push(finding('error', 'rc8-external-client-build', 'repository clientBundle only accepts packages/*/* and cannot build my-plugins/*', {
         path: buildConfigPath,
         hint: "import externalClientBundle from '../../tools/dshx/src/client-build.js' instead",
       }))
     } else if (buildConfig.includes('externalClientBundle')) {
-      findings.push(finding('ok', 'rc8-external-client-build', 'uses the RC8 out-of-tree dshx client bundle adapter', { path: buildConfigPath }))
+      findings.push(finding('ok', 'rc8-external-client-build', 'uses the target-aware out-of-tree dshx client bundle adapter', { path: buildConfigPath }))
     }
   }
   const clientExport = pkg.exports?.['./client']

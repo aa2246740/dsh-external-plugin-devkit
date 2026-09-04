@@ -305,6 +305,7 @@ function candidateEnv(candidate: string, extra: NodeJS.ProcessEnv = {}): NodeJS.
     ...extra,
     CI: '1',
     LEFTHOOK: '0',
+    DSHX_HARNESS: candidate,
     PATH: `${bins}:${process.env.PATH ?? ''}`,
   }
 }

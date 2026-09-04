@@ -1,5 +1,5 @@
 /**
- * RC8-compatible browser bundle preset for out-of-tree dshx plugins.
+ * Target-aware browser bundle preset for out-of-tree dshx plugins.
  *
  * DeepSeek Harness' own `clientBundle()` intentionally resolves manifests from
  * two-level package directories under `packages/`. A plugin under
@@ -13,12 +13,24 @@ import { existsSync, readFileSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { isBuiltin } from 'node:module'
 import { basename, dirname, resolve } from 'node:path'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { transform } from 'lightningcss'
 import { assertClientCordisInject } from './internal/client-cordis-inject.js'
-import {
+
+function clientPlatformPath() {
+  const requested = process.env.DSHX_HARNESS?.trim()
+  const fallback = resolve(dirname(fileURLToPath(import.meta.url)), '../../../packages/client/web/src/platform.ts')
+  const path = requested ? resolve(requested, 'packages/client/web/src/platform.ts') : fallback
+  if (!existsSync(path)) {
+    throw new Error(`dshx client build: target Harness client platform table not found at ${path}`)
+  }
+  return path
+}
+
+const {
   PLATFORM_MODULES,
   PRELOADED_CLIENT_EXTERNALS,
-} from '../../../packages/client/web/src/platform.ts'
+} = await import(pathToFileURL(clientPlatformPath()).href)
 
 const CSS_MODULE_PREFIX = '\0dshx-css-module:'
 const CSS_GLOBAL_PREFIX = '\0dshx-css-global:'
@@ -190,7 +202,7 @@ function cssPlugins(id, requested) {
 }
 
 /**
- * Build a Host half plus an RC8 lazy-CJS browser half for one out-of-tree package.
+ * Build a Host half plus a target-Harness lazy-CJS browser half for one out-of-tree package.
  *
  * @param {string} id package name and browser graph id.
  * @param {readonly string[]} libEntry tsc-emitted Host entries under lib/types.

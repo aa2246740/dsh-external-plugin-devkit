@@ -397,7 +397,7 @@ export function cmdInit(args: string[], options: CliOptions, root: string): numb
   const result = report('init', [
     finding('ok', 'scaffold', `created my-plugins/${name}`),
     ...options.kind === 'client'
-      ? [finding('warn', 'client-build-required', 'build lib/client.js with the RC8-compatible lazy-CJS handoff before check/verify-boot')]
+      ? [finding('warn', 'client-build-required', 'build lib/client.js with the target-aware lazy-CJS handoff before check/verify-boot')]
       : [],
     finding('info', 'next', `dshx check ${name} && dshx verify-boot ${name}`),
   ], { dir, kind: options.kind, marker })
