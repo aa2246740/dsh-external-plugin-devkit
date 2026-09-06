@@ -10,9 +10,11 @@ import {
   symlinkSync,
 } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
-import { currentHost } from './host.ts'
+import { dshEnv } from './dsh.ts'
+import { assertNoAffectedWebHosts } from './host-discovery.ts'
+import { acquireWebHostOperationLock } from './host.ts'
 import { loadJson, writeText } from './io.ts'
-import { stateDir } from './paths.ts'
+import { resolveDshHome, stateDir } from './paths.ts'
 import type { CliOptions } from './types.ts'
 import { collectUpdatePlan } from './update.ts'
 import { candidateVerified, loadUpdateCandidateState, pluginSourceHash } from './update-candidate.ts'
@@ -335,9 +337,23 @@ function cliCheck(root: string, plugin: CandidatePluginResult, env: NodeJS.Proce
   ], env)
 }
 
+function withUpdateHostGuard<T>(root: string, operation: string, run: (assertSafe: () => void) => T): T {
+  const home = resolveDshHome(dshEnv(root))
+  const release = acquireWebHostOperationLock(home, root)
+  const assertSafe = (): void => { assertNoAffectedWebHosts(root, home, operation) }
+  try {
+    assertSafe()
+    return run(assertSafe)
+  } finally {
+    release()
+  }
+}
+
 export function applyUpdate(root: string, options: CliOptions): UpdateApplyResult {
-  const host = currentHost(root)
-  if (host) throw new Error(`refusing update apply while dshx supervises Host pid ${host.pid}`)
+  return withUpdateHostGuard(root, 'update apply', assertSafe => applyUpdateGuarded(root, options, assertSafe))
+}
+
+function applyUpdateGuarded(root: string, options: CliOptions, assertSafe: () => void): UpdateApplyResult {
   const candidate = assertCandidateGate(root, options)
   const transaction = new Date().toISOString().replace(/[:.]/g, '-')
   const backupRoot = join(stateDir(root), 'update-assistant', safeTag(candidate.target.tag), `rollback-${transaction}`)
@@ -368,7 +384,12 @@ export function applyUpdate(root: string, options: CliOptions): UpdateApplyResul
   persistRollback(rollbackPath, state)
   const pluginBuilds: Record<string, boolean> = {}
   const pluginChecks: Record<string, boolean> = {}
+  let mutationStarted = false
   try {
+    // Candidate hashing can be slow. Re-prove the no-Host precondition at the
+    // exact boundary before the first installation-directory rename.
+    assertSafe()
+    mutationStarted = true
     moveToBackup(state.rootNodeModules)
     persistRollback(rollbackPath, state)
     switchToTarget(root, state.updateBranch, candidate.target.sha)
@@ -423,7 +444,13 @@ export function applyUpdate(root: string, options: CliOptions): UpdateApplyResul
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     state.applyError = message
+    if (!mutationStarted) {
+      persistRollback(rollbackPath, state)
+      throw new Error(state.applyError)
+    }
     try {
+      // Automatic rollback is also destructive and must pass the same gate.
+      assertSafe()
       restoreTransaction(state)
       state.status = 'auto-rolled-back'
       persistRollback(rollbackPath, state)
@@ -436,14 +463,17 @@ export function applyUpdate(root: string, options: CliOptions): UpdateApplyResul
 }
 
 export function rollbackUpdate(root: string, options: CliOptions): UpdateApplyResult {
-  const host = currentHost(root)
-  if (host) throw new Error(`refusing rollback while dshx supervises Host pid ${host.pid}`)
+  return withUpdateHostGuard(root, 'update rollback', assertSafe => rollbackUpdateGuarded(root, options, assertSafe))
+}
+
+function rollbackUpdateGuarded(root: string, options: CliOptions, assertSafe: () => void): UpdateApplyResult {
   const plan = collectUpdatePlan(root, options.target)
   const path = rollbackStatePath(root, plan.target.tag)
   if (!existsSync(path)) throw new Error(`rollback state missing: ${path}`)
   const state = loadJson<UpdateRollbackState>(path)
   if (state.schemaVersion !== 1 || state.sourceRoot !== resolve(root)) throw new Error(`invalid rollback state: ${path}`)
   if (state.status !== 'applied') throw new Error(`rollback is unavailable from state ${state.status}`)
+  assertSafe()
   restoreTransaction(state)
   state.status = 'rolled-back'
   persistRollback(path, state)

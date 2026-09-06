@@ -11,7 +11,7 @@ import {
   writeFileSync,
 } from 'node:fs'
 import { createRequire } from 'node:module'
-import { dirname, join } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 import {
   createClientFailureTransaction,
   creatorQuarantine,
@@ -29,6 +29,8 @@ import {
 } from './creator.ts'
 import { waitForClientAbsent } from './new-client.ts'
 import { claimedPluginIntegrityFailure } from './remove-plugin.ts'
+import { dshEnv } from './dsh.ts'
+import { readProcessStartTime, type TextProbe } from './host-discovery.ts'
 import {
   clearHostState,
   currentHost,
@@ -72,6 +74,9 @@ export interface GuardianDesiredHost {
   hostPid: number
   launcherPid?: number
   armedAt: string
+  processStartedAt?: string
+  home?: string
+  hostRoot?: string
 }
 
 export interface GuardianControl {
@@ -257,6 +262,9 @@ export function armGuardian(root: string, host: HostState, now = Date.now()): Gu
         hostPid: host.pid,
         ...launcherPid ? { launcherPid } : {},
         armedAt: iso(now),
+        ...host.processStartedAt ? { processStartedAt: host.processStartedAt } : {},
+        ...host.home ? { home: host.home } : {},
+        ...host.hostRoot ? { hostRoot: host.hostRoot } : {},
       },
       consecutiveRecoveries: targetChanged ? 0 : previous.consecutiveRecoveries,
       ...!targetChanged && previous.lastRecoveryAt ? { lastRecoveryAt: previous.lastRecoveryAt } : {},
@@ -384,8 +392,18 @@ export async function ensureGuardian(root: string, dependencies: EnsureDependenc
 export async function adoptOrArmCreatorHost(
   root: string,
   context: CreatorContext,
-  dependencies: { portOpen?: (port: number) => Promise<boolean>; ensureGuardian?: typeof ensureGuardian } = {},
+  dependencies: {
+    portOpen?: (port: number) => Promise<boolean>
+    ensureGuardian?: typeof ensureGuardian
+    processStart?: (pid: number) => TextProbe
+  } = {},
 ): Promise<{ host: HostState; guardian: GuardianRuntimeState; adopted: boolean }> {
+  const processStartedAt = (dependencies.processStart ?? readProcessStartTime)(context.hostPid)
+  if (!processStartedAt.ok) {
+    throw new Error(`Creator+ Host identity is incomplete: ${processStartedAt.reason ?? `cannot read pid ${context.hostPid} start time`}`)
+  }
+  const home = resolveDshHome(dshEnv(root))
+  const hostRoot = resolve(root)
   const existing = currentHost(root)
   let host: HostState
   let adopted = false
@@ -407,11 +425,21 @@ export async function adoptOrArmCreatorHost(
         startedAt: new Date().toISOString(),
         command: [],
         ownership: 'adopted',
+        processStartedAt: processStartedAt.text,
+        home,
+        hostRoot,
       }
       writeHostState(root, host)
       adopted = true
-    } else if (existing.ownership === 'adopted' && existing.launcherPid !== context.hostParentPid) {
-      host = { ...existing, launcherPid: context.hostParentPid }
+    } else if (existing.ownership === 'adopted' && (existing.launcherPid !== context.hostParentPid
+      || existing.processStartedAt !== processStartedAt.text || existing.home !== home || existing.hostRoot !== hostRoot)) {
+      host = {
+        ...existing,
+        launcherPid: context.hostParentPid,
+        processStartedAt: processStartedAt.text,
+        home,
+        hostRoot,
+      }
       writeHostState(root, host)
       adopted = true
     } else {
@@ -431,6 +459,9 @@ export async function adoptOrArmCreatorHost(
       command: [],
       ownership: 'adopted',
       launcherPid: context.hostParentPid,
+      processStartedAt: processStartedAt.text,
+      home,
+      hostRoot,
     }
     writeHostState(root, host)
     adopted = true

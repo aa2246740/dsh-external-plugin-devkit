@@ -255,7 +255,8 @@ function processStartedAt(pid: number): number | undefined {
 
 async function inspectWebHost(input: { pluginId: string; port: number; timeoutMs: number }): Promise<WebHostSnapshot> {
   const url = `http://127.0.0.1:${input.port}/`
-  const response = await fetch(url, { signal: AbortSignal.timeout(Math.min(input.timeoutMs, 2_000)) })
+  const { createWebProofRequest } = await import('./web-proof-auth.ts')
+  const response = await createWebProofRequest(input.port)(url, { signal: AbortSignal.timeout(Math.min(input.timeoutMs, 2_000)) })
   if (!response.ok) throw new Error(`current Web Host on ${url} returned HTTP ${response.status}`)
   const boot = parseBootManifest(await response.text())
   const pid = pidOnPort(input.port)

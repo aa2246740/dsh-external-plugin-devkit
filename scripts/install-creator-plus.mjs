@@ -24,9 +24,20 @@ const CURRENT_PERSONA = `${SEVEN_TOOL_PERSONA} DSH.app, direct dsh web, and dshx
 const LEGACY_SIX_TOOL_COMMENT = '# Bridge v2: six fixed dshx tools plus external Guardian lifecycle hooks; no shell, arbitrary argv, or model process control.'
 const SEVEN_TOOL_COMMENT = '# Bridge v2: seven fixed dshx tools plus external Guardian lifecycle hooks; no arbitrary argv, raw plugin teardown, or model process control.'
 
+const STANDARD_PRESET_PATHS = [
+  'packages/preset/agent-presets/presets/standard',
+  'apps/cli/config/agent-presets/standard',
+]
+
+function standardPresetAt(root) {
+  return STANDARD_PRESET_PATHS
+    .map(relative => join(root, relative))
+    .find(path => existsSync(join(path, 'agent.cordis.yml')) && existsSync(join(path, 'preset.yml')))
+}
+
 function isHarnessRoot(path) {
   return existsSync(join(path, 'apps/cli/src/bin.ts'))
-    && existsSync(join(path, 'apps/cli/config/agent-presets/standard/agent.cordis.yml'))
+    && standardPresetAt(path) !== undefined
     && existsSync(join(path, 'tools/dshx/src/cli.ts'))
 }
 
@@ -184,7 +195,8 @@ export function installCreatorPlus(options = {}) {
     throw new Error(`Creator Mode+ already exists at ${target}; refusing to overwrite a user preset (pass --upgrade to replace only managed skill/metadata assets)`)
   }
 
-  const source = join(harnessRoot, 'apps/cli/config/agent-presets/standard')
+  const source = standardPresetAt(harnessRoot)
+  if (source === undefined) throw new Error('no shipped Standard preset found in the DeepSeek Harness checkout')
   mkdirSync(root, { recursive: true })
   const temporaryRoot = mkdtempSync(join(root, '.creator-plus-install-'))
   const staging = join(temporaryRoot, 'creator-plus')

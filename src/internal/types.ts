@@ -50,6 +50,11 @@ export interface HostState {
   command: string[]
   ownership?: 'spawned' | 'adopted'
   launcherPid?: number
+  /** OS process birth token used to reject PID reuse before signaling. */
+  processStartedAt?: string
+  /** Canonical DSH_HOME and Harness root bound when this Host was discovered. */
+  home?: string
+  hostRoot?: string
 }
 
 export interface CliOptions {
@@ -73,7 +78,7 @@ export interface CliOptions {
   pluginSources?: string[]
 }
 
-export const DSHX_VERSION = '0.7.4'
+export const DSHX_VERSION = '0.7.5'
 export const DEFAULT_PORT = 3080
 export const DEFAULT_TIMEOUT_MS = 60_000
 export const DEFAULT_PROFILE: ProfileName = 'web'

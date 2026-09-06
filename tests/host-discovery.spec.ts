@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { join } from 'node:path'
 import { describe, it } from 'node:test'
-import { discoverWebHosts, parseWebProcessTable } from '../src/internal/host-discovery.ts'
+import { assertNoAffectedWebHosts, discoverWebHosts, parseWebProcessTable } from '../src/internal/host-discovery.ts'
 
 const root = '/work/deepseek-harness'
 const source = join(root, 'apps/cli/src/bin.ts')
@@ -55,6 +55,7 @@ describe('Web Host discovery', () => {
         : pid === 202
           ? { ok: true, paths: ['/tmp/isolated/profiles/web/package.json'] }
           : { ok: false, paths: [] },
+      processStart: pid => ({ ok: true, text: `start-${pid}` }),
     })
     assert.equal(result.complete, true)
     assert.deepEqual(result.hosts.map(host => ({ pid: host.pid, home: host.home })), [
@@ -70,5 +71,31 @@ describe('Web Host discovery', () => {
     })
     assert.equal(result.complete, false)
     assert.match(result.reason ?? '', /EPERM/)
+  })
+
+  it('blocks update mutations for same-Home, same-root, and unproved Web Hosts', () => {
+    const home = '/Users/test/.dsh'
+    const cases = [
+      { command: `/other/apps/cli/src/bin.ts web --port 4001`, files: [`${home}/profiles/web/package.json`] },
+      { command: `${source} web --port 4002`, files: ['/other-home/profiles/web/package.json'] },
+      { command: '/usr/local/bin/dsh web --port 4003', files: [] },
+    ]
+    for (const [index, value] of cases.entries()) {
+      assert.throws(() => assertNoAffectedWebHosts(root, home, 'update apply', {
+        processTable: () => ({ ok: true, text: `${700 + index} 1 /opt/node ${value.command}` }),
+        openFiles: () => ({ ok: true, paths: value.files }),
+        processStart: pid => ({ ok: true, text: `start-${pid}` }),
+      }), /refusing update apply: affected or unproved live Web Host/)
+    }
+  })
+
+  it('allows a proved Web Host only when both its Home and Harness root differ', () => {
+    const result = assertNoAffectedWebHosts(root, '/Users/test/.dsh', 'update rollback', {
+      processTable: () => ({ ok: true, text: '800 1 /opt/node /other/apps/cli/src/bin.ts web --port 4004' }),
+      openFiles: () => ({ ok: true, paths: ['/other-home/profiles/web/package.json'] }),
+      processStart: () => ({ ok: true, text: 'start-800' }),
+    })
+    assert.equal(result.hosts[0]?.home, 'other')
+    assert.equal(result.hosts[0]?.root, 'other')
   })
 })

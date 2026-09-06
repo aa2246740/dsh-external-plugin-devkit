@@ -285,10 +285,13 @@ describe('Creator+ Guardian', () => {
     const result = await adoptOrArmCreatorHost(harness, context('session-a'), {
       portOpen: async () => true,
       ensureGuardian: async () => guardian,
+      processStart: () => ({ ok: true, text: 'creator-host-start' }),
     })
     assert.equal(result.adopted, true)
     assert.equal(result.host.pid, process.pid)
     assert.equal(readHostState(harness)?.ownership, 'adopted')
+    assert.equal(readHostState(harness)?.processStartedAt, 'creator-host-start')
+    assert.equal(readHostState(harness)?.hostRoot, harness)
     assert.equal(readGuardianControl(harness).enabled, true)
   })
 

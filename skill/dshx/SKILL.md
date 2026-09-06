@@ -49,6 +49,10 @@ For whole-plugin removal inside Creator Mode+, use only `dshx_remove_plugin` aft
 
 For an externally supervised Web bundle (`dsh.profile.bundles` / package `dsh.bundle`) whose package name is also its Loader id, use `dshx plugin remove <package> --profile web --port <current-web-port>`. This is not the Creator watched-row remover. It writes or resumes one exact live `disabled: true` tombstone, proves the current `__DSH_BOOT__` no longer names the package on the same PID, then runs the official profile remover and verifies dependency/bundle/link absence. A bundle whose client-row id cannot be proved from the same-name live entry fails closed instead of guessing. The command also repairs the specific dependency-gone/bundle-leftover seam. Never delete package files first. While the old boot remains alive, a DSHX-owned disable is intentionally retained; after the user later reopens DSH.app normally, rerun the same command and it removes the tombstone only when process-start and profile-removal times prove the new Host booted from the clean profile. Already-open failed pages still require a hard refresh or new page. Do not restart DSH merely to clean the tombstone.
 
+## Authenticated Host proof
+
+Creator+ obtains current-Host authentication through the official Connection service and keeps credentials inside the bridge. `WEB_AUTH_REQUIRED` is a bridge/launcher authentication blocker, not proof that the plugin is broken. Preserve source and the claim, report the exact blocker, and retry the fixed tool after the bridge is repaired. Keep Host authentication enabled; never ask for a token in chat or scan credential stores/logs. External DSHX launchers can pass `DSHX_WEB_STARTUP_URL` privately for the selected loopback Host. Activation success still requires a page reload for a new client, then a real user workflow before claiming delivery.
+
 ## Resolve the checkout
 
 The CLI requires one DeepSeek Harness checkout containing both `apps/cli/src/bin.ts` and `tools/dshx/src/cli.ts`.
@@ -164,6 +168,11 @@ For a watched-row removal request inside Creator Mode+, replace activation steps
   ports. Attach to the user's App/CLI Host; use a temporary Home for verification.
 - Treat PID/port access denial or timeout as unknown and fail closed. Only
   `ESRCH` proves a PID dead and only `ECONNREFUSED` proves a port closed.
+- Same-Home start, restart, apply, and rollback share an identity-bound operation
+  lock. A lock whose owner is proven dead or PID-reused is reported as stale but
+  is not auto-deleted; an external supervisor must inspect that exact lock and
+  confirm no operation or Host remains before removing it. Unknown owner identity
+  is never a cleanup signal.
 - A raw `dshx` process launched by a DSH-managed shell (`DSH_SHELL=1`) is still inside the Host boundary. DSHX rejects its mutating/process commands; use the fixed Creator+ tools or an external terminal. Never unset managed environment markers to bypass this guard.
 - Creator-scoped bash rejects teardown of the claimed plugin root, its Harness link, or the active DSH profile. This is a final routing decision to `dshx_remove_plugin`, not an invitation to encode the deletion through Node, Python, or another shell.
 - A fixed-tool `outside bridge v2` rejection is a bridge defect, not a supervisor denial. Stop at that tool; do not substitute manual profile installation or report downstream success.

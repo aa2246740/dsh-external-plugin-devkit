@@ -32,14 +32,17 @@ function temporaryDirectory(label: string): string {
   return path
 }
 
-function harnessAt(root: string): string {
+function harnessAt(root: string, presetLayout: 'legacy' | 'rc1' = 'legacy'): string {
+  const standard = presetLayout === 'rc1'
+    ? join(root, 'packages/preset/agent-presets/presets/standard')
+    : join(root, 'apps/cli/config/agent-presets/standard')
   mkdirSync(join(root, 'apps/cli/src'), { recursive: true })
-  mkdirSync(join(root, 'apps/cli/config/agent-presets/standard'), { recursive: true })
+  mkdirSync(standard, { recursive: true })
   mkdirSync(join(root, 'tools/dshx/src'), { recursive: true })
   writeFileSync(join(root, 'apps/cli/src/bin.ts'), '')
   writeFileSync(join(root, 'tools/dshx/src/cli.ts'), '')
-  writeFileSync(join(root, 'apps/cli/config/agent-presets/standard/preset.yml'), 'name: Standard\n')
-  writeFileSync(join(root, 'apps/cli/config/agent-presets/standard/agent.cordis.yml'), `# The \`standard\` agent preset: the full coding agent, mounted once per process.
+  writeFileSync(join(standard, 'preset.yml'), 'name: Standard\n')
+  writeFileSync(join(standard, 'agent.cordis.yml'), `# The \`standard\` agent preset: the full coding agent, mounted once per process.
 - id: persona
   name: '@deepseek-ai/dsh-persona'
   config:
@@ -402,6 +405,18 @@ describe('Creator Mode+ bridge', () => {
     assert.throws(() => installCreatorPlus({ harnessRoot, dshHome }), /refusing to overwrite/)
   })
 
+  it('installs and upgrades from the RC1 Standard preset location', () => {
+    const harnessRoot = harnessAt(temporaryDirectory('dshx-creator-rc1-harness-'), 'rc1')
+    const dshHome = temporaryDirectory('dshx-creator-rc1-home-')
+    const source = join(harnessRoot, 'packages/preset/agent-presets/presets/standard/agent.cordis.yml')
+    const before = readFileSync(source, 'utf8')
+
+    const target = installCreatorPlus({ harnessRoot, dshHome })
+    assert.equal(installCreatorPlus({ harnessRoot, dshHome, upgrade: true }), target)
+    assert.equal(readFileSync(source, 'utf8'), before)
+    assert.match(readFileSync(join(target, 'agent.cordis.yml'), 'utf8'), /You are Creator Mode\+/)
+  })
+
   it('upgrades only Creator Mode+ managed assets and preserves the user composition', () => {
     const harnessRoot = harnessAt(temporaryDirectory('dshx-creator-upgrade-harness-'))
     const dshHome = temporaryDirectory('dshx-creator-upgrade-home-')
@@ -425,8 +440,8 @@ describe('Creator Mode+ bridge', () => {
     assert.match(readFileSync(compositionPath, 'utf8'), /one long-lived Web Host per DSH_HOME/)
     assert.doesNotMatch(readFileSync(compositionPath, 'utf8'), /six-tool DSHX v0\.7 fixed bridge/)
     assert.match(readFileSync(skillPath, 'utf8'), /dshx_activate_new_client/)
-    assert.match(readFileSync(skillPath, 'utf8'), />=0\.7\.4 <0\.8\.0/)
-    assert.match(readFileSync(join(target, 'preset.yml'), 'utf8'), /单 Home 单 Web Host.*会话认领.*外部 Guardian/)
+    assert.match(readFileSync(skillPath, 'utf8'), />=0\.7\.5 <0\.8\.0/)
+    assert.match(readFileSync(join(target, 'preset.yml'), 'utf8'), /原子同 Home 单 Web Host.*会话认领.*外部 Guardian/)
   })
 
   it('keeps the composition stamp stable when an upgrade changes only managed assets', () => {

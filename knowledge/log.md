@@ -1,5 +1,9 @@
 # Directory Update Log
 
+## 2026-09-06
+
+* **0.7.5 RC1 lifecycle repair**: Creator+ passes official Connection authentication privately to origin-bound Host proofs; authentication failures stop before installation or patch mutation. Fresh commented `[]` patches now become valid YAML with comments preserved, and unsupported appends fail before writes. The installer discovers RC1's relocated shipped Standard preset. Combined with the identity-bound single-Home gates, these changes improve safe plugin delivery, not a guarantee of autonomous plugin correctness. Runtime activation, rendered UI, and a plugin's actual behavior still require separate acceptance.
+
 ## 2026-09-04
 
 * **RC1 candidate Web gates (compat/dsh-0.1.2-rc.1)**: `verify-boot` now follows the official startup-token → local-cookie flow before reading RC1's `globalThis["__DSH_BOOT__"]` and its protected client bundle. `update verify` adds a clean vanilla Web cold boot and an all-plugin combined Web graph after the per-plugin matrix; `apply` refuses unless both gates and every plugin proof pass. The candidate state records graph/bundle evidence and preserves the temporary Home only when its Host cannot be proved stopped.
@@ -12,6 +16,7 @@
 ## 2026-08-24
 
 * **Single-Home Host ownership (0.7.4)**: App, direct CLI, and dshx are launchers for one long-lived Web Host per real `DSH_HOME`. `start` discovers and attaches instead of spawning another port, duplicates/unknown visibility fail closed, and EPERM is no longer false death. `verify-boot` now runs in a temporary Home and always tears it down; `--keep` is rejected.
+* **Atomic Host identity gate (0.7.5)**: same-Home start/restart/update operations share a cross-checkout lock and bind PID, OS start time, Home, profile, and Harness root before attach, signal, apply, or rollback. A proven-dead/PID-reused stale lock is distinguished from unknown ownership but remains fail-closed; inspect the exact lock and prove no operation or Host remains before an external supervisor removes it.
 * **Harness update assistant and RC2 native client proof (0.7.0)**: added read-only release planning, isolated Harness/plugin preparation, resumable per-plugin verification, transactional apply, and exact rollback. Web client plugins now link into the selected profile and load by package name, matching RC2 client discovery; `verify-boot` proves the active boot-graph row and served client bundle instead of waiting for suppressed `ctx.logger.info` output. The first real update moved the local Harness to official `dsh-v0.1.1-rc.2`; a combined cold boot loaded 13 Host plugins and 11 Web clients with no page, console, or request failures.
 
 ## 2026-08-21

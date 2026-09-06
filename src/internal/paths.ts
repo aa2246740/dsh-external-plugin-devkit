@@ -186,6 +186,11 @@ export function lastHostPath(root: string): string {
   return join(stateDir(root), 'last-host.json')
 }
 
+/** Shared by separate Harness checkouts that target the same real DSH_HOME. */
+export function webHostOperationLockPath(home: string): string {
+  return join(home, '.dshx', 'web-host-operation.lock')
+}
+
 export function overlayPath(root: string, id: string): string {
   return join(stateDir(root), 'overlays', `${id}.yml`)
 }

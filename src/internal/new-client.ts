@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto'
+import { createWebProofRequest, WebProofAuthError } from './web-proof-auth.ts'
 import {
   existsSync,
   chmodSync,
@@ -148,8 +149,18 @@ export function planWatchedPatch(current: string | undefined, id: string, packag
     throw new Error('watched cordis.patch.yml uses an explicit document terminator; refusing an unsafe text append')
   }
   const insertion = `- insert:\n    - id: ${yamlScalar(id)}\n      name: ${yamlScalar(packageName)}\n`
-  if (source.trim() === '' || source.trim() === '[]') return { action: 'inserted', after: insertion }
-  return { action: 'inserted', after: `${source.trimEnd()}\n${insertion}` }
+  // Official fresh profiles contain comments followed by [], not bare [].
+  // Replace the empty collection token while retaining the surrounding comments.
+  const prefix = patches.length === 0
+    ? source.replace(/^([ \t]*)\[[ \t]*\]([ \t]*(?:#[^\r\n]*)?)\r?$/m, '$1$2')
+    : source
+  const after = prefix.trim() === '' ? insertion : `${prefix.trimEnd()}\n${insertion}`
+  try {
+    parsePatchList(after)
+  } catch {
+    throw new Error('watched patch insertion would produce invalid YAML; source preserved and no live mutation performed')
+  }
+  return { action: 'inserted', after }
 }
 
 /**
@@ -284,13 +295,14 @@ function delay(ms: number): Promise<void> {
 
 /** Poll only the loopback Web Host and prove both its graph row and served client artifact. */
 export async function verifyClientInHostManifest(id: string, port: number, timeoutMs: number): Promise<HostManifestProof> {
+  const request = createWebProofRequest(port)
   const manifestUrl = `http://127.0.0.1:${port}/`
   const deadline = Date.now() + timeoutMs
   let last = 'Host did not respond'
   do {
     try {
       const remaining = Math.max(1, deadline - Date.now())
-      const response = await fetch(manifestUrl, { signal: AbortSignal.timeout(Math.min(remaining, 2_000)) })
+      const response = await request(manifestUrl, { signal: AbortSignal.timeout(Math.min(remaining, 2_000)) })
       if (!response.ok) {
         last = `Host returned HTTP ${response.status}`
       } else {
@@ -298,7 +310,7 @@ export async function verifyClientInHostManifest(id: string, port: number, timeo
         const entry = boot.entries?.find(candidate => candidate.id === id)
         if (entry) {
           const clientUrl = new URL(entry.url, manifestUrl).href
-          const client = await fetch(clientUrl, { signal: AbortSignal.timeout(Math.min(remaining, 2_000)) })
+          const client = await request(clientUrl, { signal: AbortSignal.timeout(Math.min(remaining, 2_000)) })
           if (!client.ok) {
             last = `client entry ${id} returned HTTP ${client.status}`
           } else {
@@ -314,6 +326,7 @@ export async function verifyClientInHostManifest(id: string, port: number, timeo
         }
       }
     } catch (error) {
+      if (error instanceof WebProofAuthError) throw error
       last = error instanceof Error ? error.message : String(error)
     }
     if (Date.now() < deadline) await delay(125)
@@ -323,17 +336,19 @@ export async function verifyClientInHostManifest(id: string, port: number, timeo
 
 /** Wait until the live Host graph no longer serves one quarantined client entry. */
 export async function waitForClientAbsent(id: string, port: number, timeoutMs: number): Promise<boolean> {
+  const request = createWebProofRequest(port)
   const manifestUrl = `http://127.0.0.1:${port}/`
   const deadline = Date.now() + timeoutMs
   do {
     try {
       const remaining = Math.max(1, deadline - Date.now())
-      const response = await fetch(manifestUrl, { signal: AbortSignal.timeout(Math.min(remaining, 2_000)) })
+      const response = await request(manifestUrl, { signal: AbortSignal.timeout(Math.min(remaining, 2_000)) })
       if (response.ok) {
         const boot = parseBootManifest(await response.text())
         if (!boot.entries?.some(candidate => candidate.id === id)) return true
       }
-    } catch {
+    } catch (error) {
+      if (error instanceof WebProofAuthError) throw error
       // Keep polling: a page reload is safe only after a healthy Host proves absence.
     }
     if (Date.now() < deadline) await delay(125)
@@ -394,6 +409,14 @@ export async function activateNewClient(
   }
 
   const clientEntry = clientExportPath(sourcePackage)
+  // Prove access before package installation or live patch mutation.
+  if (!dependencies.verifyHost) {
+    const response = await createWebProofRequest(port)(`http://127.0.0.1:${port}/`, {
+      signal: AbortSignal.timeout(Math.min(timeoutMs, 2_000)),
+    })
+    await response.body?.cancel()
+    if (!response.ok) throw new Error(`Host proof preflight returned HTTP ${response.status}`)
+  }
   let linkAction: NewClientActivationResult['linkAction'] = 'already-linked'
   if (!beforeSpec?.startsWith('link:') || !installedLinkIsReady(prof, packageName, plugin.dir, clientEntry)) {
     const install = dependencies.installLink ?? ((input: { root: string; profile: ProfileName; packageDir: string; timeoutMs: number }) => (

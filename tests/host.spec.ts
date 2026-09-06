@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict'
-import { mkdtempSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, realpathSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, it } from 'node:test'
 import { cmdRestart, cmdStop, cmdVerify } from '../src/commands/host.ts'
-import { dshHostArgs, pidAlive, probePid, probePort, startHost, writeHostState } from '../src/internal/host.ts'
+import { acquireWebHostOperationLock, dshHostArgs, pidAlive, probePid, probePort, startHost, stopHost, writeHostState } from '../src/internal/host.ts'
 import { parseCli, writeText } from '../src/internal/io.ts'
+import { webHostOperationLockPath } from '../src/internal/paths.ts'
 
 async function silence<T>(run: () => Promise<T>): Promise<T> {
   const write = process.stdout.write.bind(process.stdout)
@@ -66,6 +67,62 @@ describe('startHost', () => {
     assert.equal(probePid(123, signal), 'unknown')
     const request = (async () => { throw Object.assign(new Error('denied'), { cause: denied }) }) as typeof fetch
     assert.equal(await probePort(43127, '127.0.0.1', request), 'unknown')
+  })
+
+  it('publishes and releases one same-Home operation lock without partial contents', () => {
+    const root = mkdtempSync(join(tmpdir(), 'dshx-host-'))
+    const home = join(root, 'home')
+    const dependencies = {
+      processStart: (pid: number) => ({ ok: true, text: `start-${pid}` }),
+      processProbe: () => 'alive' as const,
+    }
+    const release = acquireWebHostOperationLock(home, root, 5_000, dependencies)
+    const path = webHostOperationLockPath(home)
+    const payload = JSON.parse(readFileSync(path, 'utf8')) as { pid: number; processStartedAt: string; home: string; root: string }
+    assert.equal(payload.pid, process.pid)
+    assert.ok(payload.processStartedAt)
+    assert.equal(payload.home, realpathSync(home))
+    assert.equal(payload.root, realpathSync(root))
+    assert.throws(() => acquireWebHostOperationLock(home, root, 30, dependencies), /timed out waiting/)
+    release()
+    assert.equal(existsSync(path), false)
+  })
+
+  it('fails closed and preserves a stale operation lock instead of racing to unlink it', () => {
+    const root = mkdtempSync(join(tmpdir(), 'dshx-host-'))
+    const home = join(root, 'home')
+    const path = webHostOperationLockPath(home)
+    writeText(path, `${JSON.stringify({
+      schemaVersion: 1,
+      token: 'stale',
+      pid: 987_654,
+      processStartedAt: 'old',
+      home,
+      profile: 'web',
+      root,
+      createdAt: new Date(0).toISOString(),
+    })}\n`)
+    assert.throws(() => acquireWebHostOperationLock(home, root, 30, {
+      processStart: pid => ({ ok: true, text: `start-${pid}` }),
+      processProbe: () => 'dead',
+    }), /stale lock owner pid 987654 is dead/)
+    assert.equal(existsSync(path), true)
+  })
+
+  it('refuses to signal a saved PID without the full Host binding', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'dshx-host-'))
+    writeHostState(root, {
+      pid: process.pid,
+      profile: 'web',
+      port: 3091,
+      overlay: '',
+      logFile: join(root, '.dshx/logs/web.log'),
+      startedAt: new Date().toISOString(),
+      command: ['node'],
+      ownership: 'spawned',
+    })
+    await assert.rejects(() => stopHost(root), /lacks process start time, DSH_HOME, or Harness root/)
+    assert.equal(pidAlive(process.pid), true)
   })
 
   it('restart-supervised does not resurrect stale last-host state', async () => {

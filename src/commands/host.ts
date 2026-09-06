@@ -2,8 +2,8 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { dshEnv, dumpConfig, parseDumpEntries } from '../internal/dsh.ts'
-import { discoverWebHosts } from '../internal/host-discovery.ts'
-import { currentHost, followLog, logContains, probePid, probePort, readLastHost, readLogTail, startHost, startTransientHost, stopHost, stopTransientHost, waitForHttp, waitForLog, writeHostState } from '../internal/host.ts'
+import { discoverWebHosts, type DiscoveredWebHost } from '../internal/host-discovery.ts'
+import { acquireWebHostOperationLock, clearHostState, currentHost, followLog, logContains, probePid, probePort, readLastHost, readLogTail, startHost, startTransientHost, stopHost, stopTransientHost, waitForHttp, waitForLog, writeHostState } from '../internal/host.ts'
 import { armGuardian, disarmGuardian, ensureGuardian, guardianCreatorSnapshot } from '../internal/guardian.ts'
 import { finding, printReport, report } from '../internal/io.ts'
 import { writeOverlay } from '../internal/overlay.ts'
@@ -31,14 +31,44 @@ function hostList(hosts: readonly { pid: number; port: number }[]): string {
   return hosts.map(host => `pid ${host.pid} on 127.0.0.1:${host.port}`).join(', ')
 }
 
-export async function cmdStart(args: string[], options: CliOptions, root: string): Promise<number> {
+function incompleteIdentity(host: DiscoveredWebHost): boolean {
+  return host.home === 'unknown' || host.root === 'unknown' || !host.processStartedAt
+}
+
+async function proveSpawnedWebHost(root: string, home: string, state: ReturnType<typeof startHost>, timeoutMs: number): Promise<void> {
+  const deadline = Date.now() + Math.max(500, Math.min(timeoutMs, 5_000))
+  let last = 'spawned Host was not visible in the process table'
+  while (Date.now() <= deadline) {
+    const discovery = discoverWebHosts(root, home)
+    if (!discovery.complete) throw new Error(`spawned Host binding is unknown: ${discovery.reason ?? 'process discovery failed'}`)
+    const unsafeOther = discovery.hosts.filter(host => host.pid !== state.pid
+      && (host.home !== 'other' || host.root === 'unknown' || !host.processStartedAt))
+    if (unsafeOther.length > 0) {
+      throw new Error(`spawned Host collided with another same-Home or unproved Web Host: ${hostList(unsafeOther)}`)
+    }
+    const observed = discovery.hosts.find(host => host.pid === state.pid)
+    if (observed) {
+      if (observed.home === 'same' && observed.root === 'same'
+        && observed.profile === 'web' && observed.port === state.port
+        && observed.processStartedAt === state.processStartedAt) return
+      last = `pid ${state.pid} identity is incomplete or mismatched (start=${observed.processStartedAt ?? 'unknown'} home=${observed.home} root=${observed.root} profile=${observed.profile} port=${observed.port})`
+    }
+    if (probePid(state.pid) === 'dead') throw new Error(`spawned Host pid ${state.pid} exited before identity binding`)
+    await new Promise(resolve => setTimeout(resolve, 50))
+  }
+  throw new Error(`could not bind spawned Web Host: ${last}`)
+}
+
+export async function cmdStart(args: string[], options: CliOptions, root: string, webLockHeld = false): Promise<number> {
   const { profile, pluginArg, rest } = resolveProfile(args, options)
+  let releaseWebLock: (() => void) | undefined
   try {
-    const supervised = currentHost(root)
     const home = resolveDshHome(dshEnv(root))
+    if (profile === 'web' && !webLockHeld) releaseWebLock = acquireWebHostOperationLock(home, root)
+    const supervised = currentHost(root)
     const discovery = profile === 'web' ? discoverWebHosts(root, home) : undefined
     const sameHome = discovery?.hosts.filter(host => host.home === 'same') ?? []
-    const uncertain = discovery?.hosts.filter(host => host.home === 'unknown') ?? []
+    const uncertain = discovery?.hosts.filter(incompleteIdentity) ?? []
     if (discovery?.complete && (sameHome.length > 1 || (supervised && sameHome.some(host => host.pid !== supervised.pid)))) {
       printReport(report('start', [finding('error', 'shared-home-collision', `multiple Web Hosts use the same DSH_HOME: ${hostList(sameHome)}`, {
         hint: 'do not start or restart another Host. Keep one user Host; cold-boot proof belongs in verify-boot\'s temporary DSH_HOME',
@@ -46,8 +76,8 @@ export async function cmdStart(args: string[], options: CliOptions, root: string
       return 1
     }
     if (discovery?.complete && uncertain.length > 0) {
-      printReport(report('start', [finding('error', 'host-home-unknown', `found Web Host process(es) whose DSH_HOME cannot be proved: ${hostList(uncertain)}`, {
-        hint: 'DSHX fails closed instead of assuming another port is isolated. Use status from an external terminal or verify-boot for an isolated proof',
+      printReport(report('start', [finding('error', 'host-identity-unknown', `found Web Host process(es) whose start time, DSH_HOME, or Harness root cannot be proved: ${hostList(uncertain)}`, {
+        hint: 'DSHX fails closed instead of treating a port as Host identity. Use status from an external terminal or verify-boot for an isolated proof',
       })], { home, discovery }), options.json)
       return 1
     }
@@ -55,6 +85,9 @@ export async function cmdStart(args: string[], options: CliOptions, root: string
       && (!supervised || (supervised.ownership === 'adopted' && supervised.pid === sameHome[0]!.pid))) {
       const observed = sameHome[0]!
       const alreadyAttached = supervised?.ownership === 'adopted' && supervised.pid === observed.pid
+        && supervised.processStartedAt === observed.processStartedAt
+        && supervised.home === home
+        && supervised.hostRoot === observed.rootPath
       const attached = alreadyAttached ? supervised : {
         pid: observed.pid,
         profile: 'web' as const,
@@ -64,6 +97,9 @@ export async function cmdStart(args: string[], options: CliOptions, root: string
         startedAt: new Date().toISOString(),
         command: [],
         ownership: 'adopted' as const,
+        processStartedAt: observed.processStartedAt,
+        home,
+        hostRoot: observed.rootPath,
       }
       if (!alreadyAttached) writeHostState(root, attached)
       const findings = [
@@ -117,6 +153,15 @@ export async function cmdStart(args: string[], options: CliOptions, root: string
     }
     const { plugin, overlay } = preparePlugin(root, pluginArg, profile)
     const state = startHost(root, { profile, port: options.port, overlay, plugin: plugin?.id })
+    if (profile === 'web') {
+      try {
+        await proveSpawnedWebHost(root, home, state, options.timeoutMs)
+      } catch (error) {
+        await stopTransientHost(state)
+        clearHostState(root)
+        throw error
+      }
+    }
     armGuardian(root, state)
     try {
       await ensureGuardian(root)
@@ -134,29 +179,42 @@ export async function cmdStart(args: string[], options: CliOptions, root: string
   } catch (error) {
     printReport(report('start', [finding('error', 'start', error instanceof Error ? error.message : String(error))]), options.json)
     return 1
+  } finally {
+    releaseWebLock?.()
   }
 }
 
 export async function cmdStop(_args: string[], options: CliOptions, root: string): Promise<number> {
-  const live = currentHost(root)
+  let live = currentHost(root)
   if (live?.ownership === 'adopted') {
     printReport(report('stop', [finding('error', 'adopted-host', `refusing to stop adopted Host pid ${live.pid}`, {
       hint: 'this process belongs to the official launcher or App shell. stop that launcher itself; dshx Guardian may recover it only after a detected failure',
     })]), options.json)
     return 1
   }
-  disarmGuardian(root, Date.now(), 15_000)
-  const state = await stopHost(root)
-  if (!state) {
-    printReport(report('stop', [finding('info', 'idle', 'no supervised host')]), options.json)
+  const home = resolveDshHome(dshEnv(root))
+  const release = live?.profile === 'web' ? acquireWebHostOperationLock(home, root) : undefined
+  try {
+    live = currentHost(root)
+    if (live?.ownership === 'adopted') {
+      printReport(report('stop', [finding('error', 'adopted-host', `refusing to stop adopted Host pid ${live.pid}`)]), options.json)
+      return 1
+    }
+    disarmGuardian(root, Date.now(), 15_000)
+    const state = await stopHost(root)
+    if (!state) {
+      printReport(report('stop', [finding('info', 'idle', 'no supervised host')]), options.json)
+      return 0
+    }
+    if (!live) {
+      printReport(report('stop', [finding('info', 'already-exited', `pid ${state.pid} already gone; cleared supervisor state`)]), options.json)
+      return 0
+    }
+    printReport(report('stop', [finding('ok', 'stopped', `signaled pid ${state.pid}`)]), options.json)
     return 0
+  } finally {
+    release?.()
   }
-  if (!live) {
-    printReport(report('stop', [finding('info', 'already-exited', `pid ${state.pid} already gone; cleared supervisor state`)]), options.json)
-    return 0
-  }
-  printReport(report('stop', [finding('ok', 'stopped', `signaled pid ${state.pid}`)]), options.json)
-  return 0
 }
 
 export async function cmdRestart(args: string[], options: CliOptions, root: string): Promise<number> {
@@ -186,24 +244,39 @@ export async function cmdRestart(args: string[], options: CliOptions, root: stri
     return 1
   }
   const home = resolveDshHome(dshEnv(root))
-  const discovery = discoverWebHosts(root, home)
-  const conflicts = discovery.hosts.filter(host => host.home === 'unknown' || (host.home === 'same' && host.pid !== live.pid))
-  if (!discovery.complete || conflicts.length > 0) {
-    printReport(report('restart-supervised', [finding('error', 'shared-home-unproven', !discovery.complete
-      ? discovery.reason ?? 'cannot inspect running Web Hosts'
-      : `another Web Host may share this DSH_HOME: ${hostList(conflicts)}`, {
-      hint: 'restart is refused before stopping the owned Host; leave the current PID untouched and resolve the duplicate/unknown Host first',
-    })], { home, discovery }), options.json)
-    return 1
+  const release = acquireWebHostOperationLock(home, root)
+  try {
+    const discovery = discoverWebHosts(root, home)
+    const observed = discovery.hosts.find(host => host.pid === live.pid)
+    const conflicts = discovery.hosts.filter(host => incompleteIdentity(host)
+      || (host.home === 'same' && host.pid !== live.pid))
+    const bindingMismatch = !observed
+      || observed.home !== 'same'
+      || observed.root !== 'same'
+      || observed.profile !== live.profile
+      || observed.port !== live.port
+      || observed.processStartedAt !== live.processStartedAt
+    if (!discovery.complete || conflicts.length > 0 || bindingMismatch) {
+      printReport(report('restart-supervised', [finding('error', 'shared-home-unproven', !discovery.complete
+        ? discovery.reason ?? 'cannot inspect running Web Hosts'
+        : bindingMismatch
+          ? `saved Host identity does not match pid ${live.pid}; refusing to signal it`
+          : `another Web Host may share this DSH_HOME: ${hostList(conflicts)}`, {
+        hint: 'restart is refused before stopping the owned Host; leave the current PID untouched and resolve the duplicate/unknown Host first',
+      })], { home, discovery }), options.json)
+      return 1
+    }
+    disarmGuardian(root, Date.now(), 15_000)
+    const stopped = await stopHost(root)
+    printReport(report('restart-supervised', [
+      finding('ok', 'stopped', `signaled owned pid ${stopped?.pid ?? live.pid}; starting the same target again`),
+    ]), options.json)
+    const nextOptions = { ...options, profile: live.profile, port: live.port }
+    const nextArgs = live.plugin ? [live.profile, live.plugin] : [live.profile]
+    return await cmdStart(nextArgs, nextOptions, root, true)
+  } finally {
+    release()
   }
-  disarmGuardian(root, Date.now(), 15_000)
-  const stopped = await stopHost(root)
-  printReport(report('restart-supervised', [
-    finding('ok', 'stopped', `signaled owned pid ${stopped?.pid ?? live.pid}; starting the same target again`),
-  ]), options.json)
-  const nextOptions = { ...options, profile: live.profile, port: live.port }
-  const nextArgs = live.plugin ? [live.profile, live.plugin] : [live.profile]
-  return cmdStart(nextArgs, nextOptions, root)
 }
 
 export async function cmdStatus(_args: string[], options: CliOptions, root: string): Promise<number> {
@@ -251,11 +324,11 @@ export async function cmdStatus(_args: string[], options: CliOptions, root: stri
   const home = resolveDshHome(dshEnv(root))
   const discovery = discoverWebHosts(root, home)
   const sameHome = discovery.hosts.filter(host => host.home === 'same')
-  const uncertain = discovery.hosts.filter(host => host.home === 'unknown')
+  const uncertain = discovery.hosts.filter(incompleteIdentity)
   if (!discovery.complete) findings.push(finding('warn', 'host-discovery-unknown', discovery.reason ?? 'cannot inspect Web Host processes'))
   if (sameHome.length > 1) findings.push(finding('error', 'shared-home-collision', `multiple Web Hosts use the same DSH_HOME: ${hostList(sameHome)}`))
   else if (sameHome.length === 1 && state?.pid !== sameHome[0]!.pid) findings.push(finding('warn', 'external-host', `existing App/CLI Web Host uses this DSH_HOME: ${hostList(sameHome)}`))
-  if (uncertain.length > 0) findings.push(finding('warn', 'host-home-unknown', `Web Host home could not be proved: ${hostList(uncertain)}`))
+  if (uncertain.length > 0) findings.push(finding('warn', 'host-identity-unknown', `Web Host start time, home, or root could not be proved: ${hostList(uncertain)}`))
   const creator = guardianCreatorSnapshot(root)
   findings.push(creator.guardian.running
     ? finding('ok', 'guardian', `external Guardian pid ${creator.guardian.state?.pid ?? '(unknown)'}`)

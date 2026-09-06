@@ -1,11 +1,13 @@
 import { spawn } from 'node:child_process'
-import { closeSync, createReadStream, existsSync, openSync, readFileSync } from 'node:fs'
+import { randomUUID } from 'node:crypto'
+import { closeSync, createReadStream, existsSync, linkSync, mkdirSync, openSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { createInterface } from 'node:readline'
 import { dshBin, dshEnv } from './dsh.ts'
+import { readProcessStartTime } from './host-discovery.ts'
 import { ensureDir, loadJson, writeText } from './io.ts'
-import { hostLogPath, hostStatePath, lastHostPath } from './paths.ts'
+import { hostLogPath, hostStatePath, lastHostPath, resolveDshHome, webHostOperationLockPath } from './paths.ts'
 import type { HostState, ProfileName } from './types.ts'
-import { dirname } from 'node:path'
+import { dirname, resolve } from 'node:path'
 
 export function readHostState(root: string): HostState | undefined {
   const path = hostStatePath(root)
@@ -82,8 +84,107 @@ export async function portOpen(port: number, host = '127.0.0.1'): Promise<boolea
 export function currentHost(root: string): HostState | undefined {
   const state = readHostState(root)
   if (!state?.pid) return undefined
-  if (!pidAlive(state.pid)) return undefined
+  if (probePid(state.pid) === 'dead') return undefined
+  if (state.processStartedAt) {
+    const observed = readProcessStartTime(state.pid)
+    if (observed.ok && observed.text !== state.processStartedAt) return undefined
+  }
   return state
+}
+
+interface WebHostOperationLock {
+  schemaVersion: 1
+  token: string
+  pid: number
+  processStartedAt: string
+  home: string
+  profile: 'web'
+  root: string
+  createdAt: string
+}
+
+const hostLockSleepCell = new Int32Array(new SharedArrayBuffer(4))
+
+function canonical(path: string): string {
+  return existsSync(path) ? realpathSync(path) : resolve(path)
+}
+
+function readWebHostLock(path: string): WebHostOperationLock | undefined {
+  try {
+    const value = JSON.parse(readFileSync(path, 'utf8')) as Partial<WebHostOperationLock>
+    if (value.schemaVersion !== 1 || typeof value.token !== 'string' || !Number.isInteger(value.pid)
+      || typeof value.processStartedAt !== 'string' || typeof value.home !== 'string'
+      || value.profile !== 'web' || typeof value.root !== 'string') return undefined
+    return value as WebHostOperationLock
+  } catch {
+    return undefined
+  }
+}
+
+function removeWebHostLockIfToken(path: string, token: string): boolean {
+  const current = readWebHostLock(path)
+  if (current?.token !== token) return false
+  rmSync(path, { force: true })
+  return true
+}
+
+/** Serialize discover/attach/spawn and update gates across all same-Home checkouts. */
+export function acquireWebHostOperationLock(
+  home: string,
+  root: string,
+  waitMs = 5_000,
+  dependencies: { processStart?: typeof readProcessStartTime; processProbe?: typeof probePid } = {},
+): () => void {
+  const path = webHostOperationLockPath(home)
+  const parent = dirname(path)
+  mkdirSync(parent, { recursive: true })
+  const readStart = dependencies.processStart ?? readProcessStartTime
+  const inspectPid = dependencies.processProbe ?? probePid
+  const started = readStart(process.pid)
+  if (!started.ok) throw new Error(started.reason ?? 'cannot bind the Web Host operation lock to this process')
+  const lock: WebHostOperationLock = {
+    schemaVersion: 1,
+    token: randomUUID(),
+    pid: process.pid,
+    processStartedAt: started.text,
+    home: canonical(home),
+    profile: 'web',
+    root: canonical(root),
+    createdAt: new Date().toISOString(),
+  }
+  // Publish a fully written inode with link(2). Another process can therefore
+  // never observe the open('wx') -> write gap as a corrupt lock.
+  const ownerPath = `${path}.${lock.token}.owner`
+  writeFileSync(ownerPath, `${JSON.stringify(lock)}\n`, { flag: 'wx', mode: 0o600 })
+  const deadline = Date.now() + waitMs
+  try {
+    while (Date.now() <= deadline) {
+      try {
+        linkSync(ownerPath, path)
+        rmSync(ownerPath, { force: true })
+        return () => { removeWebHostLockIfToken(path, lock.token) }
+      } catch (error) {
+        const code = errorCode(error)
+        if (code !== 'EEXIST') throw error
+        const owner = readWebHostLock(path)
+        if (!owner) throw new Error(`refusing Web Host operation: lock identity is unreadable at ${path}`)
+        const state = inspectPid(owner.pid)
+        if (state === 'unknown') throw new Error(`refusing Web Host operation: cannot verify lock owner pid ${owner.pid}`)
+        if (state === 'dead') {
+          throw new Error(`refusing Web Host operation: stale lock owner pid ${owner.pid} is dead; inspect ${path} before removing it`)
+        }
+        const observed = readStart(owner.pid)
+        if (!observed.ok) throw new Error(`refusing Web Host operation: cannot verify lock owner start time for pid ${owner.pid}`)
+        if (observed.text !== owner.processStartedAt) {
+          throw new Error(`refusing Web Host operation: stale lock pid ${owner.pid} was reused; inspect ${path} before removing it`)
+        }
+        Atomics.wait(hostLockSleepCell, 0, 0, 25)
+      }
+    }
+    throw new Error(`timed out waiting for same-Home Web Host operation lock at ${path}`)
+  } finally {
+    rmSync(ownerPath, { force: true })
+  }
 }
 
 export interface StartSpec {
@@ -121,14 +222,20 @@ function spawnHost(root: string, spec: StartSpec): HostState {
   const { cmd, prefix } = dshBin(root)
   const args = [...prefix, ...dshHostArgs(spec)]
   const fd = openSync(logFile, 'a')
+  const env = spec.env ?? dshEnv(root)
   const child = spawn(cmd, args, {
     cwd: root,
-    env: spec.env ?? dshEnv(root),
+    env,
     detached: true,
     stdio: ['ignore', fd, fd],
   })
   closeSync(fd)
   if (child.pid === undefined) throw new Error('failed to spawn dsh')
+  const processStartedAt = readProcessStartTime(child.pid)
+  if (!processStartedAt.ok) {
+    try { child.kill('SIGTERM') } catch {}
+    throw new Error(processStartedAt.reason ?? `cannot bind spawned Host pid ${child.pid}`)
+  }
   child.unref()
   const state: HostState = {
     pid: child.pid,
@@ -140,6 +247,9 @@ function spawnHost(root: string, spec: StartSpec): HostState {
     startedAt: new Date().toISOString(),
     command: [cmd, ...args],
     ownership: 'spawned',
+    processStartedAt: processStartedAt.text,
+    home: canonical(resolveDshHome(env)),
+    hostRoot: canonical(root),
   }
   return state
 }
@@ -164,6 +274,9 @@ export function startHost(root: string, spec: StartSpec): HostState {
     ownership: state.ownership,
     logFile: state.logFile,
     startedAt: state.startedAt,
+    processStartedAt: state.processStartedAt,
+    home: state.home,
+    hostRoot: state.hostRoot,
   }, null, 2)}\n`)
   return state
 }
@@ -179,10 +292,23 @@ export function readLastHost(root: string): Pick<HostState, 'profile' | 'port' |
   }
 }
 
-async function stopPid(pid: number, timeoutMs: number): Promise<void> {
+function assertSignalIdentity(state: HostState): void {
+  if (!state.processStartedAt || !state.home || !state.hostRoot) {
+    throw new Error(`cannot signal pid ${state.pid}: saved Host identity lacks process start time, DSH_HOME, or Harness root`)
+  }
+  const observed = readProcessStartTime(state.pid)
+  if (!observed.ok) throw new Error(`cannot signal pid ${state.pid}: process start time is unavailable`)
+  if (observed.text !== state.processStartedAt) {
+    throw new Error(`cannot signal pid ${state.pid}: saved process start time no longer matches`)
+  }
+}
+
+async function stopPid(state: HostState, timeoutMs: number): Promise<void> {
+  const { pid } = state
   const initial = probePid(pid)
   if (initial === 'dead') return
   if (initial === 'unknown') throw new Error(`cannot verify pid ${pid}: process access denied; refusing to clear or signal it`)
+  assertSignalIdentity(state)
   try {
     process.kill(pid, 'SIGTERM')
   } catch (error) {
@@ -206,13 +332,13 @@ async function stopPid(pid: number, timeoutMs: number): Promise<void> {
 }
 
 export async function stopTransientHost(state: HostState, timeoutMs = 8000): Promise<void> {
-  await stopPid(state.pid, timeoutMs)
+  await stopPid(state, timeoutMs)
 }
 
 export async function stopHost(root: string, timeoutMs = 8000): Promise<HostState | undefined> {
   const state = readHostState(root)
   if (!state?.pid) return undefined
-  await stopPid(state.pid, timeoutMs)
+  await stopPid(state, timeoutMs)
   writeText(hostStatePath(root), '')
   return state
 }
