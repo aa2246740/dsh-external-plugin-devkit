@@ -13,9 +13,11 @@ description: >-
 
 # dshx
 
-Use `dshx` for profile-scoped, file-backed plugins developed by an external agent or through the optional Creator Mode+ safe bridge. The CLI and Guardian outside DSH are the supervisor; Creator Mode+ exposes seven fixed operations, including plugin claims, bounded new-client activation, and source-preserving safe removal, but never process control. Do not transfer the original Creator Mode's in-memory lifecycle assumptions to external packages.
+Use `dshx` for profile-scoped, file-backed plugins developed by an external agent or through the optional Creator Mode+ safe bridge. The CLI and Guardian outside DSH are the supervisor; the updated Creator Mode+ bridge exposes eight fixed operations, including plugin claims, bounded new-client activation, `dshx_hot_reload`, and source-preserving safe removal, but never process control. Require the matching bridge capability before using the new tool. Do not transfer the original Creator Mode's in-memory lifecycle assumptions to external packages.
 
-Use a **same-PID default** for plugin work. Select the branch by the runtime surface that must change, not by prerequisite files a command happens to write. A plain profile dependency provides module resolution; it is not manifest activation or restart evidence. A first Web client remains `new-client` even though `activate-new-client` writes its dependency link: hot-mount the Host row, keep the DSH PID, then reload/reopen the page. Authorize a normal Host restart only when `activation-plan` names boot-captured bundle composition or a server module without tested module HMR as the reason.
+Use a **same-PID default** for plugin work. Select the branch by the runtime surface that must change, not by prerequisite files a command happens to write. A plain profile dependency provides module resolution; it is not manifest activation or restart evidence. A first Web client remains `new-client`: hot-mount the Host row, keep the DSH PID, then reopen the page. Missing server module-HMR evidence means `not-decided`, not restart-required. For a checked existing server plugin, follow `playbooks/restart-server-plugin` and the bounded `hot-reload` command. A failed hot reload does not authorize a Host restart.
+
+For a multi-file server, declare the exact package-relative runtime entry/helper files in `dshx.yml` under `hotReload.artifacts` before check. Entry-only replacement can leave old helpers cached. Require hashes for the complete declared set and test the changed behavior. Root scope is the default and the only fixed Creator-tool scope. External self-upgrade may explicitly select `--scope preset` after reading the server playbook: it replaces every mounted fiber of that exact private module, requires a fiber-less discovery anchor and separate same-session proof, and never authorizes managed-shell bypass or a new Host.
 
 Treat DSH.app, direct `dsh web`, and `dshx start web` as launchers for one
 long-lived Web Host per real `DSH_HOME`. Before starting, use dshx discovery and
@@ -25,6 +27,8 @@ visibility is a stop condition that `--force` cannot override. For cold-boot
 proof, use `verify-boot`: it runs in a temporary `DSH_HOME`, leaves the user's
 Host PID untouched, and always removes the transient Host. `--keep` is unsafe and
 rejected.
+
+Only after an evidence-backed restart decision, use `facts.handoff` to identify the original App, CLI, or DSHX launcher. Handoff metadata alone never authorizes a restart. Preserve the owning conversation and return to its status after an authorized launcher restart. `ACTIVATION_DECISION_REQUIRED`, `AWAITING_LAUNCHER_RESTART`, and `RUNTIME_VERIFICATION_REQUIRED` remain pending; module or manifest proof does not replace testing the changed feature.
 
 In Creator Mode+, session-start automatically arms the external Guardian. As soon
 as one plugin id is known, call `dshx_claim_plugin` before scaffold/edit/build/check.
@@ -116,7 +120,7 @@ Choose exactly one changed-surface branch:
 | `preset` | Write a user-owned preset, preserve its composition stamp when bytes are unchanged, then verify it in a new/blank session | No, when process-global resources are generation-safe | Only if the current page cached the roster |
 | `client` | Rebuild an already-rostered `lib/client.js`; observe client HMR and same-page behavior | No | No; plugin React-local state resets |
 | `new-client` | Hot-activate the Host patch entry, then reload/reopen the page for the new graph row | No | Yes |
-| `server` | Sync server artifact, then restart the current supervised Host unless exact module HMR is tested | Yes by default | Conditional |
+| `server` | Check artifacts, then bounded official module HMR via `hot-reload`; unknown remains pending | No automatic restart | Conditional |
 | `artifact` | Synchronize bytes or a plain dependency only; activation is separate | No for this step | No for this step |
 
 `sync-artifact` / `ship` must end at `ARTIFACT_SYNCED; LIVE_ACTIVATION_UNPROVEN`. Never turn that result into an activation claim.
@@ -145,7 +149,7 @@ Read only the selected branch:
 3. For an existing project, edit `my-plugins/<name>/` or the named package. Keep committed `cordis.yml` portable.
 4. For a client package, read `kb cat contracts/client-build`. An out-of-tree package must build with dshx `externalClientBundle`; set `DSHX_HARNESS` to the checkout being targeted so its platform table is authoritative. Do not import the repository-internal official `clientBundle()` or move the plugin under `packages/`.
 5. Run `check <name>`. Completion: no static contract errors; a client package also passes `client-cordis-inject` and its declared `exports["./client"]` `.js` entry is a lazy-CJS handoff. New scaffolds use `lib/client.js`; an already checked hand-written `src/client.js` export is also valid.
-6. Run `activation-plan <name> --change <branch>` now if this is a freshly built `new-client`; for an existing built target it may already have run before editing. Do not begin live mutation unless the selected plan exits `0`.
+6. Run `activation-plan <name> --change <branch>` now if this is a freshly built `new-client`; for an existing built target it may already have run before editing. Ordinary activation requires the selected plan to exit `0`. The explicit `server` / `hostRestart: not-decided` result is an evidence request: the external supervisor may proceed to the bounded `hot-reload` command's own target/check/Host gates. This exception does not waive unrelated plan errors or permit manual mutation or restart.
 7. Run `verify-boot <name>` only when an isolated cold boot is needed. Completion: server-only plugins show the runtime marker; Web clients appear in the active boot graph and their bundle returns HTTP 200. It uses a temporary Home while an existing Host stays on the same PID, then stops and removes the transient Host; it does not prove current-host activation.
 8. If package bytes must reach a profile, run `sync-artifact <dir>` (`ship` is a compatibility alias). Completion: content hash matches; activation remains unproven.
 9. Execute the selected activation branch. For `new-client`, use only `activate-new-client`; restart only when a different branch requires it.

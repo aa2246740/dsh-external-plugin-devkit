@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { describe, it } from 'node:test'
 import { activationDecision } from '../src/internal/activation.ts'
 
@@ -11,6 +12,14 @@ const facts = {
 }
 
 describe('activation lifecycle decisions', () => {
+  it('keeps shipped agent guidance aligned with the undecided server branch', () => {
+    for (const path of ['../src/help.ts', '../skill/dshx/SKILL.md', '../creator-plus/skills/creator-mode-plus/SKILL.md']) {
+      const source = readFileSync(new URL(path, import.meta.url), 'utf8')
+      assert.doesNotMatch(source, /无专项证据则受控重启|Yes by default|`manifest` or `server`:/, path)
+      assert.match(source, /not-decided|未确定/, path)
+    }
+  })
+
   it('keeps watched patch updates in the current host process', () => {
     const decision = activationDecision('patch', facts)
     assert.equal(decision.hostRestart, 'not-required')
@@ -52,9 +61,12 @@ describe('activation lifecycle decisions', () => {
     assert.match(added.preconditions.join(' '), /dependency.*prerequisite.*not make this a manifest branch/)
   })
 
-  it('defaults server module replacement to a controlled restart', () => {
+  it('keeps server activation undecided until exact module-HMR evidence exists', () => {
     const decision = activationDecision('server', facts)
-    assert.equal(decision.hostRestart, 'required')
+    assert.equal(decision.hostRestart, 'not-decided')
+    assert.match(decision.restartReason, /cannot be decided without exact.*module-HMR evidence/i)
+    assert.match(decision.blockers.join(' '), /pending.*module-HMR evidence/i)
+    assert.doesNotMatch(`${decision.method} ${decision.restartReason}`, /has no explicit.*module-HMR/i)
   })
 
   it('never turns artifact synchronization into an activation claim', () => {

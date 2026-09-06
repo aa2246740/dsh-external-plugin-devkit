@@ -1,5 +1,6 @@
 import { activationDecision, inspectActivation, isActivationChange } from '../internal/activation.ts'
 import { clientEntryFindings } from '../internal/file-copy.ts'
+import { identityOnlyHandoff } from '../internal/delivery-handoff.ts'
 import { finding, printReport, report } from '../internal/io.ts'
 import type { CliOptions, Finding } from '../internal/types.ts'
 
@@ -49,6 +50,7 @@ export function cmdActivationPlan(args: string[], options: CliOptions, root: str
     if (facts.hasClient) findings.push(...clientEntryFindings(facts.packageDir))
 
     if (!options.change) {
+      if (facts.handoff) facts.handoff = identityOnlyHandoff(facts.handoff)
       findings.push(finding('info', 'change-required', 'inventory complete; choose the changed surface before acting', {
         hint: 'rerun with --change patch|manifest|preset|client|new-client|server|artifact',
       }))
@@ -61,6 +63,14 @@ export function cmdActivationPlan(args: string[], options: CliOptions, root: str
     }
 
     const decision = activationDecision(options.change, facts)
+    if (decision.hostRestart !== 'required' && facts.handoff) {
+      facts.handoff = identityOnlyHandoff(facts.handoff)
+    }
+    if (decision.hostRestart === 'required' && facts.handoff) {
+      decision.method = `normal ${facts.handoff.launcher} launcher restart outside this DSH session`
+      decision.preconditions.push(...facts.handoff.instructions)
+      findings.push(finding('warn', 'delivery-state', facts.handoff.status))
+    }
     findings.push(
       finding('ok', 'activation-method', decision.method),
       finding(decision.hostRestart === 'required' ? 'warn' : 'info', 'host-restart', `${decision.hostRestart}: ${decision.restartReason}`),

@@ -1,4 +1,5 @@
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readFileSync, realpathSync } from 'node:fs'
+import { launcherExecutable, restartHandoff } from './delivery-handoff.ts'
 import { basename, join, resolve } from 'node:path'
 import { dumpConfig, parseDumpEntries } from './dsh.ts'
 import { currentHost } from './host.ts'
@@ -34,6 +35,7 @@ export interface ActivationFacts {
   supervisedPid?: number
   supervisedProfile?: ProfileName
   dumpError?: string
+  handoff?: ReturnType<typeof restartHandoff>
 }
 
 export interface ActivationDecision {
@@ -137,7 +139,7 @@ export function inspectActivation(root: string, profile: ProfileName, raw: strin
   return {
     id: target.id,
     packageName: target.packageName,
-    packageDir: target.dir,
+    packageDir: realpathSync(target.dir),
     dependencySpec,
     bundleDeclared: target.pkg?.dsh?.bundle !== undefined,
     bundleRegistered: (profileManifest?.dsh?.profile?.bundles ?? []).includes(target.packageName),
@@ -149,6 +151,7 @@ export function inspectActivation(root: string, profile: ProfileName, raw: strin
     packageResolvable,
     supervisedPid: host?.pid,
     supervisedProfile: host?.profile,
+    handoff: restartHandoff(host, launcherExecutable(host)),
     ...dumped.code === 0 ? {} : { dumpError: (dumped.stderr || dumped.stdout || `exit ${dumped.code}`).trim().slice(0, 400) },
   }
 }
@@ -249,13 +252,18 @@ export function activationDecision(change: ActivationChange, facts: Pick<Activat
   }
   if (change === 'server') {
     return {
-      method: 'controlled restart of the currently supervised host',
-      hostRestart: 'required',
-      restartReason: 'the selected server module has no explicit, tested module-HMR path in the Web composition',
+      method: 'server activation pending exact module-HMR evidence',
+      hostRestart: 'not-decided',
+      restartReason: 'the activation method cannot be decided without exact, tested module-HMR evidence for this server module',
       browserReload: facts.hasClient ? 'conditional' : 'not-required',
-      blockers: [],
-      preconditions: ['restart is the safe default unless this exact server module has explicit, tested module-HMR coverage'],
-      proof: ['record the old and new pid', 'post-boot marker and behavior pass', 'do not infer current activation from an artifact copy'],
+      blockers: ['activation is pending: provide exact, tested module-HMR evidence for this server module before choosing same-PID activation or a controlled launcher restart'],
+      preconditions: ['classify this exact server module against real module-HMR configuration and test evidence'],
+      proof: [
+        'until the evidence gate is satisfied, do not restart the Host or claim live activation',
+        'for proven module HMR, keep the pid unchanged and verify the changed server behavior',
+        'for an evidence-backed restart, record the old and new pid and verify the post-boot behavior',
+        'do not infer current activation from an artifact copy',
+      ],
     }
   }
   return {

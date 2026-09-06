@@ -1,7 +1,7 @@
 ---
 type: Runtime Contract
 title: Creator Mode+ safe bridge
-description: Creator Mode+ 是 user preset 加七个固定 dshx 工具；官方浏览器 WebUI 是兼容面，安全卸载保留源码，进程外 Guardian 负责失败恢复，DSH 会话不能控制自身进程。
+description: Creator Mode+ 是 user preset 加八个固定 dshx 工具；支持受限同 PID 热替换和安全卸载，DSH 会话不能控制自身进程。
 tags: [creator-mode-plus, preset, webui, supervisor, safety]
 aliases: [Creator Mode+, 创造模式+, dshx plugin, dshx preset, supervisor]
 status: stable
@@ -35,7 +35,7 @@ Creator Mode+ 不修改也不替换 shipped `cordis` preset。它是独立的用
 
 | 角色 | 可以做什么 | 不可以做什么 |
 |---|---|---|
-| Creator Mode+ 会话 | claim-plugin、scaffold、check、activation-plan、activate-new-client、remove-plugin、status | 任意 shell/argv/path；手工拆 profile/plugin root；start/stop/restart DSH |
+| Creator Mode+ 会话 | claim-plugin、scaffold、check、activation-plan、activate-new-client、remove-plugin、hot-reload、status | 任意 shell/argv/path；手工拆 profile/plugin root；start/stop/restart DSH |
 | 外部 dshx + Guardian | 文件化构建、静态检查、事务日志、Host 恢复、官方 Loader 失败隔离 | 把 manifest/Loader 恢复冒充视觉或功能正确 |
 | 用户 | 批准有影响的激活、重启和回滚 | 不承担插件内部运行时职责 |
 
@@ -56,7 +56,7 @@ official WebUI
   -> new/blank Creator Mode+ session
   -> bridge v2 arms external Guardian with exact session identity
   -> claim one plugin for this session
-  -> one of seven fixed dshx tools
+  -> one of eight fixed dshx tools
   -> child dshx CLI with bounded output
   -> file-backed plugin and layered evidence
 
@@ -70,11 +70,13 @@ external dshx / Guardian
 
 # 固定 argv 合同
 
-七个模型可见工具分别只允许 `status`、`creator claim <id>`、
+八工具合同面向独立的 `dsh-creator-mode-plus` 新版。DSHX 包中保留的 legacy bundled bridge 仍是旧工具面，不能仅刷新它的 skill 就声称新增工具已加载；迁移或升级独立 bridge 后，必须核对实际工具注册和能力预检。
+
+八个模型可见工具分别只允许 `status`、`creator claim <id>`、
 `creator scaffold <id> <kind>`、`check <id>`、
 `activation-plan <id> --change <branch>` 和
 `activate-new-client <id> --profile web --port <Host 派生端口>`、
-`creator remove <id>`。会话生命周期另有固定的
+`creator remove <id>`、`hot-reload <id> --profile web --port <Host 派生端口>`。会话生命周期另有固定的
 watch、release、recovery pull 和 recovery ack 形状。发布测试必须让每个形状真正穿过
 bridge allowlist；只验证工具名称已经注册不算通过。
 
@@ -145,6 +147,10 @@ package，Loader 可能保留负解析缓存；命令会明确命名这个 scar�
 
 `CLIENT_MANIFEST_PRESENT` 只说明当前 Host 提供了 bundle。刷新后的页面没有实际加载
 package id 和功能之前，Creator Mode+ 只能报告“已注册”，不能报告“可用”或“完成”。
+
+# 服务端模块的受限热替换
+
+服务端模块替换使用独立的 `dshx_hot_reload({ name })`，不复用卸载或检查工具。bridge 先刷新 claim，再由受限命令检查当前 Host 和产物，通过官方隔离 HMR 验证同 PID 模块替换、旧代际释放和临时 watcher 清理。`HOST_MODULE_RELOADED` 仍需实际功能验收；失败或不支持的挂载范围不得转成默认重启。其独立 journal 明确 `automaticRecovery: false`，不冒用 Guardian 的 new-client 快照恢复协议。
 
 # 整插件移除的唯一安全动作
 

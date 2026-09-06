@@ -395,7 +395,8 @@ function writePatchSnapshot(snapshot: PatchSnapshot): void {
   else rmSync(snapshot.path, { force: true })
 }
 
-function acquireActivationLock(root: string, pluginId: string, context?: CreatorContext): () => void {
+/** Serialize one short watched-patch activation without creating a new-client recovery snapshot. */
+export function acquireCreatorActivationLock(root: string, pluginId: string, context?: CreatorContext): () => void {
   const path = creatorActivationLockPath(root)
   mkdirSync(dirname(path), { recursive: true })
   for (let attempt = 0; attempt < 2; attempt += 1) {
@@ -428,9 +429,12 @@ function acquireActivationLock(root: string, pluginId: string, context?: Creator
       try {
         current = readJson<ActivationLock | undefined>(path, undefined)
       } catch {
-        current = undefined
+        throw new Error('Creator+ live activation lock is unreadable; refusing to remove it')
       }
-      if (current?.pid && processAlive(current.pid)) {
+      if (!current?.pid) {
+        throw new Error('Creator+ live activation lock is incomplete; refusing to remove it')
+      }
+      if (processAlive(current.pid)) {
         throw new Error(`another Creator+ live activation owns the global lock for ${current.pluginId}`)
       }
       rmSync(path, { force: true })
@@ -574,7 +578,7 @@ export function beginCreatorActivation(
 ): CreatorActivationHandle {
   validatePluginId(pluginId)
   if (context) assertCreatorClaim(root, pluginId, context)
-  const release = acquireActivationLock(root, pluginId, context)
+  const release = acquireCreatorActivationLock(root, pluginId, context)
   try {
     const quarantine = creatorQuarantine(root, pluginId)
     const patch = quarantine?.patch ?? (() => {
@@ -652,7 +656,7 @@ export function quarantineCreatorTransaction(
   transaction: CreatorTransaction,
   now = Date.now(),
 ): CreatorQuarantine {
-  const release = acquireActivationLock(root, transaction.pluginId)
+  const release = acquireCreatorActivationLock(root, transaction.pluginId)
   try {
     return applyCreatorQuarantine(root, transaction, now)
   } finally {

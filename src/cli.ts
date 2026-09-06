@@ -14,6 +14,7 @@ import { cmdSetup } from './commands/setup.ts'
 import { cmdShip } from './commands/ship.ts'
 import { cmdActivationPlan } from './commands/activation.ts'
 import { cmdActivateNewClient } from './commands/new-client.ts'
+import { cmdHotReload } from './commands/hot-reload.ts'
 import { cmdCreator } from './commands/creator.ts'
 import { cmdUpdate } from './commands/update.ts'
 import { cmdPlugin } from './commands/plugin.ts'
@@ -93,6 +94,8 @@ async function main(): Promise<number> {
       return cmdActivationPlan(args, options, root)
     case 'activate-new-client':
       return cmdActivateNewClient(args, options, root)
+    case 'hot-reload':
+      return cmdHotReload(args, options, root)
     case 'creator':
       return cmdCreator(args, options, root)
     case 'plugin':

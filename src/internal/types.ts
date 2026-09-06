@@ -17,8 +17,15 @@ export interface Report {
 
 export type PluginKind = 'function' | 'tool' | 'client' | 'object' | 'class'
 export type ProfileName = 'web' | 'headless'
+export type HotReloadScope = 'root' | 'preset'
 export type ActivationChange = 'patch' | 'manifest' | 'preset' | 'client' | 'new-client' | 'server' | 'artifact'
 export type UpdateAction = 'plan' | 'prepare' | 'verify' | 'apply' | 'rollback'
+
+export interface HotReloadArtifactHash {
+  path: string
+  before: string
+  after: string
+}
 
 export interface PluginManifest {
   id: string
@@ -31,6 +38,10 @@ export interface PluginManifest {
   inject?: string[]
   profile: ProfileName
   config?: Record<string, unknown>
+  hotReload?: {
+    /** Ordered, exact package-relative source files. The entry is always present. */
+    artifacts: string[]
+  }
   inferred: boolean
   runtimePackage?: {
     name: string
@@ -76,6 +87,7 @@ export interface CliOptions {
   target?: string
   candidate?: string
   pluginSources?: string[]
+  scope: HotReloadScope
 }
 
 export const DSHX_VERSION = '0.7.5'

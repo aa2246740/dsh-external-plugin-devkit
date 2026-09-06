@@ -4,6 +4,7 @@ export const HELP = `dshx — DeepSeek Harness 进程外插件工作台
   dshx kb cat contracts/live-activation
   dshx activation-plan <plugin> --change patch|manifest|preset|client|new-client|server|artifact
   dshx activate-new-client <plugin> --profile web --port <current-web-port>
+  dshx hot-reload <plugin> --profile web --port <current-web-port>
 
 分支
   patch       真实 profile/home cordis.patch.yml 被监听；Host 同 PID 热重组
@@ -11,13 +12,13 @@ export const HELP = `dshx — DeepSeek Harness 进程外插件工作台
   preset      用户 preset 每次重新发现；Host 不重启，使用新会话，已缓存名单时刷新页面
   client      当前页面已有 entry 的 lib/client.js；client HMR，不重启 Host、不刷新页面
   new-client  Host entry 可热挂；旧页面不采纳 graph 新行，必须刷新/重开页面
-  server      Web 默认不承诺 server module HMR；无专项证据则受控重启
+  server      缺少 module HMR 证据则保持未确定；受控 hot-reload 通过后验证功能
   artifact    只同步字节或普通依赖；本步不重启，live activation 仍未证明
 
 分支防误判
   普通 profile dependency 只是解析前提，不是 manifest activation，也不是重启理由。
   首次 Web client 即使会写 dependency，仍走 new-client：Host 不重启，只刷新/重开页面。
-  只有 activation-plan 明确给出 bundle boot-capture 或无 HMR 的 server module 证据，才授权 Host restart。
+  缺少 server HMR 证据表示未确定，不授权重启；优先受控 hot-reload 并验证同 PID。
 
 推荐闭环
   1. kb cat 对应合同；kb search 只找 id，命中后必须 cat
@@ -37,6 +38,7 @@ export const HELP = `dshx — DeepSeek Harness 进程外插件工作台
   check [name]                  静态合同；client 必须是 built lazy-CJS lib/client.js
   activation-plan <target>      只读 inventory；--change 选择生命周期分支
   activate-new-client <plugin>  固定顺序 link → watched patch → 当前 Host manifest；不重启、不刷新页面
+  hot-reload <plugin>           检查后受控替换已加载服务端模块；同 PID，功能另验；外部可显式 --scope preset
   plugin remove <package>       同名 Loader id 的 bundle 安全卸载：live disable → 同 PID absence → 官方 remove
   overlay [name]                生成一次性绝对 --patch 文件；该文件不受 user-patch watcher 监听
   dump [name]                   离线合成；退出 0 不是 boot/live 证明

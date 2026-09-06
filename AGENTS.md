@@ -22,7 +22,7 @@ Before any install, ship, HMR, refresh, or restart advice, use a same-PID defaul
 - preset: user preset discovery; no Host restart, verify in a new/blank session.
 - client: existing page entry client HMR; no Host restart or page reload.
 - new-client: Host patch can reconcile live; browser page reload required.
-- server: restart current supervised Host unless exact module HMR is configured and tested.
+- server: missing module-HMR evidence means activation is undecided, not restart-required. Prefer the bounded hot-reload transaction and prove same-PID replacement; its failure does not authorize a restart.
 - artifact: bytes or dependency-only work; no restart for this step, activation remains separate.
 
 When working through Creator Mode+, also read
@@ -32,9 +32,10 @@ own different plugins concurrently; the same plugin is exclusive, and only the
 short live activation transaction is globally serialized.
 Creator scaffold destinations must come from the immutable session cwd. DSHX,
 not the model or user, owns any required link into Harness `my-plugins`.
-Every release must execute the exact argv behind all seven fixed Creator+ tools and
+Every release must execute the exact argv behind all eight fixed Creator+ tools and
 the internal watch/release/recovery hooks through the bridge allowlist. Tool
 registration alone does not prove the bridge is callable.
+The eighth tool, `dshx_hot_reload`, accepts only a claimed plugin id and uses Host-derived identity for bounded official module HMR. It grants no process control and requires runtime replacement and cleanup proof before reporting module activation.
 The seventh tool, `dshx_remove_plugin`, must quarantine/remove the live watched
 row, prove same-Host absence, use the official profile remover when the
 dependency still exists, and detach only verified plugin-owned symlinks. A

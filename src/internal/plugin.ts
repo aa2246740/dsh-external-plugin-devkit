@@ -1,5 +1,5 @@
-import { existsSync, readdirSync, statSync } from 'node:fs'
-import { basename, dirname, join, resolve } from 'node:path'
+import { existsSync, lstatSync, readdirSync, realpathSync, statSync } from 'node:fs'
+import { basename, dirname, isAbsolute, join, posix, relative, resolve } from 'node:path'
 import { loadYaml, readText } from './io.ts'
 import { pluginsDir } from './paths.ts'
 import type { PluginKind, PluginManifest, ProfileName } from './types.ts'
@@ -13,6 +13,84 @@ interface RawManifest {
   inject?: string[]
   profile?: ProfileName
   config?: Record<string, unknown>
+  hotReload?: {
+    artifacts?: unknown
+  }
+}
+
+const HOT_RELOAD_ARTIFACT_LIMIT = 32
+const JAVASCRIPT_TYPESCRIPT_SOURCE = /\.(?:[cm]?[jt]sx?)$/
+const DECLARATION_SOURCE = /\.d\.(?:[cm]?ts)$/
+const GLOB_SYNTAX = /[*?{}[\]!()]/
+
+function within(path: string, parent: string): boolean {
+  const rel = relative(parent, path)
+  return rel === '' || (!rel.startsWith('..') && !isAbsolute(rel))
+}
+
+function validateArtifactPath(dir: string, raw: unknown): string {
+  if (typeof raw !== 'string' || raw.length === 0 || raw.length > 1024) {
+    throw new Error('hotReload.artifacts entries must be non-empty package-relative paths')
+  }
+  if (raw.includes('\\') || isAbsolute(raw) || /^[A-Za-z]:/.test(raw) || raw.includes('\0')) {
+    throw new Error(`hotReload artifact must be a package-relative path: ${raw}`)
+  }
+  if (GLOB_SYNTAX.test(raw)) throw new Error(`hotReload artifact cannot contain glob syntax: ${raw}`)
+  const parts = raw.split('/')
+  if (parts.some(part => part === '' || part === '.' || part === '..')) {
+    throw new Error(`hotReload artifact must use an exact normalized path: ${raw}`)
+  }
+  if (parts.some(part => part === 'node_modules')) {
+    throw new Error(`hotReload artifact cannot target node_modules: ${raw}`)
+  }
+  if (posix.normalize(raw) !== raw) {
+    throw new Error(`hotReload artifact must use an exact normalized path: ${raw}`)
+  }
+  if (!JAVASCRIPT_TYPESCRIPT_SOURCE.test(raw) || DECLARATION_SOURCE.test(raw)) {
+    throw new Error(`hotReload artifact must be a JavaScript or TypeScript runtime source file: ${raw}`)
+  }
+
+  // The package itself may be the supported my-plugins symlink to an external
+  // source tree. No component beneath that real package root may be a symlink.
+  const packageRoot = realpathSync(dir)
+  let cursor = packageRoot
+  for (const part of parts) {
+    cursor = join(cursor, part)
+    let stat
+    try {
+      stat = lstatSync(cursor)
+    } catch {
+      throw new Error(`hotReload artifact missing: ${raw}`)
+    }
+    if (stat.isSymbolicLink()) throw new Error(`hotReload artifact cannot traverse a symlink: ${raw}`)
+  }
+  if (!lstatSync(cursor).isFile()) throw new Error(`hotReload artifact is not a regular file: ${raw}`)
+  if (!within(realpathSync(cursor), packageRoot)) throw new Error(`hotReload artifact escapes the package: ${raw}`)
+  return raw
+}
+
+function hotReloadConfig(dir: string, entry: string, raw: RawManifest['hotReload']): NonNullable<PluginManifest['hotReload']> {
+  if (raw !== undefined && !isRecord(raw)) throw new Error('hotReload must be an object')
+  if (raw && Object.keys(raw).some(key => key !== 'artifacts')) {
+    throw new Error('hotReload supports only the artifacts field')
+  }
+  const configured = raw?.artifacts
+  if (configured !== undefined && !Array.isArray(configured)) {
+    throw new Error('hotReload.artifacts must be an array')
+  }
+  const artifacts = configured === undefined ? [entry] : configured
+  if (artifacts.length === 0 || artifacts.length > HOT_RELOAD_ARTIFACT_LIMIT) {
+    throw new Error(`hotReload.artifacts must contain 1 to ${HOT_RELOAD_ARTIFACT_LIMIT} files`)
+  }
+  const checked = artifacts.map(item => validateArtifactPath(dir, item))
+  if (new Set(checked).size !== checked.length) throw new Error('hotReload.artifacts cannot contain duplicate paths')
+  if (!checked.includes(entry)) throw new Error(`hotReload.artifacts must include the plugin entry: ${entry}`)
+  return { artifacts: checked }
+}
+
+/** Apply the same strict artifact boundary at the command gate, including the entry-only default. */
+export function resolveHotReloadArtifacts(dir: string, entry: string, artifacts?: unknown): string[] {
+  return hotReloadConfig(dir, entry, { artifacts }).artifacts
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -110,6 +188,7 @@ export function loadPlugin(root: string, nameOrPath?: string): PluginManifest {
   const entryAbs = resolve(dir, entry)
   if (!existsSync(entryAbs)) throw new Error(`plugin entry missing: ${entryAbs}`)
   const source = readText(entryAbs)
+  const hotReload = raw.hotReload === undefined ? undefined : hotReloadConfig(dir, entry, raw.hotReload)
   return {
     id,
     name: raw.name ?? id,
@@ -121,6 +200,7 @@ export function loadPlugin(root: string, nameOrPath?: string): PluginManifest {
     inject: raw.inject,
     profile: raw.profile ?? 'web',
     config: raw.config,
+    ...hotReload ? { hotReload } : {},
     inferred,
     runtimePackage: runtimePackage(dir),
   }

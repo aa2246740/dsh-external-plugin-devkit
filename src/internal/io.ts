@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 import yaml from 'js-yaml'
-import type { ActivationChange, CliOptions, Finding, Level, PluginKind, ProfileName, Report } from './types.ts'
+import type { ActivationChange, CliOptions, Finding, HotReloadScope, Level, PluginKind, ProfileName, Report } from './types.ts'
 import { DEFAULT_PORT, DEFAULT_PROFILE, DEFAULT_TIMEOUT_MS } from './types.ts'
 
 export function ensureDir(path: string): void {
@@ -53,7 +53,7 @@ export function envHas(name: string, extra?: Record<string, string>): boolean {
   return Boolean(value && value.trim())
 }
 
-const VALUE_FLAGS = new Set(['--profile', '--port', '--timeout', '--grep', '--kind', '--task', '--harness', '--change', '--target', '--candidate', '--plugin-source'])
+const VALUE_FLAGS = new Set(['--profile', '--port', '--timeout', '--grep', '--kind', '--task', '--harness', '--change', '--target', '--candidate', '--plugin-source', '--scope'])
 
 const COMMAND_FLAGS: Record<string, ReadonlySet<string>> = {
   kb: new Set(['--json']),
@@ -72,6 +72,7 @@ const COMMAND_FLAGS: Record<string, ReadonlySet<string>> = {
   'verify-boot': new Set(['--json', '--profile', '--port', '--timeout', '--keep', '--task']),
   'activation-plan': new Set(['--json', '--profile', '--change']),
   'activate-new-client': new Set(['--json', '--profile', '--port', '--timeout']),
+  'hot-reload': new Set(['--json', '--profile', '--port', '--timeout', '--scope']),
   creator: new Set(['--json']),
   plugin: new Set(['--json', '--profile', '--port', '--timeout']),
   doctor: new Set(['--json', '--profile']),
@@ -159,6 +160,13 @@ function applyFlag(token: string, argv: string[], index: number, options: CliOpt
     options.pluginSources ??= []
     options.pluginSources.push(argv[index + 1])
     return index + 1
+  } else if (token === '--scope') {
+    const scope = argv[index + 1]
+    if (scope !== 'root' && scope !== 'preset') {
+      throw new Error('--scope must be root or preset')
+    }
+    options.scope = scope as HotReloadScope
+    return index + 1
   }
   return index
 }
@@ -181,6 +189,7 @@ export function parseCli(argv: string[]): { command: string; args: string[]; opt
     dryRun: false,
     printPrompt: false,
     restart: false,
+    scope: 'root',
   }
   const { command: found, index: commandIndex } = findCommand(argv)
   const allowed = COMMAND_FLAGS[found] ?? new Set(['--json'])
@@ -190,6 +199,9 @@ export function parseCli(argv: string[]): { command: string; args: string[]; opt
     if (token === '--') {
       rest.push(...argv.slice(i + 1))
       break
+    }
+    if (token === '--scope' && !allowed.has(token)) {
+      throw new Error('--scope is only valid for hot-reload')
     }
     if (token.startsWith('-') && (allowed.has(token) || token === '--harness')) {
       i = applyFlag(token, argv, i, options)
