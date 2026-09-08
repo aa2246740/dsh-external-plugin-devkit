@@ -512,13 +512,34 @@ function packageExportTarget(plugin: PluginManifest): string {
   return './index.js'
 }
 
+/** A declared bundle is a candidate only. The in-Host observer must still prove
+ * its exact active Loader row, module URL and complete runtime fiber ownership.
+ */
+function registeredBundlePatch(plugin: PluginManifest, packageDir: string, profile: string): string[] {
+  if (!plugin.runtimePackage) return []
+  const manifestPath = join(profile, 'package.json')
+  if (!existsSync(manifestPath)) return []
+  const profileManifest = record(JSON.parse(readFileSync(manifestPath, 'utf8')))
+  const bundles = record(record(profileManifest?.dsh)?.profile)?.bundles
+  if (!Array.isArray(bundles) || !bundles.includes(plugin.runtimePackage.name)) return []
+  const manifest = record(JSON.parse(readFileSync(plugin.runtimePackage.manifestPath, 'utf8')))
+  const patch = record(record(manifest?.dsh)?.bundle)?.patch
+  if (typeof patch !== 'string' || isAbsolute(patch)) throw new Error('registered bundle needs a package-relative patch')
+  const path = canonicalExisting(resolve(packageDir, patch), 'registered bundle patch')
+  if (!within(path, packageDir)) throw new Error('registered bundle patch escapes the checked package')
+  return [path]
+}
+
 function resolveExistingTarget(
   rows: Map<string, Record<string, unknown>>,
   plugin: PluginManifest,
   packageDir: string,
   profile: string,
 ): ResolvedTarget {
-  const row = rows.get(plugin.id)
+  const direct = rows.get(plugin.id)
+  const candidates = [...rows.values()].filter(row => row.name === plugin.runtimePackage?.name && row.disabled !== true)
+  if (!direct && candidates.length > 1) throw new Error('root Loader target is ambiguous: multiple rows name the checked package')
+  const row = direct ?? candidates[0]
   if (!row || row.disabled === true || typeof row.name !== 'string') {
     throw new Error(`existing active root Loader target ${plugin.id} was not proved; preset-private targets are unsupported`)
   }
@@ -544,7 +565,7 @@ function resolveExistingTarget(
   if (!within(target, packageDir)) {
     throw new Error(`resolved Loader target ${plugin.id} escapes the checked package`)
   }
-  return { entryPath: target, entryId: plugin.id, entryName: name }
+  return { entryPath: target, entryId: String(row.id), entryName: name }
 }
 
 function resolvePresetTarget(plugin: PluginManifest, packageDir: string, profile: string): ResolvedTarget {
@@ -804,7 +825,8 @@ export async function hotReloadPlugin(
   const patchPath = join(prof, 'cordis.patch.yml')
   const hostState = (dependencies.currentHost ?? currentHost)(root)!
   const patchFiles = activePatchFiles(home, 'web', hostState)
-  const rows = composedRows(patchFiles)
+  const bundlePatches = targetScope === 'root' ? registeredBundlePatch(plugin, packageDir, prof) : []
+  const rows = composedRows([...bundlePatches, ...patchFiles])
   const target = targetScope === 'root'
     ? resolveExistingTarget(rows, plugin, packageDir, prof)
     : resolvePresetTarget(plugin, packageDir, prof)

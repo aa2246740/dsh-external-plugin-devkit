@@ -25,7 +25,7 @@ sources:
 
 # 证据边界
 
-默认 `root` 只接受能从活动 watched patch 证明的精确 root Loader 行，拒绝该模块还有范围外实例。Bundle 内部 root 行仍不在此模式的支持范围；拒绝这些目标不等于它们必须重启。
+默认 `root` 接受活动 watched patch 中的精确 root 行，也接受已注册 bundle 在包内 patch 声明的唯一同名包行。磁盘配置只提供候选；Host 内 observer 仍必须证明实际行 id、模块 URL、运行代际和完整 fiber 范围。多行歧义、越界 patch 或范围外实例都拒绝，不会因磁盘 bundle 注册就宣称已激活。
 
 对 Creator+ 等纯 preset-private 模块，外部 supervisor 可显式使用 `--scope preset`。该模式验证 profile 包链接、唯一运行模块以及没有 root 混挂，再临时加入不会挂载 fiber 的 disabled discovery 行，让官方 HMR 找到模块。它替换这个模块的全部已挂载 preset fibers，不能冒充只更新某个会话，也不强行 recompose 已开始的会话。Creator+ 的固定工具不能使用此 scope，不能热替换正在执行它的 Creator+/DSHX 自身。
 

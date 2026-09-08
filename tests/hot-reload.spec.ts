@@ -382,3 +382,38 @@ describe('controlled server plugin hot reload', () => {
     )
   })
 })
+
+
+describe('registered bundle root hot reload', () => {
+  function bundleFixture() {
+    const f = fixture()
+    const pkgPath=join(f.plugin,'package.json')
+    const pkg=JSON.parse(readFileSync(pkgPath,'utf8'))
+    pkg.dsh={bundle:{patch:'./cordis.yml'}}
+    writeFileSync(pkgPath,JSON.stringify(pkg))
+    writeFileSync(join(f.profile,'package.json'),JSON.stringify({dsh:{profile:{bundles:['demo-runtime']}}}))
+    writeFileSync(join(f.plugin,'cordis.yml'),'- insert:\n    - id: internal-plan\n      name: demo-runtime\n')
+    writeFileSync(f.patchPath,'')
+    return f
+  }
+  it('uses the exact bundle row id and retains observer and cleanup proof', async t => {
+    const f=bundleFixture();t.after(()=>rmSync(f.base,{recursive:true,force:true}))
+    const result=await hotReloadPlugin(f.root,'web','demo',43127,2000,simulatedDependencies(f))
+    assert.equal(result.hostPid,4242)
+    assert.equal(result.proof.moduleReloaded.samePid,true)
+    assert.equal(result.journal.cleanupProved,true)
+  })
+  it('rejects missing registration, ambiguous targets and escaping patch paths before touching files',async t=>{
+    for(const bad of ['unregistered','ambiguous','escape']) {
+      const f=bundleFixture();t.after(()=>rmSync(f.base,{recursive:true,force:true}))
+      if(bad==='unregistered') writeFileSync(join(f.profile,'package.json'),'{}')
+      if(bad==='ambiguous') writeFileSync(join(f.plugin,'cordis.yml'),'- insert:\n    - id: one\n      name: demo-runtime\n    - id: two\n      name: demo-runtime\n')
+      if(bad==='escape') {
+        const path=join(f.plugin,'package.json'), pkg=JSON.parse(readFileSync(path,'utf8'))
+        pkg.dsh.bundle.patch='../outside.yml'; writeFileSync(path,JSON.stringify(pkg));writeFileSync(join(f.plugin,'../outside.yml'),'[]')
+      }
+      await assert.rejects(hotReloadPlugin(f.root,'web','demo',43127,2000,simulatedDependencies(f)), /not proved|ambiguous|escapes/)
+      assert.equal(readFileSync(f.patchPath,'utf8'),'')
+    }
+  })
+})
