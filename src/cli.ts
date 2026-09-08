@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { HELP, LOOP } from './help.ts'
+import { cmdBrowser } from './commands/browser.ts'
 import { cmdCheck } from './commands/check.ts'
 import { cmdDoctor } from './commands/doctor.ts'
 import { cmdDump } from './commands/dump.ts'
@@ -25,6 +26,10 @@ import { DSHX_VERSION } from './internal/types.ts'
 
 async function main(): Promise<number> {
   const raw = process.argv.slice(2)
+  if (raw.includes('browser') && raw.some(value => /token=|[?&]token|^https?:/i.test(value))) {
+    process.stderr.write('WEB_AUTH_PRIVATE_INPUT_REQUIRED: browser credentials must not appear in command arguments\n')
+    return 2
+  }
   if (raw.some(token => token === '--help' || token === '-h')) {
     process.stdout.write(HELP)
     return 0
@@ -65,6 +70,8 @@ async function main(): Promise<number> {
   logObserve(root, { kind: 'cli', command, args, json: options.json })
 
   switch (command) {
+    case 'browser':
+      return cmdBrowser(args, options, root)
     case 'kb':
     case 'okf':
       return cmdKb(args, options, root)

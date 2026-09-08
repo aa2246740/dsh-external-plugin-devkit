@@ -78,6 +78,7 @@ describe('Creator Mode+ bridge', () => {
       'dshx_activation_plan',
       'dshx_activate_new_client',
       'dshx_remove_plugin',
+      'dshx_hot_reload',
       'dshx_status',
     ])
     assert.equal(tools.some(tool => /start|stop|restart|shell|command/.test(String(tool.name))), false)
@@ -122,6 +123,7 @@ describe('Creator Mode+ bridge', () => {
       ['activation-plan', 'demo', '--change', 'new-client'],
       ['activate-new-client', 'demo', '--profile', 'web', '--port', '43127'],
       ['creator', 'remove', 'demo'],
+      ['hot-reload', 'demo', '--profile', 'web', '--port', '43127', '--json'],
       ['creator', 'watch', '--json'],
       ['creator', 'release', '--json'],
       ['creator', 'recovery', 'pull', '--json'],
@@ -371,7 +373,13 @@ describe('Creator Mode+ bridge', () => {
     const nested = join(root, 'workspace/example/src')
     mkdirSync(nested, { recursive: true })
     assert.equal(resolveHarnessRoot({ envRoot: root, configFile: '/missing', cwd: '/missing', moduleDir: '/missing' }), root)
-    assert.equal(resolveHarnessRoot({ configFile: '/missing', cwd: nested, moduleDir: '/missing' }), root)
+    const previous = process.env.DSHX_HARNESS
+    delete process.env.DSHX_HARNESS
+    try {
+      assert.equal(resolveHarnessRoot({ configFile: '/missing', cwd: nested, moduleDir: '/missing' }), root)
+    } finally {
+      if (previous !== undefined) process.env.DSHX_HARNESS = previous
+    }
   })
 
   it('fails closed on invalid or conflicting checkout authority', () => {

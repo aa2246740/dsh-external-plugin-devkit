@@ -55,6 +55,8 @@ For an externally supervised Web bundle (`dsh.profile.bundles` / package `dsh.bu
 
 ## Authenticated Host proof
 
+For browser/WebUI 401 errors or autonomous browser testing, read `kb cat contracts/browser-access`. Run `browser status` to separate current-Host authentication from browser readiness. External `browser open` uses an explicitly configured adapter for the Agent's permitted browser runtime; the Codex smoke adapter is `examples/browser/codex-smoke.mjs`. Creator watch/claim refreshes the private current-Host handoff. Preserve `WEB_AUTH_REQUIRED` when no credential source exists; a bare port is not authentication.
+
 Creator+ obtains current-Host authentication through the official Connection service and keeps credentials inside the bridge. `WEB_AUTH_REQUIRED` is a bridge/launcher authentication blocker, not proof that the plugin is broken. Preserve source and the claim, report the exact blocker, and retry the fixed tool after the bridge is repaired. Keep Host authentication enabled; never ask for a token in chat or scan credential stores/logs. External DSHX launchers can pass `DSHX_WEB_STARTUP_URL` privately for the selected loopback Host. Activation success still requires a page reload for a new client, then a real user workflow before claiming delivery.
 
 ## Resolve the checkout

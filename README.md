@@ -126,3 +126,9 @@ DSHX 0.7.3 修复 bundle 插件卸载顺序。外部 supervisor 使用 `dshx plu
 ## 许可
 
 MIT。DeepSeek Harness 是另一个项目。这里和 DeepSeek 没有隶属关系。
+
+## 浏览器认证与 Agent 自测
+
+用 `dshx browser status` 检查当前 Host 的访问状态。Creator watch/claim 会通过官方 Connection 自动交接认证；没有 Creator 的官方 CLI 用户，可用 `browser bind` 从私密环境变量 `DSHX_WEB_STARTUP_URL` 绑定启动链接。不要把带 token 的链接写进命令参数或聊天。
+
+`browser open` 使用 `DSHX_BROWSER_ADAPTER` 指定的可执行适配器，通过 stdin 私密传入认证信息。具体适配协议、凭据有效期和随包提供的 Codex 双浏览器上下文测试见[浏览器访问合同](knowledge/contracts/browser-access.md)。HTTP 认证、浏览器访问和具体功能验收分别报告。

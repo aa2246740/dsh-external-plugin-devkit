@@ -31,6 +31,7 @@ export const HELP = `dshx — DeepSeek Harness 进程外插件工作台
 
 命令
   help
+  browser status|bind|open      当前 Host 的私密浏览器认证交接；open 使用显式配置的浏览器适配器
   setup                         安装用户 launcher/skill 并记住 Harness checkout；不改核心、不启停 DSH
   kb                            ls / catalog / cat / search / lint / digest
   loop                          打印本闭环

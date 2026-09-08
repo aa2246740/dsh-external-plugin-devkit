@@ -1,3 +1,4 @@
+import { privateStartupUrl, redactStartupOutput } from './auth.js'
 /** Fixed-argument bridge from DSH tools to the external dshx CLI. */
 
 import { spawn } from 'node:child_process'
@@ -51,6 +52,15 @@ function isAllowedArgs(args) {
       && /^\d{1,5}$/.test(args[5])
       && Number(args[5]) >= 1
       && Number(args[5]) <= 65_535
+  }
+  if (args.length === 7 && args[0] === 'hot-reload' && PLUGIN_ID.test(args[1])) {
+    return args[2] === '--profile'
+      && args[3] === 'web'
+      && args[4] === '--port'
+      && /^\d{1,5}$/.test(args[5])
+      && Number(args[5]) >= 1
+      && Number(args[5]) <= 65_535
+      && args[6] === '--json'
   }
   return false
 }
@@ -181,6 +191,7 @@ export function runDshx(args, exec, options = {}) {
   const argv = ['--import', 'tsx/esm', cli, ...args]
   const hostPort = options.hostPort ?? currentWebPort()
   const creatorContext = contextFromExecution(exec, hostPort)
+  const startup = privateStartupUrl(options.getWebStartupUrl, hostPort)
   const signal = exec?.signal
   const spawnProcess = options.spawnProcess ?? spawn
   return new Promise((resolveResult, reject) => {
@@ -190,7 +201,7 @@ export function runDshx(args, exec, options = {}) {
         ...process.env,
         DSHX_HARNESS: root,
         DSHX_CREATOR_CONTEXT: JSON.stringify(creatorContext),
-        DSHX_WEB_STARTUP_URL: options.getWebStartupUrl?.(hostPort) ?? '',
+        DSHX_WEB_STARTUP_URL: startup,
       },
       stdio: ['ignore', 'pipe', 'pipe'],
     })
@@ -208,8 +219,8 @@ export function runDshx(args, exec, options = {}) {
       resolveResult({
         command: `dshx ${args.join(' ')}`,
         exitCode: code ?? 1,
-        stdout: stdout.trim(),
-        stderr: stderr.trim(),
+        stdout: redactStartupOutput(stdout.trim(), startup),
+        stderr: redactStartupOutput(stderr.trim(), startup),
         creatorBridgeVersion: CREATOR_BRIDGE_VERSION,
         ...args[0] === 'activate-new-client' ? { hostPid: process.pid, hostPort: Number(args[5]) } : {},
       })
@@ -226,6 +237,7 @@ export function runClientFailureDshx(report, options = {}) {
   const cli = join(root, 'tools/dshx/src/cli.ts')
   const argv = ['--import', 'tsx/esm', cli, 'creator', 'client-failure', '--json']
   const spawnProcess = options.spawnProcess ?? spawn
+  const startup = privateStartupUrl(options.getWebStartupUrl, report.hostPort)
   const { DSHX_CREATOR_CONTEXT: _discardContext, DSHX_CREATOR_CLIENT_FAILURE: _discardFailure, ...baseEnv } = process.env
   return new Promise((resolveResult, reject) => {
     const child = spawnProcess(process.execPath, argv, {
@@ -234,7 +246,7 @@ export function runClientFailureDshx(report, options = {}) {
         ...baseEnv,
         DSHX_HARNESS: root,
         DSHX_CREATOR_CLIENT_FAILURE: JSON.stringify(report),
-        DSHX_WEB_STARTUP_URL: options.getWebStartupUrl?.(report.hostPort) ?? '',
+        DSHX_WEB_STARTUP_URL: startup,
       },
       stdio: ['ignore', 'pipe', 'pipe'],
     })
@@ -256,8 +268,8 @@ export function runClientFailureDshx(report, options = {}) {
       resolveResult({
         command: 'dshx creator client-failure',
         exitCode: timedOut ? 124 : (code ?? 1),
-        stdout: stdout.trim(),
-        stderr: timedOut ? `${stderr.trim()}\nclient-failure recovery timed out`.trim() : stderr.trim(),
+        stdout: redactStartupOutput(stdout.trim(), startup),
+        stderr: redactStartupOutput(timedOut ? `${stderr.trim()}\nclient-failure recovery timed out`.trim() : stderr.trim(), startup),
         creatorBridgeVersion: CREATOR_BRIDGE_VERSION,
       })
     })

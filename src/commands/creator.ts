@@ -1,3 +1,4 @@
+import { bindBrowserAccess, discoverBrowserHost } from '../internal/browser-access.ts'
 import {
   acknowledgeCreatorIncident,
   assertCreatorClaim,
@@ -24,6 +25,22 @@ function requireContext() {
   return context
 }
 
+/** Optional browser handoff must not disable Guardian when browser access is unavailable. */
+async function refreshBrowserHandoff(root: string, context: ReturnType<typeof requireContext>) {
+  if (!process.env.DSHX_WEB_STARTUP_URL) return { status: 'WEB_AUTH_REQUIRED' }
+  try {
+    const discover = (selected: string) => {
+      const host = discoverBrowserHost(selected)
+      if (host.pid !== context.hostPid || host.port !== context.hostPort) throw new Error('WEB_HOST_CHANGED')
+      return host
+    }
+    const bound = await bindBrowserAccess(root, process.env.DSHX_WEB_STARTUP_URL, 'creator', 5_000, discover)
+    return { status: 'BROWSER_HANDOFF_READY', expiresAt: bound.expiresAt }
+  } catch {
+    return { status: 'BROWSER_HANDOFF_UNAVAILABLE', action: 'Use external dshx browser status to diagnose; keep Host and claims intact.' }
+  }
+}
+
 /** Internal structured protocol used by Creator Mode+ and its external Guardian. */
 export async function cmdCreator(args: string[], options: CliOptions, root: string): Promise<number> {
   const action = args[0]
@@ -34,13 +51,14 @@ export async function cmdCreator(args: string[], options: CliOptions, root: stri
       const context = requireContext()
       const armed = await adoptOrArmCreatorHost(root, context)
       const claim = claimCreatorPlugin(root, pluginId, context)
+      const browserAccess = await refreshBrowserHandoff(root, context)
       printReport(report('creator claim', [
         finding('ok', 'claimed', `${pluginId} belongs to Creator+ session ${context.sessionId}`),
         finding('ok', 'guardian', `external Guardian pid ${armed.guardian.pid} watches Web Host pid ${armed.host.pid}`),
         armed.adopted
           ? finding('info', 'adopted', `adopted the current official Web Host on 127.0.0.1:${armed.host.port}`)
           : finding('info', 'supervised', `using the existing dshx-owned Host on 127.0.0.1:${armed.host.port}`),
-      ], { claim, host: armed.host, guardian: armed.guardian }), options.json)
+      ], { claim, host: armed.host, guardian: armed.guardian, browserAccess }), options.json)
       return 0
     }
 
@@ -92,9 +110,10 @@ export async function cmdCreator(args: string[], options: CliOptions, root: stri
       if (args.length !== 1) throw new Error('usage: dshx creator watch')
       const context = requireContext()
       const armed = await adoptOrArmCreatorHost(root, context)
+      const browserAccess = await refreshBrowserHandoff(root, context)
       printReport(report('creator watch', [
         finding('ok', 'guardian', `external Guardian pid ${armed.guardian.pid} watches Web Host pid ${armed.host.pid}`),
-      ], { host: armed.host, guardian: armed.guardian }), options.json)
+      ], { host: armed.host, guardian: armed.guardian, browserAccess }), options.json)
       return 0
     }
 

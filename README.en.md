@@ -126,3 +126,7 @@ More: [start here](knowledge/start-here.md) · [why work outside Creator Mode](k
 ## License
 
 MIT. DeepSeek Harness is a separate project. This repo is not affiliated with DeepSeek.
+
+## Browser authentication and Agent tests
+
+Use `dshx browser status` to check the existing Host. External `browser bind` accepts an official startup URL privately through `DSHX_WEB_STARTUP_URL`; Creator watch/claim refreshes this handoff automatically. `browser open` uses `DSHX_BROWSER_ADAPTER`, an explicit executable receiving private JSON on stdin. See [browser access](knowledge/contracts/browser-access.md) for launcher coverage, expiry, adapter protocol, and the shipped Codex two-context smoke test. HTTP authentication, an authenticated browser run, and feature acceptance are separate.

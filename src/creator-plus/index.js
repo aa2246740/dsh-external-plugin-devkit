@@ -22,6 +22,7 @@ const CLIENT_FAILURE_ROUTE_REGISTRY = Symbol.for('dshx-creator-plus.client-failu
 
 const PLUGIN_ID = /^[a-z][a-z0-9-]*$/
 const KINDS = new Set(['function', 'tool', 'client', 'object', 'class'])
+const HOT_RELOAD_INFRASTRUCTURE = new Set(['dsh-creator-mode-plus', 'dsh-external-plugin-devkit'])
 const CHANGES = new Set(['patch', 'manifest', 'preset', 'client', 'new-client', 'server', 'artifact'])
 
 function pluginId(value) {
@@ -161,7 +162,7 @@ export function installClientFailureRoute(ctx, options = {}) {
 /** Register file-backed Creator Mode+ operations for one preset scope. */
 export function apply(ctx) {
   console.log('[dshx/creator-plus] loaded')
-  const authOptions = { getWebStartupUrl: port => ctx.connection.authenticatedUrl(`http://127.0.0.1:${port}/`) }
+  const authOptions = { getWebStartupUrl: port => typeof ctx.connection.authenticatedUrl === 'function' ? ctx.connection.authenticatedUrl(`http://127.0.0.1:${port}/`) : undefined }
   installCreatorRecovery(ctx, authOptions)
   installClientFailureRoute(ctx, authOptions)
   installCreatorSafetyGuard(ctx)
@@ -291,6 +292,30 @@ export function apply(ctx) {
       return result
     },
     presentCall: args => ({ card: 'generic', title: `dshx remove ${args.name}`, kind: 'edit', rawInput: args.name }),
+  })
+
+  ctx.tools.register({
+    name: 'dshx_hot_reload',
+    description: 'Replace one already-loaded, checked Web-profile server plugin through DSHX controlled same-PID module HMR. Success proves module replacement and temporary-scope cleanup only; the requested behavior remains RUNTIME_VERIFICATION_REQUIRED. It never accepts paths, ports, arbitrary commands, or Host process control.',
+    parameters: {
+      type: 'object',
+      properties: { name: { type: 'string', description: 'Existing checked plugin id under my-plugins' } },
+      required: ['name'],
+      additionalProperties: false,
+    },
+    timeoutMs: 90_000,
+    output,
+    execute(args, exec) {
+      const id = pluginId(args.name)
+      if (HOT_RELOAD_INFRASTRUCTURE.has(id)) {
+        throw new Error(`dshx_hot_reload cannot replace its executing infrastructure plugin: ${id}`)
+      }
+      const port = currentWebPort()
+      return runClaimedDshx(id, [
+        'hot-reload', id, '--profile', 'web', '--port', String(port), '--json',
+      ], exec, { ...authOptions, hostPort: port })
+    },
+    presentCall: args => ({ card: 'generic', title: `dshx hot reload ${args.name}`, kind: 'edit', rawInput: args.name }),
   })
 
   ctx.tools.register({

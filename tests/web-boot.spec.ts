@@ -15,6 +15,7 @@ describe('authenticated Web boot', () => {
     const html = '<script>globalThis["__DSH_BOOT__"] = {"entries":[{"id":"demo","url":"/plugins/demo/client.js?rev=1"}]}</script>'
     assert.deepEqual(parseWebBootManifest(html), { entries: [{ id: 'demo', url: '/plugins/demo/client.js?rev=1' }] })
     assert.equal(parseWebBootManifest('<script>window.__DSH_BOOT__ = {}</script>'), undefined)
+    assert.deepEqual(parseWebBootManifest('<script>window.__DSH_BOOT__ = {"entries":[]};</script>'), { entries: [] })
   })
 
   it('exchanges the launcher token for a cookie before reading the boot graph and bundle', async () => {

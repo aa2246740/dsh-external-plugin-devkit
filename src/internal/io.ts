@@ -56,6 +56,7 @@ export function envHas(name: string, extra?: Record<string, string>): boolean {
 const VALUE_FLAGS = new Set(['--profile', '--port', '--timeout', '--grep', '--kind', '--task', '--harness', '--change', '--target', '--candidate', '--plugin-source', '--scope'])
 
 const COMMAND_FLAGS: Record<string, ReadonlySet<string>> = {
+  browser: new Set(['--json', '--timeout']),
   kb: new Set(['--json']),
   okf: new Set(['--json']),
   init: new Set(['--json', '--force', '--kind']),
@@ -100,6 +101,7 @@ const DSH_MANAGED_SHELL_READ_COMMANDS = new Set([
  */
 export function dshManagedShellAllows(command: string, env: NodeJS.ProcessEnv = process.env, args: readonly string[] = []): boolean {
   if (env.DSH_SHELL !== '1') return true
+  if (command === 'browser') return args.length <= 1 && (args[0] ?? 'status') === 'status'
   if (command === 'update') return (args[0] ?? 'plan') === 'plan'
   return DSH_MANAGED_SHELL_READ_COMMANDS.has(command)
 }
@@ -199,6 +201,9 @@ export function parseCli(argv: string[]): { command: string; args: string[]; opt
     if (token === '--') {
       rest.push(...argv.slice(i + 1))
       break
+    }
+    if (found === 'browser' && token.startsWith('-') && !allowed.has(token) && token !== '--harness') {
+      throw new Error('browser accepts only --json, --timeout, and --harness')
     }
     if (token === '--scope' && !allowed.has(token)) {
       throw new Error('--scope is only valid for hot-reload')

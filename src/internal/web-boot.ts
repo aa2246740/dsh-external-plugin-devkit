@@ -1,3 +1,4 @@
+import { boundWebUrl, validateWebStartupUrl } from './web-proof-auth.ts'
 export interface WebBootEntry {
   id: string
   url: string
@@ -47,7 +48,7 @@ export function findWebStartupUrl(log: string, port: number): URL | undefined {
 
 /** Parse the official Web boot assignment without evaluating page source. */
 export function parseWebBootManifest(html: string): WebBootManifest | undefined {
-  const match = /globalThis\["__DSH_BOOT__"\]\s*=\s*(\{.*?\})<\/script>/su.exec(html)
+  const match = /(?:window\s*\.\s*__DSH_BOOT__|globalThis(?:\s*\.\s*__DSH_BOOT__|\s*\[\s*["']__DSH_BOOT__["']\s*\]))\s*=\s*(\{.*?\})\s*;?\s*<\/script>/su.exec(html)
   if (!match?.[1]) return undefined
   try {
     const parsed: unknown = JSON.parse(match[1])
@@ -68,9 +69,11 @@ export function parseWebBootManifest(html: string): WebBootManifest | undefined 
   }
 }
 
-/** Exchange the single-use launcher token for its local session cookie, then load the real page. */
+/** Exchange the process-scoped launcher token for its local session cookie, then load the real page. */
 export async function fetchAuthenticatedWebPage(startupUrl: URL, request: FetchLike = fetch): Promise<AuthenticatedWebPage> {
-  const first = await request(startupUrl, { redirect: 'manual' })
+  validateWebStartupUrl(startupUrl, Number(startupUrl.port))
+  const signal = AbortSignal.timeout(10_000)
+  const first = await request(startupUrl, { redirect: 'manual', signal })
   if (first.status === 200) {
     return { url: startupUrl, html: await first.text(), cookie: cookieHeader(first) }
   }
@@ -80,8 +83,8 @@ export async function fetchAuthenticatedWebPage(startupUrl: URL, request: FetchL
   const location = first.headers.get('location')
   const cookie = cookieHeader(first)
   if (!location || !cookie) throw new Error('Web startup URL did not establish a local session cookie')
-  const url = new URL(location, startupUrl)
-  const page = await request(url, { headers: { cookie } })
+  const url = boundWebUrl(location, startupUrl.origin)
+  const page = await request(url, { headers: { cookie }, redirect: 'manual', signal })
   if (!page.ok) throw new Error(`authenticated Web page returned ${page.status}`)
   return { url, html: await page.text(), cookie }
 }
@@ -92,5 +95,6 @@ export async function fetchAuthenticatedWebResource(
   path: string,
   request: FetchLike = fetch,
 ): Promise<Response> {
-  return await request(new URL(path, page.url), { headers: page.cookie ? { cookie: page.cookie } : {} })
+  const url = boundWebUrl(path, page.url.origin)
+  return await request(url, { headers: page.cookie ? { cookie: page.cookie } : {}, redirect: 'manual', signal: AbortSignal.timeout(10_000) })
 }
