@@ -32,8 +32,8 @@ Host restart, second same-Home Host, authentication bypass, or browser-tool fall
 
 Creator watch/claim obtains the startup URL through the existing official
 Connection API and refreshes the handoff automatically. Failure to refresh is
-reported separately and does not disable Guardian or discard claims. The eight
-model tools and fixed argv boundary remain intact. Startup secrets are removed
+reported separately and does not disable Guardian or discard claims. The fixed argv boundary remains intact; the standalone Creator+ bridge can
+expose the no-argument `dshx_browser_open` when `session-browser-open` is attested. Startup secrets are removed
 from assembled child output before tool results or delivery records are returned.
 
 For plain official `dsh web` without a Creator bridge, bind its official startup
@@ -79,3 +79,25 @@ private handoff, or missing runtime is a browser-adapter failure, even when HTTP
 authentication succeeds. Tests cover concurrency, cancelled waiters, cross-origin
 redirects/resources, owner-only storage, stale identities, expired bindings,
 exact tool argv, and private adapter input/output.
+
+
+## Session-bound Creator browser entry
+
+The external supervisor configures one reviewed, self-contained executable once:
+`dshx browser configure <session-id> <absolute-adapter-path> --harness <checkout>`.
+This pins an owner-only adapter snapshot outside the model workspace, bound to
+that session, Home and checkout. Setup opens no browser and stores no credentials.
+Use a self-contained adapter: its location changes, so relative imports/assets
+are not supported. Reconfigure after reviewing an adapter update. An edited
+workspace source cannot change the pinned executable that receives authentication.
+The adapter still must use the browser runtime permitted for the task.
+
+Creator+ calls `dshx_browser_open({})`, mapping only to `browser open --json`.
+The fixed bridge supplies Connection authentication and trusted session/Host
+identity. DSHX verifies that the child belongs to the live Host, selects the
+session's pinned adapter, and ignores DSHX_BROWSER_ADAPTER from that child.
+The model supplies no path, URL, port, shell or credential. Missing configuration
+returns BROWSER_ADAPTER_REQUIRED; it does not authorize a Host restart or a raw
+managed-shell workaround. Raw browser configure/bind/open remain denied in
+DSH-managed shells. Success is BROWSER_AUTHENTICATED; feature QA continues in the
+same task without requiring the user to type a command or say continue.

@@ -1,9 +1,9 @@
 /** Browser-neutral, private handoff. This module never starts or stops a Host. */
 import { spawn } from 'node:child_process'
-import { randomUUID } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import type { Stats } from 'node:fs'
 import { constants, closeSync, fstatSync, lstatSync, mkdirSync, openSync, readFileSync, realpathSync, renameSync, unlinkSync, writeFileSync } from 'node:fs'
-import { isAbsolute, join } from 'node:path'
+import { dirname, extname, isAbsolute, join } from 'node:path'
 import { dshEnv } from './dsh.ts'
 import { discoverWebHosts } from './host-discovery.ts'
 import { currentHost } from './host.ts'
@@ -166,4 +166,79 @@ export async function openBrowserAdapter(executable: string | undefined, host: B
     })
     child.stdin.end(JSON.stringify({ version: 1, host, origin, startupUrl: startup ?? `${origin}/`, timeoutMs }))
   })
+}
+
+/** External setup pins a reviewed, self-contained adapter for one Creator session. */
+function adapterRecordPath(host: BrowserHostIdentity, sessionId: string, create: boolean): string {
+  if (!sessionId || sessionId.length > 512) throw new Error('BROWSER_SESSION_INVALID')
+  try { bindingPath(host.home, create) }
+  catch (error) {
+    if ((error as NodeJS.ErrnoException)?.code !== 'EEXIST') throw error
+    bindingPath(host.home, false)
+  }
+  return join(host.home, '.dshx-browser', `adapter-${createHash('sha256').update(sessionId).digest('hex')}.json`)
+}
+
+export function configureSessionBrowserAdapter(host: BrowserHostIdentity, sessionId: string, executable: string) {
+  if (!isAbsolute(executable)) throw new Error('BROWSER_ADAPTER_INVALID: absolute executable required')
+  const fd = openSync(executable, constants.O_RDONLY | constants.O_NOFOLLOW)
+  let bytes: Buffer
+  try {
+    const stat = fstatSync(fd)
+    if (!stat.isFile() || !(stat.mode & 0o111) || (stat.mode & 0o022)
+      || (process.getuid && stat.uid !== process.getuid()) || stat.size > 1024 * 1024) {
+      throw new Error('BROWSER_ADAPTER_INVALID: require an owner-controlled bounded executable')
+    }
+    bytes = readFileSync(fd)
+  } finally { closeSync(fd) }
+  const path = adapterRecordPath(host, sessionId, true)
+  const digest = createHash('sha256').update(bytes).digest('hex')
+  const snapshot = path.replace(/\.json$/, `-${digest}${extname(executable)}`)
+  // A private immutable copy prevents a later workspace edit from changing what
+  // receives credentials. Reconfiguration is external-only; no adapter argv.
+  try { writeFileSync(snapshot, bytes, { flag: 'wx', mode: 0o700 }) }
+  catch (error) {
+    if ((error as NodeJS.ErrnoException)?.code !== 'EEXIST') throw error
+    privateStat(lstatSync(snapshot), false)
+    if (createHash('sha256').update(readFileSync(snapshot)).digest('hex') !== digest) throw new Error('BROWSER_ADAPTER_CHANGED')
+  }
+  try { privateStat(lstatSync(path), false) } catch (error) { if (!isMissing(error)) throw error }
+  const temporary = `${path}.${randomUUID()}.tmp`
+  try {
+    writeFileSync(temporary, JSON.stringify({ version: 1, sessionId, home: host.home, root: host.root, executable: snapshot, digest }), { flag: 'wx', mode: 0o600 })
+    renameSync(temporary, path)
+  } finally { try { unlinkSync(temporary) } catch (error) { if (!isMissing(error)) throw error } }
+  return { status: 'BROWSER_ADAPTER_CONFIGURED', sessionId, digest }
+}
+
+export function sessionBrowserAdapter(host: BrowserHostIdentity, sessionId: string): string {
+  let fd: number | undefined
+  try {
+    const path = adapterRecordPath(host, sessionId, false)
+    fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW)
+    const stat = fstatSync(fd); privateStat(stat, false)
+    if (stat.size > MAX_BYTES) throw new Error('BROWSER_ADAPTER_INVALID')
+    const record = JSON.parse(readFileSync(fd, 'utf8'))
+    if (record.version !== 1 || record.sessionId !== sessionId || record.home !== host.home || record.root !== host.root
+      || typeof record.executable !== 'string' || dirname(record.executable) !== dirname(path)
+      || typeof record.digest !== 'string' || !/^[0-9a-f]{64}$/.test(record.digest)) throw new Error('BROWSER_ADAPTER_INVALID')
+    const adapterFd = openSync(record.executable, constants.O_RDONLY | constants.O_NOFOLLOW)
+    try {
+      const info = fstatSync(adapterFd); privateStat(info, false)
+      if (!(info.mode & 0o100) || info.size > 1024 * 1024
+        || createHash('sha256').update(readFileSync(adapterFd)).digest('hex') !== record.digest) throw new Error('BROWSER_ADAPTER_CHANGED')
+    } finally { closeSync(adapterFd) }
+    return record.executable
+  } catch (error) {
+    if (isMissing(error)) throw new Error('BROWSER_ADAPTER_REQUIRED: external supervisor must configure this session once; no Host restart is needed')
+    throw error
+  } finally { if (fd !== undefined) closeSync(fd) }
+}
+
+
+export function assertCreatorBrowserHost(host: BrowserHostIdentity,
+  context: { hostPid: number; hostPort: number }, parentPid = process.ppid): void {
+  if (context.hostPid !== parentPid || context.hostPid !== host.pid || context.hostPort !== host.port) {
+    throw new Error('WEB_HOST_CHANGED: fixed browser entry must belong to the current Host')
+  }
 }
