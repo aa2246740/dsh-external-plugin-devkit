@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
-import { join, relative, resolve } from 'node:path'
+import { isAbsolute, join, relative, resolve } from 'node:path'
+import ts from 'typescript'
 import { inspectClientCordisInject, resolveClientSource } from './client-cordis-inject.js'
 import { finding, loadJson } from './io.ts'
 import type { Finding, ProfileName } from './types.ts'
@@ -169,6 +170,25 @@ export function clientEntryFindings(pluginDir: string): Finding[] {
     }
   }
 
+  const tsconfigPath = join(pluginDir, 'tsconfig.json')
+  if (existsSync(tsconfigPath)) {
+    const parsed = ts.parseConfigFileTextToJson(tsconfigPath, readFileSync(tsconfigPath, 'utf8'))
+    if (parsed.error) {
+      findings.push(finding('error', 'client-build-config', 'tsconfig.json cannot be parsed', { path: tsconfigPath }))
+    } else {
+      const bases = parsed.config?.extends
+      for (const base of Array.isArray(bases) ? bases : [bases]) {
+        if (typeof base !== 'string' || !(base.startsWith('.') || isAbsolute(base))) continue
+        const target = resolve(pluginDir, base)
+        if (!existsSync(target) && !existsSync(`${target}.json`)) {
+          findings.push(finding('error', 'client-build-config', `tsconfig extends missing: ${base}`, {
+            path: tsconfigPath,
+            hint: 'Repair the build configuration in the existing plugin directory. Out-of-tree source is supported; do not move or reinstall the plugin. tsconfig JSON does not interpolate DSHX_HARNESS. An old client.js cannot prove this source builds.',
+          }))
+        }
+      }
+    }
+  }
   const buildConfigPath = join(pluginDir, 'tsdown.config.ts')
   if (existsSync(buildConfigPath)) {
     const buildConfig = readFileSync(buildConfigPath, 'utf8')
@@ -213,6 +233,8 @@ export function clientEntryFindings(pluginDir: string): Finding[] {
       return findings
     }
     findings.push(finding('ok', 'client-entry', `built lazy-CJS client entry exists: ${declared}`))
+    findings.push(finding('info', 'client-build-proof', 'STATIC_CONTRACT_ONLY: check does not run a build or prove this artifact matches current source; a failed build remains blocking. Verify client HMR separately.'))
+
     return findings
   }
   const mjs = abs.replace(/\.js$/, '.mjs')

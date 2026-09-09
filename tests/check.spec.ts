@@ -3,6 +3,7 @@ import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, it } from 'node:test'
+import { clientEntryFindings } from '../src/internal/file-copy.ts'
 import { checkPlugin } from '../src/internal/check.ts'
 import { writeText } from '../src/internal/io.ts'
 import { loadPlugin } from '../src/internal/plugin.ts'
@@ -80,5 +81,23 @@ export function apply(_ctx: Context) {
     const findings = checkPlugin(loadPlugin(root, 'class-form'), root)
     assert.ok(findings.some(item => item.code === 'class-form' && item.level === 'ok'), JSON.stringify(findings, null, 2))
     assert.equal(findings.some(item => item.level === 'error'), false, JSON.stringify(findings, null, 2))
+  })
+})
+
+describe('out-of-tree client build diagnostics', () => {
+  it('rejects a missing relative tsconfig base despite an existing valid old bundle', () => {
+    const root = mkdtempSync(join(tmpdir(), 'dshx-build-config-'))
+    const dir = writePlugin(root, 'example', {
+      'package.json': JSON.stringify({ name: 'example', exports: { './client': './lib/client.js' }, dsh: { client: { platform: 'web', inject: [] } } }),
+      'tsconfig.json': '{ // valid JSONC\n "extends": "../../missing-client-base" }',
+      'lib/client.js': 'window.__ModuleLoader__.load({ id: "example", factory: function() {} })',
+    })
+    const before = clientEntryFindings(dir)
+    assert.ok(before.some(f => f.code === 'client-entry' && f.level === 'ok'))
+    assert.ok(before.some(f => f.code === 'client-build-config' && f.level === 'error'))
+    writeText(join(root, 'missing-client-base.json'), '{}')
+    const after = clientEntryFindings(dir)
+    assert.ok(!after.some(f => f.code === 'client-build-config' && f.level === 'error'))
+    assert.ok(after.some(f => f.code === 'client-build-proof'))
   })
 })
