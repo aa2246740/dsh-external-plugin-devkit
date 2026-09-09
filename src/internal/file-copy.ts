@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync, realpathSync, statSync } from 'node:fs'
 import { isAbsolute, join, relative, resolve } from 'node:path'
 import ts from 'typescript'
 import { inspectClientCordisInject, resolveClientSource } from './client-cordis-inject.js'
@@ -179,7 +179,7 @@ export function clientEntryFindings(pluginDir: string): Finding[] {
       const bases = parsed.config?.extends
       for (const base of Array.isArray(bases) ? bases : [bases]) {
         if (typeof base !== 'string' || !(base.startsWith('.') || isAbsolute(base))) continue
-        const target = resolve(pluginDir, base)
+        const target = resolve(realpathSync(pluginDir), base)
         if (!existsSync(target) && !existsSync(`${target}.json`)) {
           findings.push(finding('error', 'client-build-config', `tsconfig extends missing: ${base}`, {
             path: tsconfigPath,

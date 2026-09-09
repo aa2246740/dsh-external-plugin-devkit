@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { mkdtempSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, symlinkSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, it } from 'node:test'
@@ -92,6 +92,11 @@ describe('out-of-tree client build diagnostics', () => {
       'tsconfig.json': '{ // valid JSONC\n "extends": "../../missing-client-base" }',
       'lib/client.js': 'window.__ModuleLoader__.load({ id: "example", factory: function() {} })',
     })
+    const linkParent = join(root, 'runtime', 'my-plugins')
+    mkdirSync(linkParent, { recursive: true })
+    symlinkSync(dir, join(linkParent, 'example'))
+    writeText(join(root, 'runtime', 'missing-client-base.json'), '{}')
+    assert.ok(clientEntryFindings(join(linkParent, 'example')).some(f => f.code === 'client-build-config' && f.level === 'error'), 'resolve relative config from the real source, not the Harness symlink')
     const before = clientEntryFindings(dir)
     assert.ok(before.some(f => f.code === 'client-entry' && f.level === 'ok'))
     assert.ok(before.some(f => f.code === 'client-build-config' && f.level === 'error'))
