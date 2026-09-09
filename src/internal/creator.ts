@@ -333,7 +333,15 @@ export function claimCreatorPlugin(
     const claims = listCreatorClaims(root, now)
     const conflicting = claims.find(claim => claim.pluginId === pluginId && claim.sessionId !== context.sessionId)
     if (conflicting) {
-      throw new Error(`plugin ${pluginId} is already claimed by Creator+ session ${conflicting.sessionId}`)
+      throw new Error([
+        `plugin ${pluginId} is already claimed by Creator+ session ${conflicting.sessionId}`,
+        `当前会话：${context.sessionId}；持有认领的会话：${conflicting.sessionId}。`,
+        '分叉会话拥有独立身份，不会自动继承原会话的插件认领；更换 turn 或调用 ID 不会造成此冲突。',
+        `请从会话列表查找持有者 ${conflicting.sessionId} 的真实标题并向用户指出该对话；不要把当前分叉误报为持有者，也不要编造标题或链接。`,
+        '继续开发可回到持有认领的对话。若要在当前会话接手，需要外部监督者核实原会话已停止操作并安排受控交接；不要抢占、删除认领文件、卸载插件或重启 Host。',
+        `认领最后刷新：${conflicting.lastSeenAt}；预计过期：${conflicting.expiresAt}。有效认领不等于持有者此刻正在运行，也不证明必须等待过期才能交付。`,
+        '本次请求已拒绝，原认领保持不变。',
+      ].join('\n'))
     }
     const previous = claims.find(claim => claim.sessionId === context.sessionId)
     const claimedAt = previous?.pluginId === pluginId ? previous.claimedAt : iso(now)

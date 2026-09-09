@@ -78,8 +78,16 @@ describe('Creator+ claims and transactions', () => {
     ])
     assert.throws(
       () => claimCreatorPlugin(harness, 'plugin-a', context('session-b'), 1_001),
-      /already claimed by Creator\+ session session-a/,
+      (error: Error) => {
+        assert.match(error.message, /already claimed by Creator\+ session session-a/)
+        assert.match(error.message, /当前会话：session-b；持有认领的会话：session-a/)
+        assert.match(error.message, /分叉会话拥有独立身份/)
+        assert.match(error.message, /不要编造标题或链接/)
+        assert.match(error.message, /不要抢占、删除认领文件、卸载插件或重启 Host/)
+        return true
+      },
     )
+    assert.equal(listCreatorClaims(harness, 1_001).find(claim => claim.pluginId === 'plugin-a')?.sessionId, 'session-a')
   })
 
   it('serializes only the live activation section', () => {
