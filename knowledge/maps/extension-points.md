@@ -26,7 +26,7 @@ sources:
 | UI / Chat 节点 | `session/event` 或 `ConversationNodeDefinition` + slots | `docs/cookbook/adding-a-conversation-node.md` |
 | 插件设置卡片 | Host `installSettingsSection` + `settings.plugin.item` | [settings-card](/contracts/settings-card.md)、`docs/cookbook/adding-a-settings-card.md` |
 | 设置整页 | `settings.section`（`id` / `order` / `label`） | `packages/client/ui-settings/src/client/contract/slots.ts` |
-| 持久图片 | `ctx.attachments`（先落盘再写 session 事件） | `docs/subsystems/attachment.md` |
+| 持久图片 / 草稿附件 | composer `createDrafts` + `InputActions.addAttachments`；提交后走 `ctx.attachments` | [compat-0.1.5](/contracts/compat-0.1.5.md)、`docs/subsystems/attachment.md` |
 | 后台任务 / Job Panel | `ctx.jobs` | `docs/subsystems/jobs.md` |
 | 人发命令 | `ctx.commands` | 不经模型 turn |
 | 后台任务 | `ctx.jobs` | |

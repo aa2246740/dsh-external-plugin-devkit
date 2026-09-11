@@ -22,6 +22,7 @@ okf_version: "0.2"
 * [Creator+ Guardian recovery](contracts/creator-guardian.md) - 多会话认领、事故归因、隔离复活与原 session steering
 * [Live activation matrix](contracts/live-activation.md) - 先区分 patch / manifest / preset / client / new-client / server / artifact
 * [RC8 external client build](contracts/client-build.md) - 官方 workspace helper 与外部 `my-plugins/*` 的边界
+* [0.1.5-rc.2 API replacements](contracts/compat-0.1.5.md) - 升 RC 后的死 API 与 `dshx check` 诊断
 * [Recommended loop](playbooks/external-loop.md) - `dshx` 闭环
 
 # 合同（先于教程）

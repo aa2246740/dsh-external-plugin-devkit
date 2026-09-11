@@ -78,9 +78,11 @@ const TARGET_RUNTIME_DEPENDENCIES = [
   '@deepseek-ai',
   '@earendil-works',
   '@cordisjs',
+  '@types/node',
   'cordis',
   'react',
   'react-dom',
+  'typescript',
 ] as const
 
 function pathPresent(path: string): boolean {
@@ -211,40 +213,82 @@ function linkEntry(source: string, target: string): void {
   symlinkSync(source, target, stat.isDirectory() ? 'dir' : 'file')
 }
 
-function targetDependency(root: string, name: string): string | undefined {
+function isDirectory(path: string): boolean {
+  try {
+    return lstatSync(path).isDirectory()
+  } catch {
+    return false
+  }
+}
+
+function isScopedNamespace(name: string): boolean {
+  return name.startsWith('@') && !name.includes('/')
+}
+
+function pnpmBridgeDependency(root: string, name: string): string | undefined {
   const bridge = join(root, 'node_modules/.pnpm/node_modules', name)
-  if (pathPresent(bridge)) return bridge
-  const direct = join(root, 'node_modules', name)
-  return pathPresent(direct) ? direct : undefined
+  return pathPresent(bridge) ? bridge : undefined
+}
+
+/** Prefer the checkout workspace view over the pnpm virtual store. */
+export function targetDependency(root: string, name: string): string | undefined {
+  const workspace = join(root, 'node_modules', name)
+  if (pathPresent(workspace)) return workspace
+  return pnpmBridgeDependency(root, name)
+}
+
+/**
+ * Overlay one target runtime dependency into a plugin `node_modules`.
+ * Scoped namespaces that exist in both views are merged; workspace entries win
+ * so `@deepseek-ai/dsh-agent` resolves while pnpm-only packages stay visible.
+ */
+export function overlayTargetDependency(root: string, nodeModules: string, name: string): void {
+  const preferred = targetDependency(root, name)
+  if (!preferred) return
+  const dest = join(nodeModules, name)
+  const bridge = pnpmBridgeDependency(root, name)
+  const merge = isScopedNamespace(name)
+    && bridge !== undefined
+    && resolve(bridge) !== resolve(preferred)
+    && isDirectory(preferred)
+    && isDirectory(bridge)
+  rmSync(dest, { recursive: true, force: true })
+  if (merge) {
+    mkdirSync(dest, { recursive: true })
+    for (const entry of readdirSync(bridge)) {
+      linkEntry(join(bridge, entry), join(dest, entry))
+    }
+    for (const entry of readdirSync(preferred)) {
+      const path = join(dest, entry)
+      rmSync(path, { recursive: true, force: true })
+      linkEntry(join(preferred, entry), path)
+    }
+    return
+  }
+  mkdirSync(dirname(dest), { recursive: true })
+  symlinkSync(preferred, dest, 'dir')
+}
+
+function materializeDependencyEntries(source: string, target: string): void {
+  mkdirSync(target, { recursive: true })
+  if (!pathPresent(source)) return
+  for (const entry of readdirSync(source)) {
+    linkEntry(join(source, entry), join(target, entry))
+  }
 }
 
 function createPluginDependencyView(root: string, backup: PathBackup): void {
   const target = backup.original
   if (!backup.existed || lstatSync(backup.backup).isSymbolicLink()) {
-    symlinkSync(join(root, 'node_modules/.pnpm/node_modules'), target, 'dir')
-    return
+    materializeDependencyEntries(join(root, 'node_modules/.pnpm/node_modules'), target)
+  } else {
+    materializeDependencyEntries(backup.backup, target)
   }
-  mkdirSync(target, { recursive: true })
-  for (const entry of readdirSync(backup.backup)) {
-    linkEntry(join(backup.backup, entry), join(target, entry))
-  }
-  for (const name of TARGET_RUNTIME_DEPENDENCIES) {
-    const source = targetDependency(root, name)
-    if (!source) continue
-    const path = join(target, name)
-    rmSync(path, { recursive: true, force: true })
-    mkdirSync(dirname(path), { recursive: true })
-    symlinkSync(source, path, 'dir')
-  }
+  for (const name of TARGET_RUNTIME_DEPENDENCIES) overlayTargetDependency(root, target, name)
 }
 
 function replaceWithTargetDependency(root: string, pluginDir: string, name: string): void {
-  const source = targetDependency(root, name)
-  if (!source) return
-  const path = join(pluginDir, 'node_modules', name)
-  rmSync(path, { recursive: true, force: true })
-  mkdirSync(dirname(path), { recursive: true })
-  symlinkSync(source, path, 'dir')
+  overlayTargetDependency(root, join(pluginDir, 'node_modules'), name)
 }
 
 function installPluginDependencies(root: string, pluginDir: string, env: NodeJS.ProcessEnv): CommandResult {

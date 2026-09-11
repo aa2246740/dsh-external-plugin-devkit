@@ -105,22 +105,66 @@ function record(value: unknown): Record<string, unknown> | undefined {
     : undefined
 }
 
+function isDisableTombstone(patch: Record<string, unknown>, id: string): boolean {
+  return patch.id === id
+    && patch.disabled === true
+    && Object.keys(patch).every(key => key === 'id' || key === 'disabled')
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+/** Drop one exact `{id, disabled:true}` tombstone without rewriting the rest of the file. */
+export function removeDisableTombstone(source: string, id: string): string | undefined {
+  const labels = [...new Set([id, yamlScalar(id)])]
+  const ranges: Array<{ start: number; end: number }> = []
+  for (const label of labels) {
+    const pattern = new RegExp(
+      `^- id:[ \\t]+${escapeRegExp(label)}[ \\t]*\\r?\\n[ \\t]+disabled:[ \\t]+true[ \\t]*(?:#[^\\r\\n]*)?\\r?\\n?`,
+      'gm',
+    )
+    for (const match of source.matchAll(pattern)) {
+      try {
+        const parsed = parsePatchList(match[0])
+        const item = parsed.length === 1 ? record(parsed[0]) : undefined
+        if (item && isDisableTombstone(item, id)) {
+          ranges.push({ start: match.index!, end: match.index! + match[0].length })
+        }
+      } catch {
+        // Keep looking; only a verified tombstone is removable.
+      }
+    }
+  }
+  const unique = ranges.filter((range, index) => (
+    ranges.findIndex(other => other.start === range.start && other.end === range.end) === index
+  ))
+  if (unique.length !== 1) return undefined
+  const [range] = unique
+  return source.slice(0, range!.start) + source.slice(range!.end)
+}
+
 /**
  * Plan one stable Host insertion while preserving the user's YAML bytes,
  * comments, and !!js expressions. Existing matching rows are deliberately
  * rewritten unchanged so a link repaired after an earlier watcher failure is
- * observed again.
+ * observed again. A later `{id, disabled:true}` tombstone is cleared so
+ * activate-new-client can re-enable a previously disabled insert.
  */
 export function planWatchedPatch(current: string | undefined, id: string, packageName: string): WatchedPatchPlan {
   const source = current ?? ''
   const patches = parsePatchList(source)
   const inserted: Record<string, unknown>[] = []
+  const tombstones: Record<string, unknown>[] = []
   let targeted = false
 
   for (const patchValue of patches) {
     const patch = record(patchValue)
     if (!patch) continue
-    if (patch.id === id) targeted = true
+    if (patch.id === id) {
+      if (isDisableTombstone(patch, id)) tombstones.push(patch)
+      else targeted = true
+    }
     if (!Array.isArray(patch.insert)) continue
     for (const rowValue of patch.insert) {
       const row = record(rowValue)
@@ -130,6 +174,13 @@ export function planWatchedPatch(current: string | undefined, id: string, packag
 
   if (targeted) {
     throw new Error(`watched patch id ${id} is already an id-targeted override; refusing to add a second Host row`)
+  }
+  if (tombstones.length > 1) {
+    throw new Error(`watched patch id ${id} has more than one disable tombstone`)
+  }
+  const cleared = tombstones.length === 1 ? removeDisableTombstone(source, id) : source
+  if (tombstones.length === 1 && cleared === undefined) {
+    throw new Error(`watched patch id ${id} disable tombstone is not a removable exact block; source preserved`)
   }
   if (inserted.length > 1) {
     throw new Error(`watched patch id ${id} is inserted more than once`)
@@ -142,18 +193,19 @@ export function planWatchedPatch(current: string | undefined, id: string, packag
     if (row.disabled === true) {
       throw new Error(`watched patch id ${id} is disabled; refusing to silently change user policy`)
     }
-    return { action: 'retriggered', after: source }
+    return { action: 'retriggered', after: cleared ?? source }
   }
 
-  if (source.trimEnd().endsWith('...')) {
+  const base = cleared ?? source
+  if (base.trimEnd().endsWith('...')) {
     throw new Error('watched cordis.patch.yml uses an explicit document terminator; refusing an unsafe text append')
   }
   const insertion = `- insert:\n    - id: ${yamlScalar(id)}\n      name: ${yamlScalar(packageName)}\n`
   // Official fresh profiles contain comments followed by [], not bare [].
   // Replace the empty collection token while retaining the surrounding comments.
   const prefix = patches.length === 0
-    ? source.replace(/^([ \t]*)\[[ \t]*\]([ \t]*(?:#[^\r\n]*)?)\r?$/m, '$1$2')
-    : source
+    ? base.replace(/^([ \t]*)\[[ \t]*\]([ \t]*(?:#[^\r\n]*)?)\r?$/m, '$1$2')
+    : base
   const after = prefix.trim() === '' ? insertion : `${prefix.trimEnd()}\n${insertion}`
   try {
     parsePatchList(after)

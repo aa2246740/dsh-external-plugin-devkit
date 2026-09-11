@@ -8,6 +8,7 @@ import {
 import { currentHost, pidAlive } from '../internal/host.ts'
 import { finding, printReport, report } from '../internal/io.ts'
 import { profileDir, resolveDshHome } from '../internal/paths.ts'
+import { loadPlugin } from '../internal/plugin.ts'
 import type { CliOptions } from '../internal/types.ts'
 import { join } from 'node:path'
 
@@ -25,7 +26,8 @@ export async function cmdActivateNewClient(args: string[], options: CliOptions, 
   try {
     const context = readCreatorContext()
     const patchPath = join(profileDir(resolveDshHome(), 'web'), 'cordis.patch.yml')
-    handle = beginCreatorActivation(root, raw, patchPath, options.port, context)
+    const plugin = loadPlugin(root, raw)
+    handle = beginCreatorActivation(root, plugin.id, patchPath, options.port, context)
     transaction = markCreatorActivationRunning(root, handle.transaction)
     const result = await activateNewClient(root, options.profile, raw, options.port, options.timeoutMs)
     finishCreatorActivation(root, transaction, { ok: true, hostAlive: true })

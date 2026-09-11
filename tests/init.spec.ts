@@ -67,6 +67,8 @@ describe('init scaffolds', () => {
     const buildConfig = readFileSync(join(source, 'tsdown.config.ts'), 'utf8')
     assert.match(buildConfig, /\.config\/dshx\/harness/)
     assert.match(buildConfig, /externalClientBundle/)
+    assert.match(buildConfig, /if \(configured\) return resolve\(configured\)/)
+    assert.doesNotMatch(buildConfig, /roots\.length\s*!==\s*1/)
     assert.doesNotMatch(buildConfig, new RegExp(root.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
   })
 })

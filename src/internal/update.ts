@@ -291,18 +291,27 @@ function inventoryPlugin(root: string, name: string, path: string, location: Plu
   }
 }
 
+const UPDATE_INVENTORY_SKIP = new Set(['dsh-external-plugin-devkit'])
+
+function skipUpdateInventory(name: string, packageName?: string): boolean {
+  return UPDATE_INVENTORY_SKIP.has(name) || (packageName !== undefined && UPDATE_INVENTORY_SKIP.has(packageName))
+}
+
 function workspacePluginInventory(root: string): UpdatePluginInventory[] {
   const dir = pluginsDir(root)
   if (!existsSync(dir)) return []
   const plugins: UpdatePluginInventory[] = []
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     if (entry.name.startsWith('.')) continue
+    if (skipUpdateInventory(entry.name)) continue
     const path = join(dir, entry.name)
     let location: PluginLocation
     if (entry.isDirectory()) location = 'directory'
     else if (entry.isSymbolicLink()) location = 'symlink'
     else continue
-    plugins.push(inventoryPlugin(root, entry.name, path, location))
+    const item = inventoryPlugin(root, entry.name, path, location)
+    if (skipUpdateInventory(item.name, item.packageName)) continue
+    plugins.push(item)
   }
   return plugins
 }
@@ -344,6 +353,7 @@ function pluginInventory(root: string, env: NodeJS.ProcessEnv): {
   applyActivationPatch(join(resolveDshHome(env), 'cordis.patch.yml'), activation)
   for (const [name, raw] of Object.entries(dependencies).sort(([left], [right]) => left.localeCompare(right))) {
     if (typeof raw !== 'string') continue
+    if (skipUpdateInventory(name)) continue
     const source = resolveLocalSpec(raw, profile)
     if (!source) continue
     if (!existsSync(source)) {
@@ -352,6 +362,7 @@ function pluginInventory(root: string, env: NodeJS.ProcessEnv): {
     }
     const location: PluginLocation = raw.startsWith('file:') ? 'profile-file' : 'profile-link'
     const active = inventoryPlugin(root, name, source, location)
+    if (skipUpdateInventory(name, active.packageName)) continue
     // A profile dependency is what Web will actually resolve. It displaces an
     // inactive my-plugins copy by package name before we check stable plugin ids.
     plugins = plugins.filter(plugin => plugin.name !== name)

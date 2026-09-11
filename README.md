@@ -68,10 +68,10 @@ dshx update plan
 
 ```sh
 dshx update plan
-dshx update prepare --target dsh-v0.1.2-rc.1
-dshx update verify --target dsh-v0.1.2-rc.1
-dshx update apply --target dsh-v0.1.2-rc.1
-dshx update rollback --target dsh-v0.1.2-rc.1
+dshx update prepare --target dsh-v0.1.5-rc.2
+dshx update verify --target dsh-v0.1.5-rc.2
+dshx update apply --target dsh-v0.1.5-rc.2
+dshx update rollback --target dsh-v0.1.5-rc.2
 ```
 
 下面的截图是历史 RC2 样例：本机从 `0.1.0-rc.8` 规划到 `0.1.1-rc.2`，1 个插件入账，没有监督中的 Host。它不替代当前 target 的候选结果：

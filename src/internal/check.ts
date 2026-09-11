@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
+import { compat015Findings } from './compat-015.ts'
 import { clientEntryFindings } from './file-copy.ts'
 import { finding } from './io.ts'
 import { pluginSource, readCommittedOverlay } from './plugin.ts'
@@ -112,6 +113,7 @@ export function checkPlugin(plugin: PluginManifest, repoRoot: string): Finding[]
   }
 
   findings.push(...clientEntryFindings(plugin.dir))
+  findings.push(...compat015Findings(plugin, repoRoot))
 
   return findings
 }

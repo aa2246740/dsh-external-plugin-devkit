@@ -200,6 +200,16 @@ export function clientEntryFindings(pluginDir: string): Finding[] {
     } else if (buildConfig.includes('externalClientBundle')) {
       findings.push(finding('ok', 'rc8-external-client-build', 'uses the target-aware out-of-tree dshx client bundle adapter', { path: buildConfigPath }))
     }
+    if (
+      buildConfig.includes('DSHX_HARNESS')
+      && buildConfig.includes('.config/dshx/harness')
+      && /roots\.length\s*!==\s*1/.test(buildConfig)
+    ) {
+      findings.push(finding('error', 'client-harness-pin', 'client build refuses when DSHX_HARNESS and ~/.config/dshx/harness disagree', {
+        path: buildConfigPath,
+        hint: 'prefer process.env.DSHX_HARNESS when set, then fall back to ~/.config/dshx/harness. update prepare pins DSHX_HARNESS to the candidate while the config file stays on the active checkout; requiring the two roots to match blocks candidate builds. read contracts/client-build',
+      }))
+    }
   }
   const clientExport = pkg.exports?.['./client']
   const declared = typeof clientExport === 'string'

@@ -68,10 +68,10 @@ An update is more than `git pull`. The gates are staged. Without `--target`, DSH
 
 ```sh
 dshx update plan
-dshx update prepare --target dsh-v0.1.2-rc.1
-dshx update verify --target dsh-v0.1.2-rc.1
-dshx update apply --target dsh-v0.1.2-rc.1
-dshx update rollback --target dsh-v0.1.2-rc.1
+dshx update prepare --target dsh-v0.1.5-rc.2
+dshx update verify --target dsh-v0.1.5-rc.2
+dshx update apply --target dsh-v0.1.5-rc.2
+dshx update rollback --target dsh-v0.1.5-rc.2
 ```
 
 The screenshots below are a historical RC2 example: this machine planned `0.1.0-rc.8` → `0.1.1-rc.2`, inventoried one plugin, and was not supervising a Host. They are not proof for a current target:

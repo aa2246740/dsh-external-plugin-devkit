@@ -9,6 +9,7 @@
 * [Plugin Config](plugin-config.md) - Schemastery `Config`，不要普通对象
 * [Settings cards](settings-card.md) - rc.7 `installSettingsSection` + `settings.plugin.item`
 * [RC8 external client build](client-build.md) - 官方 workspace preset 与 `my-plugins/*` 的构建边界
+* [0.1.5-rc.2 API replacements](compat-0.1.5.md) - 死 API 与 `dshx check` 的 `compat-015-*` 诊断
 
 # 工具与事件
 

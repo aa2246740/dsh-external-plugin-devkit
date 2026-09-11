@@ -12,6 +12,7 @@ describe('dshx skill workflow', () => {
     assert.doesNotMatch(skill, /Do not implement until the plan/)
     assert.match(skill, /freshly scaffolded `new-client`.*implement, build, and pass `check` before activation-plan/s)
     assert.match(skill, /fresh `new-client`.*after `check` passes/is)
+    assert.match(skill, /kb cat contracts\/compat-0\.1\.5/)
   })
 
   it('keeps the bundled Creator+ skill on the complete 0.7.5 workflow', () => {

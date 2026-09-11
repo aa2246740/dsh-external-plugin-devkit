@@ -90,7 +90,7 @@ export interface CliOptions {
   scope: HotReloadScope
 }
 
-export const DSHX_VERSION = '0.7.5'
+export const DSHX_VERSION = '0.7.6'
 export const DEFAULT_PORT = 3080
 export const DEFAULT_TIMEOUT_MS = 60_000
 export const DEFAULT_PROFILE: ProfileName = 'web'

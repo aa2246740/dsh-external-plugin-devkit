@@ -5,7 +5,7 @@ description: 官方 clientBundle 只发现 packages/*/*；my-plugins 外部包�
 tags: [client, build, rc8, rc1, tsdown, external-plugin]
 aliases: [clientBundle, externalClientBundle, target aware client, rc8 external client, packages glob, my-plugins build, no packages manifest]
 status: stable
-verified_against: { tag: dsh-v0.1.2-rc.1, sha: a66e4702047846cdaa10c66c9d3df3951f5ea70d, date: 2026-09-04 }
+verified_against: { tag: dsh-v0.1.5-rc.2, sha: fb2c4b9e698e30edb738bca4cf0618587db7d203, date: 2026-09-11 }
 sources:
   - id: official-client-build
     resource: packages/client/tsdown.client.ts
@@ -69,8 +69,9 @@ preset、`platform.ts` 和真实 WebUI。
 
 外部 CLI 的 `dshx init <name> --kind client` 在 Harness `my-plugins` 内生成相对
 adapter 配置。Creator+ 的 `dshx_scaffold` 则在可信会话工作区生成等价的便携配置：
-它从 `DSHX_HARNESS` 或 `~/.config/dshx/harness` 解析唯一 checkout，再加载同一
-`externalClientBundle()`，不会把本机绝对路径写进项目。
+它优先读 `DSHX_HARNESS`，没有时才读 `~/.config/dshx/harness`，再加载同一
+`externalClientBundle()`，不会把本机绝对路径写进项目。`update prepare` 会把
+`DSHX_HARNESS` 钉到 candidate；两个根路径不一致时必须采用环境变量，不能失败关闭。
 
 Harness 内形状为：
 

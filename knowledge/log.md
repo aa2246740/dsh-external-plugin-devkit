@@ -1,5 +1,9 @@
 # Directory Update Log
 
+## 2026-09-11
+
+* **0.7.6 0.1.5-rc.2 plugin compat**: `dshx check` diagnoses removed 0.1.2 APIs (`MessageText`, `addImages`, `createDraftImages`, `PendingSubmission.images`, `CommandInputDescriptor.images`, `EpochHeader.system`, `assistant/chunk`, `ctx.agent`) and the client `tsdown` template that fail-closes when `DSHX_HARNESS` and `~/.config/dshx/harness` disagree. New scaffolds prefer the env pin so `update prepare` can read the candidate platform table. Update inventory skips `dsh-external-plugin-devkit`. Apply rebuilds link `@types/node` and `typescript` from the target checkout. Agents start at `kb cat contracts/compat-0.1.5`.
+
 ## 2026-09-06
 
 * **0.7.5 RC1 lifecycle repair**: Creator+ passes official Connection authentication privately to origin-bound Host proofs; authentication failures stop before installation or patch mutation. Fresh commented `[]` patches now become valid YAML with comments preserved, and unsupported appends fail before writes. The installer discovers RC1's relocated shipped Standard preset. Combined with the identity-bound single-Home gates, these changes improve safe plugin delivery, not a guarantee of autonomous plugin correctness. Runtime activation, rendered UI, and a plugin's actual behavior still require separate acceptance.

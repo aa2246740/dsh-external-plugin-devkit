@@ -72,6 +72,8 @@ stale_after: 2026-11-17
 | 目录已在、想覆盖脚手架 | [init-plugin](/playbooks/init-plugin.md) | `dshx init <name> --force` |
 | 要一块 Web 设置/slot 脚手架 | [init-plugin](/playbooks/init-plugin.md) | `dshx init <name> --kind client` |
 | RC8 外部 client 构建报 `no packages/*/*/package.json` | [client-build](/contracts/client-build.md) | 用生成的 `externalClientBundle`，不要改核心 glob 或移动插件 |
+| 升到 0.1.5 后 `MessageText` / `addImages` / `assistant/chunk` / `ctx.agent` 编译失败 | [compat-0.1.5](/contracts/compat-0.1.5.md) | `dshx check` 的 `compat-015-*`；不要猜旧 API |
+| `update prepare` 因 DSHX_HARNESS 与 `~/.config/dshx/harness` 不一致而构建失败 | [client-build](/contracts/client-build.md) | 优先环境变量钉；`check` 报 `client-harness-pin` |
 | 插件配置要出现在设置 → 插件 | [settings-card](/contracts/settings-card.md) | [settings-card playbook](/playbooks/settings-card.md) |
 | 设置里多了一行导航、本该只是插件配置 | [settings-card](/contracts/settings-card.md) | 不要用 `settings.section` 冒充配置卡 |
 | verify 成功后还想看日志 / 留宿主 | [verify-boot](/playbooks/verify-boot.md) | 日志仍可读；`--keep` 已禁用，不能留下第二个长期 Host |

@@ -75,6 +75,7 @@ const SYNONYM_GROUPS: string[][] = [
   ['supervising', 'supervises', 'already supervising', 'already supervises'],
   ['headless', 'one-shot', 'oneshot', 'headless-boot', 'no-ui', 'noui', 'no ui'],
   ['hmr', 'hot reload', 'hot-reload', '热重载', '热插拔', 'live activation', '不重启'],
+  ['addimages', 'messagetext', 'assistant/chunk', 'compat-0.1.5', '0.1.5', 'ctx.agent'],
   ['manifest', 'package.json', 'dsh.profile.bundles', 'next boot', '下次启动'],
   ['client reload', 'page reload', 'refresh page', '页面刷新', '重开页面'],
 ]
@@ -137,6 +138,11 @@ export const RETRIEVAL_FIXTURES: RetrievalFixture[] = [
   { query: 'cordis.patch.yml', mustInclude: 'contracts/live-activation' },
   { query: 'manifest', mustInclude: 'contracts/live-activation' },
   { query: 'restart', mustInclude: 'contracts/live-activation' },
+  { query: 'MessageText', mustInclude: 'contracts/compat-0.1.5', first: 'contracts/compat-0.1.5' },
+  { query: 'addImages', mustInclude: 'contracts/compat-0.1.5', first: 'contracts/compat-0.1.5' },
+  { query: 'assistant/chunk', mustInclude: 'contracts/compat-0.1.5', first: 'contracts/compat-0.1.5' },
+  { query: 'ctx.agent', mustInclude: 'contracts/compat-0.1.5', first: 'contracts/compat-0.1.5' },
+  { query: '0.1.5', mustInclude: 'contracts/compat-0.1.5' },
 ]
 
 function walkMd(dir: string, acc: string[] = []): string[] {

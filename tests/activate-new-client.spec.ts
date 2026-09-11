@@ -127,6 +127,17 @@ describe('activate-new-client', () => {
     assert.match(planned.after, /id: "demo"/)
   })
 
+  it('clears an exact insert+disabled tombstone without rewriting other patch bytes', () => {
+    const current = '# keep\n- insert:\n    - id: "demo"\n      name: "demo"\n- id: another\n  config:\n    port: 1\n- id: demo\n  disabled: true\n'
+    const planned = planWatchedPatch(current, 'demo', 'demo')
+    assert.equal(planned.action, 'retriggered')
+    assert.equal(planned.after, '# keep\n- insert:\n    - id: "demo"\n      name: "demo"\n- id: another\n  config:\n    port: 1\n')
+    assert.throws(
+      () => planWatchedPatch('- id: demo\n  disabled: true\n  config:\n    keep: true\n', 'demo', 'demo'),
+      /already an id-targeted override/,
+    )
+  })
+
   it('removes only a standalone matching insert block and disables ambiguous shared rows', () => {
     const standalone = '# keep\n- insert:\n    - id: "demo"\n      name: "demo"\n- id: another\n  disabled: true\n'
     const removed = planWatchedPatchRemoval(standalone, 'demo', 'demo')

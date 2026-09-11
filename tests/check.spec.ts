@@ -84,6 +84,55 @@ export function apply(_ctx: Context) {
   })
 })
 
+describe('0.1.5 compat diagnostics', () => {
+  it('fails dead 0.1.2 APIs and accepts the 0.1.5 replacements', () => {
+    const root = mkdtempSync(join(tmpdir(), 'dshx-compat-'))
+    writePlugin(root, 'legacy', {
+      'dshx.yml': 'id: legacy\nentry: src/legacy.ts\nmarker: "[legacy] loaded"\nkind: function\n',
+      'src/legacy.ts': `import type { Context } from '@deepseek-ai/cordis'
+import { MessageText } from '@deepseek-ai/dsh-client-ui-primitives'
+export const inject = ['agent']
+export function apply(ctx: Context) {
+  ctx.agent.on('assistant/chunk', () => {})
+  console.log('[legacy] loaded')
+}
+`,
+      'src/ui.tsx': `export function Images(actions: { addImages(files: File[]): void }) {
+  actions.addImages([])
+  createDraftImages()
+}
+function createDraftImages() {}
+`,
+    })
+    const broken = checkPlugin(loadPlugin(root, 'legacy'), root)
+    const codes = broken.filter(item => item.level === 'error').map(item => item.code)
+    assert.ok(codes.includes('compat-015-message-text'), JSON.stringify(broken, null, 2))
+    assert.ok(codes.includes('compat-015-add-images'), JSON.stringify(broken, null, 2))
+    assert.ok(codes.includes('compat-015-create-draft-images'), JSON.stringify(broken, null, 2))
+    assert.ok(codes.includes('compat-015-assistant-chunk'), JSON.stringify(broken, null, 2))
+    assert.ok(codes.includes('compat-015-ctx-agent'), JSON.stringify(broken, null, 2))
+
+    writePlugin(root, 'current', {
+      'dshx.yml': 'id: current\nentry: src/current.ts\nmarker: "[current] loaded"\nkind: function\n',
+      'src/current.ts': `import type { Context } from '@deepseek-ai/cordis'
+import { MarkdownText } from '@deepseek-ai/dsh-client-ui-primitives'
+export const inject = ['agents']
+export function apply(ctx: Context) {
+  ctx.agents.get('x')
+  ctx.agentLoop.create
+  console.log('[current] loaded')
+}
+`,
+      'src/ui.tsx': `export function Attachments(actions: { addAttachments(ids: string[]): void }) {
+  actions.addAttachments([])
+}
+`,
+    })
+    const ok = checkPlugin(loadPlugin(root, 'current'), root)
+    assert.equal(ok.some(item => item.code.startsWith('compat-015-') && item.level === 'error'), false, JSON.stringify(ok, null, 2))
+  })
+})
+
 describe('out-of-tree client build diagnostics', () => {
   it('rejects a missing relative tsconfig base despite an existing valid old bundle', () => {
     const root = mkdtempSync(join(tmpdir(), 'dshx-build-config-'))
@@ -104,5 +153,23 @@ describe('out-of-tree client build diagnostics', () => {
     const after = clientEntryFindings(dir)
     assert.ok(!after.some(f => f.code === 'client-build-config' && f.level === 'error'))
     assert.ok(after.some(f => f.code === 'client-build-proof'))
+  })
+
+  it('rejects a tsdown template that requires DSHX_HARNESS and the config file to agree', () => {
+    const root = mkdtempSync(join(tmpdir(), 'dshx-harness-pin-'))
+    const dir = writePlugin(root, 'pinned', {
+      'package.json': JSON.stringify({ name: 'pinned', exports: { './client': './lib/client.js' }, dsh: { client: { platform: 'web', inject: [] } } }),
+      'tsdown.config.ts': `function resolveHarness() {
+  const configured = process.env.DSHX_HARNESS?.trim()
+  const recorded = '/tmp/recorded'
+  const roots = [...new Set([configured, recorded].filter(Boolean))]
+  if (roots.length !== 1) throw new Error('dshx client build requires one Harness root from DSHX_HARNESS or ~/.config/dshx/harness')
+  return roots[0]
+}
+export default { adapter: resolveHarness() }
+`,
+    })
+    const findings = clientEntryFindings(dir)
+    assert.ok(findings.some(item => item.code === 'client-harness-pin' && item.level === 'error'), JSON.stringify(findings, null, 2))
   })
 })

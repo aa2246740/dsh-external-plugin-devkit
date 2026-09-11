@@ -34,6 +34,8 @@ dshx check              # 扫 my-plugins/ 下每一个目录（含别人留下�
 | `cordis-yml` | 已提交 overlay 不是顶层 YAML 数组 |
 | `entry` | entry 文件不存在 |
 | `client-entry` / `client-entry-format` | built `.js` 不存在，或没有 `window.__ModuleLoader__.load({ id, factory })` handoff；source TSX 会红 |
+| `client-harness-pin` | `tsdown.config.ts` 要求 `DSHX_HARNESS` 与 `~/.config/dshx/harness` 相同；`update prepare` 会故意把它们钉到不同 checkout |
+| `compat-015-*` | 源码仍使用 0.1.2 已删除的 API。替换表见 [compat-0.1.5](/contracts/compat-0.1.5.md) |
 
 # 常见负例
 

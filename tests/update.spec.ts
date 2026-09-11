@@ -6,7 +6,7 @@ import { dirname, join } from 'node:path'
 import { describe, it } from 'node:test'
 import { applyPluginSourceOverrides, collectUpdatePlan, latestReleaseRef, parseReleaseRef } from '../src/internal/update.ts'
 import { candidateVerified, candidateWebGateFailures, combinedPluginNames } from '../src/internal/update-candidate.ts'
-import { assertNoStagingOnlyPluginSources } from '../src/internal/update-apply.ts'
+import { assertNoStagingOnlyPluginSources, overlayTargetDependency, targetDependency } from '../src/internal/update-apply.ts'
 import type { CandidatePluginResult, CandidateWebGateResult, UpdateCandidateState } from '../src/internal/update-candidate.ts'
 
 function git(root: string, args: readonly string[]): void {
@@ -68,6 +68,20 @@ describe('update plan', () => {
     assert.equal(plan.plugins.every(plugin => plugin.activeInProfile === false), true)
     assert.equal(plan.checkout.trackedChanges.length, 0)
     assert.equal(before, after)
+  })
+
+  it('skips the dshx checkout when it appears as a local plugin', () => {
+    const root = fakeHarness()
+    write(join(root, 'my-plugins/dsh-external-plugin-devkit/src/index.ts'), "export function apply() { console.log('[dshx] loaded') }\n")
+    write(join(root, 'my-plugins/dsh-external-plugin-devkit/dshx.yml'), 'id: dsh-external-plugin-devkit\nentry: src/index.ts\nmarker: "[dshx] loaded"\n')
+    write(join(root, 'my-plugins/dsh-external-plugin-devkit/package.json'), '{"name":"dsh-external-plugin-devkit","version":"0.7.6"}\n')
+    const home = join(root, '.test-dsh-home')
+    write(join(home, 'profiles/web/package.json'), JSON.stringify({
+      dependencies: { 'dsh-external-plugin-devkit': `link:${join(root, 'my-plugins/dsh-external-plugin-devkit')}` },
+    }))
+    const plan = collectUpdatePlan(root, 'dsh-v0.1.1-rc.2', isolatedEnv(root))
+    assert.equal(plan.plugins.some(plugin => plugin.name === 'dsh-external-plugin-devkit' || plugin.packageName === 'dsh-external-plugin-devkit'), false)
+    assert.deepEqual(plan.plugins.map(plugin => plugin.name), ['linked', 'local'])
   })
 
   it('blocks a blind update when tracked Harness files are dirty', () => {
@@ -279,5 +293,29 @@ describe('update plan', () => {
     }
     assert.equal(candidateVerified(incomplete), false)
     assert.deepEqual(candidateWebGateFailures(incomplete), ['combined-web'])
+  })
+
+  it('prefers the checkout workspace @deepseek-ai view over the pnpm virtual store', () => {
+    const root = mkdtempSync(join(tmpdir(), 'dshx-apply-overlay-'))
+    const workspace = join(root, 'node_modules/@deepseek-ai')
+    const bridge = join(root, 'node_modules/.pnpm/node_modules/@deepseek-ai')
+    write(join(workspace, 'dsh-agent/package.json'), '{"name":"@deepseek-ai/dsh-agent"}\n')
+    write(join(bridge, 'cordis/package.json'), '{"name":"@deepseek-ai/cordis"}\n')
+    write(join(bridge, 'dsh-client-locale/package.json'), '{"name":"@deepseek-ai/dsh-client-locale"}\n')
+    write(join(root, 'node_modules/.pnpm/node_modules/react/package.json'), '{"name":"react"}\n')
+
+    assert.equal(targetDependency(root, '@deepseek-ai'), workspace)
+    assert.equal(targetDependency(root, 'react'), join(root, 'node_modules/.pnpm/node_modules/react'))
+    assert.equal(targetDependency(root, 'missing'), undefined)
+
+    const pluginModules = join(root, 'plugin/node_modules')
+    mkdirSync(pluginModules, { recursive: true })
+    overlayTargetDependency(root, pluginModules, '@deepseek-ai')
+    overlayTargetDependency(root, pluginModules, 'react')
+
+    assert.equal(readFileSync(join(pluginModules, '@deepseek-ai/dsh-agent/package.json'), 'utf8'), '{"name":"@deepseek-ai/dsh-agent"}\n')
+    assert.equal(readFileSync(join(pluginModules, '@deepseek-ai/cordis/package.json'), 'utf8'), '{"name":"@deepseek-ai/cordis"}\n')
+    assert.equal(readFileSync(join(pluginModules, '@deepseek-ai/dsh-client-locale/package.json'), 'utf8'), '{"name":"@deepseek-ai/dsh-client-locale"}\n')
+    assert.equal(realpathSync(join(pluginModules, 'react')), realpathSync(join(root, 'node_modules/.pnpm/node_modules/react')))
   })
 })

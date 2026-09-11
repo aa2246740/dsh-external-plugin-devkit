@@ -147,13 +147,13 @@ import { pathToFileURL } from 'node:url'
 
 function resolveHarness() {
   const configured = process.env.DSHX_HARNESS?.trim()
+  if (configured) return resolve(configured)
   const configPath = join(homedir(), '.config/dshx/harness')
   const recorded = existsSync(configPath) ? readFileSync(configPath, 'utf8').trim() : undefined
-  const roots = [...new Set([configured, recorded].filter(Boolean).map(value => resolve(value)))]
-  if (roots.length !== 1) {
-    throw new Error('dshx client build requires one Harness root from DSHX_HARNESS or ~/.config/dshx/harness')
+  if (!recorded) {
+    throw new Error('dshx client build requires a Harness root from DSHX_HARNESS or ~/.config/dshx/harness')
   }
-  return roots[0]
+  return resolve(recorded)
 }
 
 const adapter = join(resolveHarness(), 'tools/dshx/src/client-build.js')

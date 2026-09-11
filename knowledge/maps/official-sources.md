@@ -9,7 +9,7 @@ generated: { by: dshx/grok-4.6, at: 2026-08-17T14:00:00Z }
 stale_after: 2026-11-17
 ---
 
-钉：合同对照官方 **0.1.0-rc.8**（tag `dsh-v0.1.0-rc.8`，SHA `141eb6fef83422698aef7a981029e843e8161534`）。工作台 checkout 的 `package.json` 可能仍显示更早 rc；以官方 tag / npm `@deepseek-ai/dsh*` 为准。路径相对仓库根。
+当前工作台对照官方 **0.1.5-rc.2**（tag `dsh-v0.1.5-rc.2`，SHA `fb2c4b9e698e30edb738bca4cf0618587db7d203`）。更早合同篇仍可能钉在 rc.8 / rc.1；跨版本改插件 API 先读 [compat-0.1.5](/contracts/compat-0.1.5.md)。路径相对仓库根。
 
 **不要先把这些文件整篇读完。** 先走 [symptoms](symptoms.md) 或下面的「已拆成」列，需要逐条核对再打开原件。
 
