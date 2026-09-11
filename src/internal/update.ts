@@ -5,6 +5,7 @@ import yaml from 'js-yaml'
 import { currentHost } from './host.ts'
 import { resolveLocalSpec } from './file-copy.ts'
 import { pluginsDir, profileDir, resolveDshHome } from './paths.ts'
+import { captureOfficialPluginDisables, officialDisableOnlyDirty, type OfficialPluginPolicy } from './official-plugin-policy.ts'
 import { loadPlugin, pluginSource } from './plugin.ts'
 
 interface GitResult {
@@ -63,6 +64,7 @@ export interface UpdatePlan {
   target: UpdateTargetState
   plugins: UpdatePluginInventory[]
   staleProfileDependencies: Array<{ name: string; spec: string; source: string }>
+  officialPluginDisables: OfficialPluginPolicy
   supervisedHost?: { pid: number; port: number; ownership: string }
   blockers: string[]
 }
@@ -451,9 +453,15 @@ export function collectUpdatePlan(root: string, requestedTarget?: string, env: N
   const inventory = pluginInventory(root, env)
   const plugins = applyPluginSourceOverrides(root, inventory.plugins, sourceOverrides)
   const { staleProfileDependencies } = inventory
+  const officialPluginDisables = captureOfficialPluginDisables(root, env)
   const blockers: string[] = []
   if (!officialOrigin(origin)) blockers.push(`origin is not deepseek-ai/deepseek-harness: ${origin}`)
-  if (checkout.trackedChanges.length > 0) blockers.push(`tracked Harness changes must be preserved before apply (${checkout.trackedChanges.length})`)
+  if (
+    checkout.trackedChanges.length > 0
+    && !officialDisableOnlyDirty(root, checkout.trackedChanges, officialPluginDisables)
+  ) {
+    blockers.push(`tracked Harness changes must be preserved before apply (${checkout.trackedChanges.length})`)
+  }
   if (checkout.targetCollisions.length > 0) blockers.push(`target would overwrite untracked paths (${checkout.targetCollisions.length})`)
   const invalid = plugins.filter(plugin => !plugin.valid)
   if (invalid.length > 0) blockers.push(`invalid local plugin sources (${invalid.map(plugin => plugin.name).join(', ')})`)
@@ -463,6 +471,7 @@ export function collectUpdatePlan(root: string, requestedTarget?: string, env: N
     target,
     plugins,
     staleProfileDependencies,
+    officialPluginDisables,
     ...host ? { supervisedHost: { pid: host.pid, port: host.port, ownership: host.ownership ?? 'spawned' } } : {},
     blockers,
   }

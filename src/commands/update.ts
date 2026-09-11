@@ -8,8 +8,26 @@ import {
   verifyUpdateCandidate,
 } from '../internal/update-candidate.ts'
 import { applyUpdate, rollbackUpdate } from '../internal/update-apply.ts'
+import { officialDisableOnlyDirty } from '../internal/official-plugin-policy.ts'
 import { finding, printReport, report } from '../internal/io.ts'
+import type { OfficialDisableReportItem } from '../internal/official-plugin-policy.ts'
 import type { CliOptions, Finding, UpdateAction } from '../internal/types.ts'
+
+function officialDisableFindings(items: readonly OfficialDisableReportItem[]): Finding[] {
+  if (items.length === 0) {
+    return [finding('ok', 'official-plugin-disable', 'no user-disabled official plugins to keep')]
+  }
+  return [
+    ...items.map(item => {
+      const surfaces = item.surfaces.map(entry => `${entry.surface} (${entry.status})`).join(', ')
+      const absent = item.surfaces.some(entry => entry.status === 'absent')
+      return finding(absent ? 'warn' : 'info', 'official-plugin-disable', `${item.id} (${item.name}): ${surfaces}`, {
+        hint: 'kept disabled on purpose; re-enable only if you want the official plugin back',
+      })
+    }),
+    finding('info', 'official-plugin-disable-summary', `${items.length} official plugin disable(s) reported for your judgment; update does not silently re-enable them`),
+  ]
+}
 
 function updateAction(value: string | undefined): UpdateAction | undefined {
   if (value === undefined || value === 'plan') return 'plan'
@@ -84,6 +102,7 @@ export async function cmdUpdate(args: string[], options: CliOptions, root: strin
           finding('ok', 'harness-build', 'target Harness frozen install and full build passed'),
           finding('ok', 'plugins', `${Object.keys(result.pluginChecks).length}/${Object.keys(result.pluginChecks).length} plugins rebuilt and checked on the target checkout`),
           finding('ok', 'rollback', 'exact pre-update dependencies and generated plugin artifacts are preserved', { path: result.rollbackPath }),
+          ...officialDisableFindings(result.officialPluginDisables ?? []),
           finding('info', 'runtime-limit', 'apply does not claim browser/client activation; run the final Host and browser acceptance gate'),
         ]
         : [
@@ -98,6 +117,7 @@ export async function cmdUpdate(args: string[], options: CliOptions, root: strin
         target: result.state.target,
         pluginBuilds: result.pluginBuilds,
         pluginChecks: result.pluginChecks,
+        officialPluginDisables: result.officialPluginDisables ?? [],
       }), options.json)
       return 0
     } catch (error) {
@@ -125,9 +145,18 @@ export async function cmdUpdate(args: string[], options: CliOptions, root: strin
       finding('ok', 'target', `${plan.target.version} @ ${plan.target.sha.slice(0, 12)} (${plan.target.local ? 'local' : 'remote'})`),
       plan.checkout.trackedChanges.length === 0
         ? finding('ok', 'tracked-tree', 'no tracked Harness changes')
-        : finding('error', 'tracked-tree', `${plan.checkout.trackedChanges.length} tracked Harness change(s) would be lost by a blind update`, {
-          hint: 'commit, stash, or migrate these changes explicitly; update never hides them',
-        }),
+        : officialDisableOnlyDirty(root, plan.checkout.trackedChanges, plan.officialPluginDisables)
+          ? finding('info', 'tracked-tree', `${plan.checkout.trackedChanges.length} tracked official-plugin disable(s) will be restamped after apply`, {
+            hint: 'these working-tree edits only keep official plugins disabled; they are not a blind-update loss',
+          })
+          : finding('error', 'tracked-tree', `${plan.checkout.trackedChanges.length} tracked Harness change(s) would be lost by a blind update`, {
+            hint: 'commit, stash, or migrate these changes explicitly; update never hides them',
+          }),
+      ...plan.officialPluginDisables.disables.length === 0
+        ? [finding('ok', 'official-plugin-disable', 'no user-disabled official plugins')]
+        : plan.officialPluginDisables.disables.map(item => finding('info', 'official-plugin-disable', `${item.id} (${item.name}): ${item.surfaces.join(', ')}`, {
+          hint: 'apply keeps these disabled and reports the same list for you to judge',
+        })),
       plan.checkout.targetCollisions.length === 0
         ? finding('ok', 'untracked-collisions', 'target does not overwrite discovered untracked paths')
         : finding('error', 'untracked-collisions', `${plan.checkout.targetCollisions.length} untracked path(s) collide with the target release`),

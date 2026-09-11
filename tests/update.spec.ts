@@ -92,6 +92,21 @@ describe('update plan', () => {
     assert.equal(plan.blockers.some(blocker => blocker.includes('tracked Harness changes')), true)
   })
 
+  it('does not treat user-disabled official shipped presets as a blind-update loss', () => {
+    const root = fakeHarness()
+    const composition = `- id: command-goal\n  name: '@deepseek-ai/dsh-command-goal'\n`
+    write(join(root, 'packages/preset/agent-presets/presets/standard/agent.cordis.yml'), composition)
+    execFileSync('git', ['-C', root, 'add', 'packages'], { stdio: 'ignore' })
+    execFileSync('git', ['-C', root, 'commit', '-m', 'presets'], { stdio: 'ignore' })
+    write(
+      join(root, 'packages/preset/agent-presets/presets/standard/agent.cordis.yml'),
+      `- id: command-goal\n  name: '@deepseek-ai/dsh-command-goal'\n  disabled: true\n`,
+    )
+    const plan = collectUpdatePlan(root, 'dsh-v0.1.1-rc.2', isolatedEnv(root))
+    assert.equal(plan.officialPluginDisables.disables.some(item => item.id === 'command-goal'), true)
+    assert.equal(plan.blockers.some(blocker => blocker.includes('tracked Harness changes')), false)
+  })
+
   it('includes local Web-profile plugins that are absent from my-plugins', () => {
     const root = fakeHarness()
     const home = join(root, '.test-dsh-home')

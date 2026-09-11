@@ -16,6 +16,11 @@ import { acquireWebHostOperationLock } from './host.ts'
 import { loadJson, writeText } from './io.ts'
 import { resolveDshHome, stateDir } from './paths.ts'
 import type { CliOptions } from './types.ts'
+import {
+  persistOfficialPluginPolicy,
+  restampOfficialPluginDisables,
+  type OfficialDisableReportItem,
+} from './official-plugin-policy.ts'
 import { collectUpdatePlan } from './update.ts'
 import { candidateVerified, loadUpdateCandidateState, pluginSourceHash } from './update-candidate.ts'
 import type { CandidatePluginResult, UpdateCandidateState } from './update-candidate.ts'
@@ -72,6 +77,7 @@ export interface UpdateApplyResult {
   state: UpdateRollbackState
   pluginBuilds: Record<string, boolean>
   pluginChecks: Record<string, boolean>
+  officialPluginDisables?: OfficialDisableReportItem[]
 }
 
 const TARGET_RUNTIME_DEPENDENCIES = [
@@ -321,6 +327,7 @@ function restorePath(item: PathBackup): void {
 }
 
 function restoreTransaction(state: UpdateRollbackState): void {
+  git(state.sourceRoot, ['checkout', '--', 'packages/preset/agent-presets/presets'])
   for (const plugin of [...state.plugins].reverse()) {
     restorePath(plugin.lib)
     restorePath(plugin.nodeModules)
@@ -426,8 +433,10 @@ function applyUpdateGuarded(root: string, options: CliOptions, assertSafe: () =>
     plugins: pluginBackups(candidate, backupRoot),
   }
   persistRollback(rollbackPath, state)
+  persistOfficialPluginPolicy(resolveDshHome(dshEnv(root)), plan.officialPluginDisables)
   const pluginBuilds: Record<string, boolean> = {}
   const pluginChecks: Record<string, boolean> = {}
+  let officialPluginDisables: OfficialDisableReportItem[] = []
   let mutationStarted = false
   try {
     // Candidate hashing can be slow. Re-prove the no-Host precondition at the
@@ -482,9 +491,10 @@ function applyUpdateGuarded(root: string, options: CliOptions, assertSafe: () =>
     }
     const failed = candidate.plugins.filter(plugin => !pluginBuilds[plugin.name] || !pluginChecks[plugin.name])
     if (failed.length > 0) throw new Error(`target plugin gate failed: ${failed.map(plugin => plugin.name).join(', ')}`)
+    officialPluginDisables = restampOfficialPluginDisables(root, plan.officialPluginDisables, dshEnv(root)).report
     state.status = 'applied'
     persistRollback(rollbackPath, state)
-    return { ok: true, rollbackPath, state, pluginBuilds, pluginChecks }
+    return { ok: true, rollbackPath, state, pluginBuilds, pluginChecks, officialPluginDisables }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     state.applyError = message
