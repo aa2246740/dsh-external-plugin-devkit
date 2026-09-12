@@ -2,7 +2,11 @@
 
 [中文](README.md) · [English](README.en.md)
 
-DeepSeek Harness 的进程外插件工作台。给 Cursor、Claude Code、Codex、Grok 和人用。
+**这不是 Host 功能插件。** 不要用 `dsh plugin add` 装本仓库，也没有 `github:aa2246740/dsh-external-plugin-devkit` 这种 Host 安装命令。
+
+只跑官方 DeepSeek Harness（例如 **0.1.5-rc.2**）、不写插件的人：**跳过这个仓库。** 官方原装 DSH 没有 Creator Mode，也没有 DSHX；功能插件的安装写在那个插件自己的 README 里。
+
+本仓库是 **dshx CLI / 工作台**。给**手里有一份 [Harness checkout](https://github.com/deepseek-ai/deepseek-harness)、要在仓外写或维护文件插件**的作者用（Cursor、Claude Code、Codex、Grok，或人自己跑）。
 
 官方 Creator Mode 适合在活进程里探针。dshx 管另一半：把插件写成文件、检查合同、看这次改的是哪一层，再决定要不要重启 Host、刷新页面。**不是 `dsh`，不是 Harness 的 fork，也不是 Creator Mode 的替代品。**
 
@@ -14,7 +18,9 @@ DeepSeek Harness 的进程外插件工作台。给 Cursor、Claude Code、Codex�
 
 上面是本机刚跑过的 CLI。Harness 在 `dsh-v0.1.0-rc.8`，依赖已装，所以 `doctor` 的 `dump-config` 能过。官方 Web UI 没有起来，所以没有官方窗口。`dump-config` 退出 0 不是 boot 证明。
 
-## 装上就能用
+## 作者：装工作台
+
+先有一份本机 Harness checkout，再把本仓库 clone 进它的 `tools/dshx`，用 dshx 自己的 `setup`。**不是** `dsh plugin add`。
 
 ```sh
 cd /path/to/deepseek-harness

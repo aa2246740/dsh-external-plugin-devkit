@@ -2,7 +2,11 @@
 
 [English](README.en.md) · [中文](README.md)
 
-An out-of-process plugin workshop for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness). For Cursor, Claude Code, Codex, Grok, and humans.
+**This is not a Host feature plugin.** Do not install this repo with `dsh plugin add`. There is no Host install spec such as `github:aa2246740/dsh-external-plugin-devkit`.
+
+If you only run official DeepSeek Harness (for example **0.1.5-rc.2**) and you are not writing plugins: **skip this repository.** Stock DSH has no Creator Mode and no DSHX. Feature-plugin install lives in that plugin's own README.
+
+This repo is the **dshx CLI / workbench**. It is for **plugin authors who already have a [Harness checkout](https://github.com/deepseek-ai/deepseek-harness)** and want to write or maintain file-backed plugins outside the Host (Cursor, Claude Code, Codex, Grok, or a human).
 
 Official Creator Mode is for probing a live process. dshx is the other half: write the plugin as files, check the contract, name the layer you changed, then decide whether the Host restarts or the page reloads. **It is not `dsh`, not a Harness fork, and not a Creator Mode replacement.**
 
@@ -14,7 +18,9 @@ Official Creator Mode is for probing a live process. dshx is the other half: wri
 
 That GIF is the local CLI. The Harness checkout is `dsh-v0.1.0-rc.8` with dependencies installed, so `doctor`'s `dump-config` can run. The official Web UI was not booted. There is no official window to show. `dump-config` exiting 0 is not a boot proof.
 
-## Install
+## Authors: set up the workbench
+
+You need a local Harness checkout first. Clone this repo into that tree's `tools/dshx`, then run dshx `setup`. **Not** `dsh plugin add`.
 
 ```sh
 cd /path/to/deepseek-harness
