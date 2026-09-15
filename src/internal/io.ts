@@ -164,8 +164,8 @@ function applyFlag(token: string, argv: string[], index: number, options: CliOpt
     return index + 1
   } else if (token === '--scope') {
     const scope = argv[index + 1]
-    if (scope !== 'root' && scope !== 'preset') {
-      throw new Error('--scope must be root or preset')
+    if (scope !== 'root' && scope !== 'preset' && scope !== 'mixed') {
+      throw new Error('--scope must be root or preset or mixed')
     }
     options.scope = scope as HotReloadScope
     return index + 1

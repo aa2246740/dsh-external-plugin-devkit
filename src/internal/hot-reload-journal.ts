@@ -47,7 +47,7 @@ export interface HotReloadJournalRecord {
   }
   target: {
     pluginId: string
-    targetScope: 'root' | 'preset'
+    targetScope: 'root' | 'preset' | 'mixed'
     sourcePath: string
     entryPath: string
     patchPath: string

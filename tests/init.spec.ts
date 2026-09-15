@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { lstatSync, mkdtempSync, readFileSync, realpathSync } from 'node:fs'
+import { lstatSync, mkdtempSync, readFileSync, realpathSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, it } from 'node:test'
@@ -71,4 +71,18 @@ describe('init scaffolds', () => {
     assert.doesNotMatch(buildConfig, /roots\.length\s*!==\s*1/)
     assert.doesNotMatch(buildConfig, new RegExp(root.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
   })
+})
+
+// A plain client must not require the retired settings installation helper.
+it('creates a client Host half that imports and mounts without optional settings APIs', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'dshx-client-import-'))
+  const workspace = mkdtempSync(join(tmpdir(), 'dshx-client-workspace-'))
+  try {
+    scaffoldCreatorPlugin(root, workspace, 'plain-client-proof', 'client')
+    const path = join(workspace, 'plain-client-proof/src/plain-client-proof.ts')
+    const plugin = await import(path)
+    assert.equal(plugin.name, 'plain-client-proof')
+    assert.deepEqual(plugin.inject, [])
+    await plugin.apply({})
+  } finally { rmSync(root, { recursive: true, force: true }); rmSync(workspace, { recursive: true, force: true }) }
 })

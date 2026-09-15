@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
 import {
   chmodSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -94,7 +95,7 @@ function simulatedDependencies(test: ReturnType<typeof fixture>, failAfterTouch 
   let hmrEntryId = ''
   let report: Record<string, unknown> | undefined
   let touched = 0
-  let targetScope: 'root' | 'preset' = 'root'
+  let targetScope: 'root' | 'preset' | 'mixed' = 'root'
 
   const publish = (phase: string, fields: Record<string, unknown> = {}) => {
     report = { ...report, ...fields, phase }
@@ -125,7 +126,7 @@ function simulatedDependencies(test: ReturnType<typeof fixture>, failAfterTouch 
       const reportMatch = content.match(/reportPath: ("[^"\n]+")/)
       const hmrMatch = content.match(/hmrEntryId: ("[^"\n]+")/)
       const transactionMatch = content.match(/transactionId: ("[^"\n]+")/)
-      const scopeMatch = content.match(/targetScope: ("(?:root|preset)")/)
+      const scopeMatch = content.match(/targetScope: ("(?:root|preset|mixed)")/)
       if (reportMatch && hmrMatch && transactionMatch && !report) {
         reportPath = JSON.parse(reportMatch[1]!)
         hmrEntryId = JSON.parse(hmrMatch[1]!)
@@ -134,9 +135,10 @@ function simulatedDependencies(test: ReturnType<typeof fixture>, failAfterTouch 
         report = identity()
         publish('READY', {
           readyAt: iso,
-          targetGenerationIds: ['generation-1'],
-          targetGenerationStates: [{ generationId: 'generation-1', state: 'ACTIVE' }],
+          targetGenerationIds: targetScope === 'mixed' ? ['generation-1', 'generation-4'] : ['generation-1'],
+          targetGenerationStates: (targetScope === 'mixed' ? ['generation-1', 'generation-4'] : ['generation-1']).map(generationId => ({ generationId, state: 'ACTIVE' })),
           hmrGenerationId: 'generation-2',
+          ...targetScope === 'mixed' ? { mixedMounts: { rootGenerationId: 'generation-1', privateGenerationIds: ['generation-4'] } } : {},
           ...targetScope === 'preset' ? { discoveryAnchor: { disabled: true, hasFiber: false } } : {},
         })
       } else if (report && content.includes('# dshx hot-reload begin')
@@ -158,10 +160,10 @@ function simulatedDependencies(test: ReturnType<typeof fixture>, failAfterTouch 
         publish('MODULE_RELOADED', {
           moduleReloaded: {
             at: iso,
-            oldGenerationIds: ['generation-1'],
-            newGenerationIds: ['generation-3'],
+            oldGenerationIds: targetScope === 'mixed' ? ['generation-1', 'generation-4'] : ['generation-1'],
+            newGenerationIds: targetScope === 'mixed' ? ['generation-3', 'generation-5'] : ['generation-3'],
             hmrEventAt: iso,
-            hmrEventMatchedGenerationIds: ['generation-1'],
+            hmrEventMatchedGenerationIds: targetScope === 'mixed' ? ['generation-1', 'generation-4'] : ['generation-1'],
             samePid: true,
           },
         })
@@ -284,6 +286,29 @@ describe('controlled server plugin hot reload', () => {
     assert.deepEqual(result.watchRoots, ['src/index.ts', 'lib/index.js'])
   })
 
+  it('loads a fresh complete observer snapshot instead of a cached installed module', async (t) => {
+    const test = fixture()
+    t.after(() => rmSync(test.base, { recursive: true, force: true }))
+    const dependencies = simulatedDependencies(test)
+    const write = dependencies.writePatch!
+    const snapshotPaths = new Set<string>()
+    dependencies.writePatch = (path, content) => {
+      const match = content.match(/name: ("[^"\n]+observer-runtime\.mjs")/)
+      if (content.includes('reportPath:')) {
+        assert.ok(match, 'managed row must use a transaction-private observer URL')
+        const snapshot = JSON.parse(match[1]!)
+        snapshotPaths.add(snapshot)
+        assert.notEqual(snapshot, dependencies.observerPath)
+        assert.equal(readFileSync(snapshot, 'utf8'), readFileSync(dependencies.observerPath!, 'utf8'))
+        assert.equal(readFileSync(join(dirname(snapshot), 'hot-reload-hmr-audit.mjs'), 'utf8'), readFileSync(resolve('src/runtime/hot-reload-hmr-audit.mjs'), 'utf8'))
+      }
+      write(path, content)
+    }
+    await hotReloadPlugin(test.root, 'web', 'demo', 43127, 2_000, dependencies)
+    assert.equal(snapshotPaths.size, 1)
+    assert.ok([...snapshotPaths].every(path => !existsSync(path)), 'disposed observer snapshots are cleaned up')
+  })
+
   it('mounts an external preset discovery anchor and reports the explicit all-fibers scope', async (t) => {
     const test = fixture()
     t.after(() => rmSync(test.base, { recursive: true, force: true }))
@@ -301,16 +326,50 @@ describe('controlled server plugin hot reload', () => {
     assert.doesNotMatch(readFileSync(test.patchPath, 'utf8'), /dshx-hot-reload-anchor/)
   })
 
-  it('rejects preset scope whenever a CreatorContext is present', async (t) => {
+  it('replaces a mixed module only with complete partition and disposal receipts', async (t) => {
+    const test = fixture()
+    t.after(() => rmSync(test.base, { recursive: true, force: true }))
+    const result = await hotReloadPlugin(test.root, 'web', 'demo', 43127, 2_000, 'mixed', simulatedDependencies(test))
+    assert.equal(result.targetScope, 'mixed')
+    assert.equal(result.anchorEntryId, undefined)
+    assert.deepEqual(result.proof.ready.mixedMounts, { rootGenerationId: 'generation-1', privateGenerationIds: ['generation-4'] })
+    assert.equal(result.proof.moduleReloaded.moduleReloaded?.newGenerationIds.length, 2)
+    assert.equal(result.journal.cleanupProved, true)
+  })
+
+  it('rejects a mixed receipt missing its mount partition before touching source', async (t) => {
+    const test = fixture()
+    t.after(() => rmSync(test.base, { recursive: true, force: true }))
+    const dependencies = simulatedDependencies(test)
+    const write = dependencies.writePatch!
+    dependencies.writePatch = (path, content) => {
+      write(path, content)
+      const match = content.match(/reportPath: ("[^"\n]+")/)
+      if (match) {
+        const reportPath = JSON.parse(match[1]!)
+        const value = JSON.parse(readFileSync(reportPath, 'utf8'))
+        if (value.phase === 'READY') {
+          delete value.mixedMounts
+          writeFileSync(reportPath, JSON.stringify(value))
+        }
+      }
+    }
+    dependencies.touch = () => { assert.fail('unproved mixed scope must not trigger HMR') }
+    await assert.rejects(hotReloadPlugin(test.root, 'web', 'demo', 43127, 2_000, 'mixed', dependencies), /mixedMounts/)
+  })
+
+  it('rejects external scopes whenever a CreatorContext is present', async (t) => {
     const test = fixture()
     t.after(() => rmSync(test.base, { recursive: true, force: true }))
     const dependencies = simulatedDependencies(test)
     dependencies.creatorContext = () => ({ hostPid: 4242, hostPort: 43127 } as never)
 
-    await assert.rejects(
-      hotReloadPlugin(test.root, 'web', 'demo', 43127, 2_000, 'preset', dependencies),
-      /external-only and refuses CreatorContext/,
-    )
+    for (const scope of ['preset', 'mixed'] as const) {
+      await assert.rejects(
+        hotReloadPlugin(test.root, 'web', 'demo', 43127, 2_000, scope, dependencies),
+        /external-only and refuses CreatorContext/,
+      )
+    }
   })
 
   it('fails closed without deleting an incomplete activation lock', (t) => {

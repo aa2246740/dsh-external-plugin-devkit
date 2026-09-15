@@ -8,6 +8,10 @@ describe('hot-reload CLI scope parsing', () => {
     const preset = parseCli(['hot-reload', 'demo', '--scope', 'preset'])
     assert.equal(preset.options.scope, 'preset')
     assert.deepEqual(preset.args, ['demo'])
+    const mixed = parseCli(['hot-reload', 'demo', '--scope', 'mixed'])
+    assert.equal(mixed.options.scope, 'mixed')
+    assert.deepEqual(mixed.args, ['demo'])
+    assert.throws(() => parseCli(['check', 'demo', '--scope', 'mixed']), /only valid for hot-reload/)
   })
 
   it('rejects invalid, missing, and pre-command scope on other commands', () => {

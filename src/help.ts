@@ -39,7 +39,7 @@ export const HELP = `dshx — DeepSeek Harness 进程外插件工作台
   check [name]                  静态合同；client 必须是 built lazy-CJS lib/client.js
   activation-plan <target>      只读 inventory；--change 选择生命周期分支
   activate-new-client <plugin>  固定顺序 link → watched patch → 当前 Host manifest；不重启、不刷新页面
-  hot-reload <plugin>           检查后受控替换已加载服务端模块；同 PID，功能另验；外部可显式 --scope preset
+  hot-reload <plugin>           检查后受控替换已加载服务端模块；同 PID，功能另验；外部可显式 --scope preset|mixed
   plugin remove <package>       同名 Loader id 的 bundle 安全卸载：live disable → 同 PID absence → 官方 remove
   overlay [name]                生成一次性绝对 --patch 文件；该文件不受 user-patch watcher 监听
   dump [name]                   离线合成；退出 0 不是 boot/live 证明

@@ -18,7 +18,7 @@ sources:
 # 步骤
 
 1. 构建并检查 server 产物。多文件实现须在 `dshx.yml` 的 `hotReload.artifacts` 声明精确的包内相对文件清单，包含运行入口与要更新的服务端 helper；最多 32 个 JS/TS 文件，禁止目录、glob、外链和依赖目录。需要同步时运行 `sync-artifact`；同步不证明激活。
-2. 用 `status` 确认唯一目标 Host 的 Home、profile、port、PID，再读 `activation-plan <plugin> --change server`。`not-decided` 是待取得运行时证据，不是重启指令。
+2. 用 `status` 确认唯一目标 Host 的 Home、profile、port、PID，再读 `activation-plan <plugin> --change server`。`not-decided` 是待取得运行时证据，不是重启指令。计划成功返回下一操作 `dshx_hot_reload`；实际模块和 Host 门禁由该操作检查。
 3. 普通 root 插件在外部运行 `dshx hot-reload <plugin-id> --profile web --port <当前端口>`，或在 Creator+ 使用固定的 `dshx_hot_reload`。命令检查目标与已生效的官方 HMR 实例，临时挂载精确文件集合的隔离 HMR，等待 READY 后批量触发，并清理临时资源；不持续监听半成品，不调用进程重启。所有声明文件的前后哈希必须相等。
 4. 只有同 PID、新模块代际和临时资源清理均有证据，才能报告 `HOST_MODULE_RELOADED`。随后在当前认证 WebUI 实测功能；客户端部分另按 client 分支验证。
 5. 失败或身份未知时保留源码和错误证据。不要把失败自动转成重启；只有另有具体的启动边界或故障恢复证据，并获得相应授权，才选择原启动器的重启路径。
@@ -32,3 +32,11 @@ sources:
 未声明文件清单时只处理入口及已验证的 package runtime entry，不自动扫描或猜测依赖闭包。真实实验发现，只换入口可能留下旧 helper；即使 `HOST_MODULE_RELOADED` 已证明，仍须实测用到 helper 的功能。多文件源码不要沿用入口单文件的验收结果。记录只证明本次有界替换，不承诺自动恢复任意插件副作用；HMR journal 的 `automaticRecovery` 当前为 `false`。
 
 RC1 的默认 `root: []` 仅保证配置监听。专项验收已证明，可以运行中挂载隔离的官方 HMR，热换链接到外部目录的插件，再撤掉 HMR，而原配置 watcher 继续工作。此机制不保证任意插件的业务逻辑或框架外副作用正确；实际目标仍须通过命令门禁和功能验收。旧文件名保留供已有知识链接使用，不表示重启是默认流程。
+
+## 同一模块同时挂在 root 和会话 preset
+
+Creator+ 的 profile 安装可能产生一个 root 行，已有会话还持有同一模块的 preset 实例。此时 `--scope root` 和 `--scope preset` 各自只声明了部分影响范围，应保留它们的拒绝结果。外部 supervisor 可显式运行 `--scope mixed`：命令先绑定唯一 root 行及其解析模块，再要求该运行模块只有一个 root 挂载和至少一个私有实例。它替换这一模块的所有实例，回执列出 root/private generation 分组，并逐个证明替换和清理。
+
+`mixed` 不加入 discovery anchor，也不修改永久 composition。固定 Creator 工具及任何携带 CreatorContext 的调用都不能选择它。缺少完整分组、存在第二个 root 挂载、混入其他模块或只替换部分实例都不得报告成功。完成后在已有会话调用新工具验证；Host PID 和会话身份应保持。
+
+每次事务使用当前 DSHX 观察器及其审计 helper 的临时快照，避免长时间运行的 Host 沿用旧模块缓存。成功后随观察器清理；失败时和回执目录一起保留以供诊断。

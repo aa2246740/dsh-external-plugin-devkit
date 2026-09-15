@@ -56,10 +56,12 @@ export interface NewClientActivationResult {
   patchPath: string
   hostPort: number
   hostEntry: HostManifestProof
+  importPreparation?: { phase: string; hostPid?: number; cleanupProved: boolean }
 }
 
 interface ActivateNewClientDependencies {
   dshHome?: string
+  prepareImport?: (root: string, plugin: ReturnType<typeof loadPlugin>, port: number, timeoutMs: number) => Promise<NewClientActivationResult['importPreparation']>
   installLink?: (input: {
     root: string
     profile: ProfileName
@@ -411,7 +413,7 @@ export async function waitForClientAbsent(id: string, port: number, timeoutMs: n
 /**
  * Safely activate a built, plain external client package in this Web profile.
  * Ordering is contractual: validate -> official profile link -> prove link ->
- * write/retrigger watched patch -> prove current Host manifest. No process
+ * refresh an unmounted import -> write/retrigger watched patch -> prove current Host manifest. No process
  * control and no browser automation occur here.
  */
 export async function activateNewClient(
@@ -495,6 +497,11 @@ export async function activateNewClient(
     throw new Error(`profile link for ${packageName} does not resolve its built client entry ${clientEntry}`)
   }
 
+  // Node retains failed imports after source correction. Use the official,
+  // bounded HMR path before retrying the watched row; it never restarts Host.
+  const prepareImport = dependencies.prepareImport ?? (await import('./new-client-import.ts')).prepareNewClientImport
+  const importPreparation = await prepareImport(root, plugin, port, timeoutMs)
+
   if (patchPlan.action === 'retriggered') {
     // A failed first mount can leave Include's candidate config equal to the
     // on-disk row while the last-good tree still omits it. Rewriting identical
@@ -526,7 +533,7 @@ export async function activateNewClient(
     }
     throw new Error(
       `${error instanceof Error ? error.message : String(error)}; matching watched row remained inactive after a semantic retrigger. `
-      + 'The current Host likely cached an earlier pre-install resolution failure; hand off one controlled Host restart to the external supervisor, then verify the manifest. Creator Mode+ must not restart its own Host.',
+      + 'Import preparation completed; inspect the target import/configuration error, correct its source and retry activate-new-client.',
     )
   }
 
@@ -542,5 +549,6 @@ export async function activateNewClient(
     patchPath,
     hostPort: port,
     hostEntry,
+    importPreparation,
   }
 }

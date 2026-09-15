@@ -8,6 +8,7 @@ import {
   rmSync,
   statSync,
   utimesSync,
+  writeFileSync,
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
@@ -48,6 +49,7 @@ const OBSERVER_FAILURES = new Set([
   'PRESET_RUNTIME_AMBIGUOUS',
   'ACTIVE_HMR_AUDIT_FAILED',
   'PRESET_ROOT_SCOPE_PRESENT',
+  'MIXED_RUNTIME_SCOPE_AMBIGUOUS',
   'HMR_EVENT_SCOPE_EXCEEDED',
 ])
 const TRANSACTION_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -96,6 +98,7 @@ interface ObserverReport {
   hmrDisposed?: ObserverDisposal
   observerDisposed?: { at: string }
   discoveryAnchor?: { disabled: true; hasFiber: false }
+  mixedMounts?: { rootGenerationId: string; privateGenerationIds: string[] }
 }
 
 interface BoundHost {
@@ -299,6 +302,18 @@ function validateObserverReport(
   } else if (report.discoveryAnchor !== undefined) {
     throw new Error('hot-reload observer root report contains an unexpected discovery anchor')
   }
+  if (expected.targetScope === 'mixed') {
+    const mounts = record(report.mixedMounts)
+    const privateIds = generationIds(mounts?.privateGenerationIds, 'mixedMounts.privateGenerationIds')
+    const rootId = mounts?.rootGenerationId
+    if (typeof rootId !== 'string' || !targets.includes(rootId) || privateIds.includes(rootId)
+      || privateIds.length + 1 !== targets.length || privateIds.some(id => !targets.includes(id))) {
+      throw new Error('hot-reload observer mixed mount partition is invalid')
+    }
+    validated.mixedMounts = { rootGenerationId: rootId, privateGenerationIds: privateIds }
+  } else if (report.mixedMounts !== undefined) {
+    throw new Error('hot-reload observer contains unexpected mixed mount proof')
+  }
   if (phaseIndex(phase) >= phaseIndex('MODULE_RELOADED')) {
     const reloaded = record(report.moduleReloaded)
     if (!reloaded || reloaded.samePid !== true) throw new Error('hot-reload observer moduleReloaded proof is missing')
@@ -390,6 +405,9 @@ function assertRetainedReport(previous: ObserverReport, next: ObserverReport): v
   if (JSON.stringify(next.discoveryAnchor) !== JSON.stringify(previous.discoveryAnchor)) {
     throw new Error('hot-reload observer changed cumulative discovery anchor proof')
   }
+  if (JSON.stringify(next.mixedMounts) !== JSON.stringify(previous.mixedMounts)) {
+    throw new Error('hot-reload observer changed cumulative mixed mount proof')
+  }
   if (previous.moduleReloaded
     && JSON.stringify(next.moduleReloaded) !== JSON.stringify(previous.moduleReloaded)) {
     throw new Error('hot-reload observer changed cumulative reload proof')
@@ -464,7 +482,7 @@ function inspectExistingHmr(
   }
 }
 
-function packageExportTarget(plugin: PluginManifest): string {
+export function packageExportTarget(plugin: PluginManifest): string {
   if (!plugin.runtimePackage) throw new Error(`Loader target ${plugin.id} has no package manifest`)
   const parsed = record(JSON.parse(readFileSync(plugin.runtimePackage.manifestPath, 'utf8')))
   if (!parsed) throw new Error(`package manifest for ${plugin.id} is not an object`)
@@ -581,7 +599,7 @@ function resolvePresetTarget(plugin: PluginManifest, packageDir: string, profile
   return { entryPath, entryId: '', entryName: name }
 }
 
-function artifactStates(plugin: PluginManifest, packageDir: string, runtimeEntry: string): ArtifactState[] {
+export function artifactStates(plugin: PluginManifest, packageDir: string, runtimeEntry: string): ArtifactState[] {
   const configured = resolveHotReloadArtifacts(packageDir, plugin.entry, plugin.hotReload?.artifacts)
   const runtimeRelative = relative(packageDir, runtimeEntry).split(sep).join('/')
   if (!runtimeRelative || runtimeRelative.startsWith('../') || isAbsolute(runtimeRelative)) {
@@ -780,7 +798,7 @@ export async function hotReloadPlugin(
   const targetScope: HotReloadScope = typeof scopeOrDependencies === 'string' ? scopeOrDependencies : 'root'
   const dependencies = typeof scopeOrDependencies === 'string' ? providedDependencies : scopeOrDependencies
   if (profile !== 'web') throw new Error('hot reload supports only the web profile')
-  if (targetScope !== 'root' && targetScope !== 'preset') throw new Error('hot reload scope must be root or preset')
+  if (targetScope !== 'root' && targetScope !== 'preset' && targetScope !== 'mixed') throw new Error('hot reload scope must be root or preset or mixed')
   if (!PLUGIN_ID.test(pluginId)) throw new Error('hot reload requires a lower-case kebab-case plugin id, not a path')
   if (!Number.isSafeInteger(port) || port < 1 || port > 65_535) throw new Error('hot reload requires a valid Host port')
   if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1) throw new Error('hot reload requires a positive timeout')
@@ -789,8 +807,8 @@ export async function hotReloadPlugin(
   const home = resolve(dependencies.dshHome ?? resolveDshHome())
   const host = await assertBoundHost(root, home, port, undefined, deadline, dependencies)
   const context = (dependencies.creatorContext ?? readCreatorContext)()
-  if (targetScope === 'preset' && context) {
-    throw new Error('preset hot reload is external-only and refuses CreatorContext')
+  if (targetScope !== 'root' && context) {
+    throw new Error(`${targetScope} hot reload is external-only and refuses CreatorContext`)
   }
   if (context) {
     if (context.hostPid !== host.pid || context.hostPort !== host.port) {
@@ -825,9 +843,9 @@ export async function hotReloadPlugin(
   const patchPath = join(prof, 'cordis.patch.yml')
   const hostState = (dependencies.currentHost ?? currentHost)(root)!
   const patchFiles = activePatchFiles(home, 'web', hostState)
-  const bundlePatches = targetScope === 'root' ? registeredBundlePatch(plugin, packageDir, prof) : []
+  const bundlePatches = targetScope !== 'preset' ? registeredBundlePatch(plugin, packageDir, prof) : []
   const rows = composedRows([...bundlePatches, ...patchFiles])
-  const target = targetScope === 'root'
+  const target = targetScope !== 'preset'
     ? resolveExistingTarget(rows, plugin, packageDir, prof)
     : resolvePresetTarget(plugin, packageDir, prof)
   const entryPath = target.entryPath
@@ -847,12 +865,19 @@ export async function hotReloadPlugin(
   }
   const reportDir = mkdtempSync(join(tmpdir(), 'dshx-hot-reload-'))
   const reportPath = join(reportDir, 'observer.json')
+  // A long-lived Host may still cache the previously installed observer module.
+  // Give this transaction an immutable copy of both runtime files and a fresh
+  // module URL; the existing report-directory disposal owns their cleanup.
+  const observerSnapshotPath = join(reportDir, 'observer-runtime.mjs')
+  const observerAuditPath = canonicalExisting(join(dirname(observerPath), 'hot-reload-hmr-audit.mjs'), 'observer audit helper')
+  writeFileSync(observerSnapshotPath, readFileSync(observerPath), { mode: 0o600, flag: 'wx' })
+  writeFileSync(join(reportDir, 'hot-reload-hmr-audit.mjs'), readFileSync(observerAuditPath), { mode: 0o600, flag: 'wx' })
   const blocks = managedBlocks({
     transactionId,
     pluginId,
     packageDir,
     artifactRelatives: watchRoots,
-    observerPath,
+    observerPath: observerSnapshotPath,
     reportPath,
     expectedEntryUrl: pathToFileURL(entryPath).href,
     targetScope,

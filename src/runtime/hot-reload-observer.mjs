@@ -37,8 +37,8 @@ function configuration(value) {
   if (typeof value.hmrEntryId !== 'string' || !HMR_ENTRY_ID.test(value.hmrEntryId) || value.hmrEntryId === value.pluginId) {
     throw new Error('hot-reload observer hmrEntryId must be a distinct bounded Loader id')
   }
-  if (value.targetScope !== 'root' && value.targetScope !== 'preset') {
-    throw new Error('hot-reload observer targetScope must be root or preset')
+  if (value.targetScope !== 'root' && value.targetScope !== 'preset' && value.targetScope !== 'mixed') {
+    throw new Error('hot-reload observer targetScope must be root or preset or mixed')
   }
   if (typeof value.targetEntryId !== 'string' || !HMR_ENTRY_ID.test(value.targetEntryId)) {
     throw new Error('hot-reload observer targetEntryId must be a bounded Loader id')
@@ -91,10 +91,32 @@ function liveRuntimeFibers(runtime) {
 
 function targetSnapshot(ctx, config) {
   const entries = exactEntries(ctx, config.targetEntryId, config.targetEntryName)
-  if (entries.length !== 1) throw observerFailure(config.targetScope === 'root'
+  if (entries.length !== 1) throw observerFailure(config.targetScope !== 'preset'
     ? 'ROOT_TARGET_AMBIGUOUS'
     : 'PRESET_ANCHOR_INVALID')
   const entry = entries[0]
+  if (config.targetScope === 'mixed') {
+    const runtime = entry.fiber?.runtime
+    const fibers = liveRuntimeFibers(runtime)
+    const rootFibers = fibers?.filter(fiber => fiber.entry === entry)
+    const roots = [...ctx.loader.entries()].filter(rootEntry => rootEntry?.fiber
+      && (rootEntry.fiber.runtime === runtime || rootEntry.options?.name === config.targetEntryName))
+    if (!runtime || runtime.name !== config.pluginId || !fibers || fibers.length < 2
+      || rootFibers?.length !== 1 || roots.length !== 1 || roots[0] !== entry
+      || fibers.some(fiber => fiber.runtime !== runtime)) {
+      throw observerFailure('MIXED_RUNTIME_SCOPE_AMBIGUOUS', {
+        runtimeName: runtime?.name,
+        liveCount: fibers?.length,
+        selectedState: entry.fiber?.state,
+        allFiberStates: [...(runtime?.fibers ?? [])].map(fiber => ({ state: fiber.state, entryId: fiber.entry?.options?.id, selected: fiber === entry.fiber, sameEntry: fiber.entry === entry })),
+        rootEntryIds: roots.map(rootEntry => String(rootEntry.options?.id ?? '')),
+        selectedInRuntime: fibers?.includes(entry.fiber),
+        rootEntryIdentity: roots[0] === entry,
+        fiberRuntimeMatches: fibers?.map(fiber => fiber.runtime === runtime),
+      })
+    }
+    return { fibers, rootFiber: rootFibers[0] }
+  }
   if (config.targetScope === 'root') {
     if (!entry.fiber || typeof entry.fiber !== 'object') throw observerFailure('ROOT_TARGET_AMBIGUOUS')
     const live = liveRuntimeFibers(entry.fiber.runtime)
@@ -131,9 +153,10 @@ function writeAtomicJson(path, value) {
   }
 }
 
-function observerFailure(code) {
+function observerFailure(code, details) {
   const error = new Error(code)
   error.observerCode = code
+  if (details) error.observerDetails = details
   return error
 }
 
@@ -233,6 +256,10 @@ export function apply(ctx, rawConfig) {
         targetGenerationStates,
         hmrGenerationId: generationId(hmrFiber),
         ...target.discoveryAnchor ? { discoveryAnchor: target.discoveryAnchor } : {},
+        ...target.rootFiber ? { mixedMounts: {
+          rootGenerationId: generationId(target.rootFiber),
+          privateGenerationIds: targets.filter(fiber => fiber !== target.rootFiber).map(generationId),
+        } } : {},
       })
       return
     }
@@ -319,7 +346,7 @@ export function apply(ctx, rawConfig) {
         pollFailed = true
         const code = typeof error?.observerCode === 'string' ? error.observerCode : 'OBSERVER_POLL_FAILED'
         try {
-          publish('FAILED', { failure: { at: new Date().toISOString(), code } })
+          publish('FAILED', { failure: { at: new Date().toISOString(), code, ...error.observerDetails ? { details: error.observerDetails } : {} } })
         } catch {
           // If the atomic report itself is unavailable, the supervising CLI
           // retains its timeout as the final fail-closed signal.

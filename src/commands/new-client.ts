@@ -60,7 +60,7 @@ export async function cmdActivateNewClient(args: string[], options: CliOptions, 
     }
     printReport(report('activate-new-client', [
       finding('error', 'activation', error instanceof Error ? error.message : String(error), {
-        hint: 'No Host restart was attempted. Follow the named blocker exactly; retry only when it describes a retryable condition.',
+        hint: 'Resolve the named source, configuration or access problem, then retry this activation step.',
       }),
     ], { hostRestart: false, browserReload: false }), options.json)
     return 1

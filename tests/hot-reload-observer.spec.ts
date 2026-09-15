@@ -502,3 +502,67 @@ test('rejects unbound or over-broad observer configuration before registering ef
   assert.throws(() => apply(runtime.ctx, { ...base, expectedEntryUrl: 'https://example.com/demo.js' }), /exact file URL/)
   assert.throws(() => apply(runtime.ctx, { ...base, command: 'restart' }), /unsupported field command/)
 })
+
+test('explicit mixed scope replaces the one root and every private instance together', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'dshx-hmr-mixed-'))
+  try {
+    const reportPath = join(root, 'report.json')
+    const oldRoot = fiber(), oldPrivate = fiber()
+    const oldRuntime = pluginRuntime(oldRoot, oldPrivate)
+    const hmr = fiber()
+    const rootEntry = entry('demo', oldRoot)
+    // Cordis can expose a scope-bound fork reference from entry.fiber while
+    // runtime.fibers contains the original instance with the same entry.
+    rootEntry.fiber = new Proxy(oldRoot, {})
+    const runtime = harness([rootEntry, entry(HMR_ID, hmr)], [oldRuntime])
+    mountObserver(runtime, root, reportPath, { targetScope: 'mixed' })
+    await runtime.poll()
+    const ready = report(reportPath)
+    assert.equal(ready.phase, 'READY')
+    assert.equal(ready.targetGenerationIds.length, 2)
+    assert.deepEqual(ready.mixedMounts, {
+      rootGenerationId: ready.targetGenerationIds[0],
+      privateGenerationIds: [ready.targetGenerationIds[1]],
+    })
+    const nextRoot = fiber(), nextPrivate = fiber()
+    const nextRuntime = pluginRuntime(nextRoot, nextPrivate)
+    runtime.setEntries([entry('demo', nextRoot), entry(HMR_ID, hmr)])
+    runtime.setRuntimes([nextRuntime])
+    runtime.emit('hmr/reload', [{ filename: targetUrl(root), runtime: oldRuntime }])
+    oldRoot.state = DISPOSED
+    await runtime.poll()
+    assert.equal(report(reportPath).phase, 'READY', 'private replacement is required too')
+    oldPrivate.state = DISPOSED
+    await runtime.poll()
+    assert.equal(report(reportPath).phase, 'MODULE_RELOADED')
+    assert.deepEqual(report(reportPath).moduleReloaded.oldGenerationIds, ready.targetGenerationIds)
+    assert.equal(oldRoot.disposeCalls, 1)
+    assert.equal(oldPrivate.disposeCalls, 1)
+    runtime.setEntries([entry('demo', nextRoot)])
+    await runtime.poll()
+    assert.equal(report(reportPath).phase, 'HMR_DISPOSED')
+    await runtime.dispose()
+    assert.equal(report(reportPath).phase, 'OBSERVER_DISPOSED')
+    assert.equal(nextRoot.disposeCalls, 0)
+    assert.equal(nextPrivate.disposeCalls, 0)
+  } finally { rmSync(root, { recursive: true, force: true }) }
+})
+
+for (const scenario of ['root-only', 'second-root']) {
+  test(`mixed scope rejects ${scenario} before READY`, async () => {
+    const root = mkdtempSync(join(tmpdir(), 'dshx-hmr-mixed-deny-'))
+    try {
+      const reportPath = join(root, 'report.json')
+      const rootFiber = fiber(), privateFiber = fiber()
+      const selectedRuntime = pluginRuntime(...(scenario === 'root-only' ? [rootFiber] : [rootFiber, privateFiber]))
+      const entries = [entry('demo', rootFiber), entry(HMR_ID, fiber())]
+      if (scenario === 'second-root') entries.push(entry('other-root', privateFiber))
+      const runtime = harness(entries, [selectedRuntime])
+      mountObserver(runtime, root, reportPath, { targetScope: 'mixed' })
+      await runtime.poll()
+      assert.equal(report(reportPath).failure.code, 'MIXED_RUNTIME_SCOPE_AMBIGUOUS')
+      assert.equal(rootFiber.disposeCalls, 0)
+      await runtime.dispose()
+    } finally { rmSync(root, { recursive: true, force: true }) }
+  })
+}

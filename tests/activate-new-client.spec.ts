@@ -84,6 +84,12 @@ describe('activate-new-client', () => {
         installFixtureLink(pluginDir, profileDir)
         return { code: 0, stdout: '', stderr: '' }
       },
+      async prepareImport() {
+        events.push('prepare')
+        assert.equal(existsSync(join(profileDir, 'node_modules/demo/package.json')), true)
+        assert.equal(existsSync(patchPath), false)
+        return { phase: 'IMPORT_READY', cleanupProved: true }
+      },
       async verifyHost({ id }) {
         events.push('verify')
         assert.equal(existsSync(join(profileDir, 'node_modules/demo/package.json')), true)
@@ -92,7 +98,7 @@ describe('activate-new-client', () => {
       },
     })
 
-    assert.deepEqual(events, ['install', 'verify'])
+    assert.deepEqual(events, ['install', 'prepare', 'verify'])
     assert.equal(result.linkAction, 'installed')
     assert.equal(result.patchAction, 'inserted')
     assert.equal(result.hostEntry.id, 'demo')
@@ -104,6 +110,7 @@ describe('activate-new-client', () => {
     writeFileSync(patchPath, original)
     const result = await activateNewClient(root, 'web', 'demo', 43127, 2_000, {
       dshHome: home,
+      async prepareImport() { return { phase: "IMPORT_READY", cleanupProved: true } },
       installLink() {
         installFixtureLink(pluginDir, profileDir)
         return { code: 0, stdout: '', stderr: '' }
@@ -161,6 +168,7 @@ describe('activate-new-client', () => {
     await assert.rejects(
       activateNewClient(root, 'web', 'demo', 43127, 2_000, {
         dshHome: home,
+      async prepareImport() { return { phase: "IMPORT_READY", cleanupProved: true } },
         installLink() {
           installed = true
           return { code: 0, stdout: '', stderr: '' }
@@ -177,6 +185,7 @@ describe('activate-new-client', () => {
     await assert.rejects(
       activateNewClient(root, 'web', 'demo', 43127, 2_000, {
         dshHome: home,
+      async prepareImport() { return { phase: "IMPORT_READY", cleanupProved: true } },
         installLink() {
           installFixtureLink(pluginDir, profileDir)
           return { code: 0, stdout: '', stderr: '' }
@@ -188,7 +197,7 @@ describe('activate-new-client', () => {
     assert.equal(existsSync(patchPath), false)
   })
 
-  it('hands a pre-install resolution scar to the external supervisor instead of retrying forever', async () => {
+  it('reports a target activation failure after bounded import recovery without requesting a restart', async () => {
     const { root, home, pluginDir, profileDir, patchPath } = fixture()
     installFixtureLink(pluginDir, profileDir)
     const original = '- insert:\n    - id: demo\n      name: demo\n'
@@ -196,10 +205,11 @@ describe('activate-new-client', () => {
     await assert.rejects(
       activateNewClient(root, 'web', 'demo', 43127, 2_000, {
         dshHome: home,
+      async prepareImport() { return { phase: "IMPORT_READY", cleanupProved: true } },
         async settleWatchedPatch() {},
         async verifyHost() { throw new Error('manifest missing') },
       }),
-      /pre-install resolution failure.*external supervisor/,
+      /Import preparation completed.*correct its source/,
     )
     assert.equal(readFileSync(patchPath, 'utf8'), original)
   })

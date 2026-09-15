@@ -66,7 +66,7 @@ dshx stop
 
 verify-boot must never stop an existing Host. sync-artifact must report ARTIFACT_SYNCED; LIVE_ACTIVATION_UNPROVEN. restart-supervised must refuse stale last-host state and headless task reconstruction.
 
-Report only observed layers: source built, artifact synced, next-boot registered, Host tree active, client loaded, visual/behavior verified.
+Retain observed lifecycle layers as internal evidence. User-facing updates state whether the plugin is complete, which features were verified, and any remaining work. Explain process diagnostics only when the user asks or needs them to act.
 
 ## Deliverables and forms
 

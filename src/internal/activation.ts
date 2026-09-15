@@ -46,6 +46,7 @@ export interface ActivationDecision {
   blockers: string[]
   preconditions: string[]
   proof: string[]
+  nextAction?: { tool: 'dshx_hot_reload'; arguments: { name: string } }
 }
 
 const CHANGES = new Set<ActivationChange>(['patch', 'manifest', 'preset', 'client', 'new-client', 'server', 'artifact'])
@@ -252,17 +253,17 @@ export function activationDecision(change: ActivationChange, facts: Pick<Activat
   }
   if (change === 'server') {
     return {
-      method: 'server activation pending exact module-HMR evidence',
+      method: 'bounded server hot-reload, followed by feature verification',
       hostRestart: 'not-decided',
-      restartReason: 'the activation method cannot be decided without exact, tested module-HMR evidence for this server module',
+      restartReason: 'the next operation obtains exact module-HMR evidence; this plan grants no Host restart authority',
       browserReload: facts.hasClient ? 'conditional' : 'not-required',
-      blockers: ['activation is pending: provide exact, tested module-HMR evidence for this server module before choosing same-PID activation or a controlled launcher restart'],
-      preconditions: ['classify this exact server module against real module-HMR configuration and test evidence'],
+      blockers: [],
+      nextAction: { tool: 'dshx_hot_reload', arguments: { name: facts.id } },
+      preconditions: ['build and check the exact plugin, then let bounded hot-reload validate its artifacts and current Host identity'],
       proof: [
-        'until the evidence gate is satisfied, do not restart the Host or claim live activation',
-        'for proven module HMR, keep the pid unchanged and verify the changed server behavior',
-        'for an evidence-backed restart, record the old and new pid and verify the post-boot behavior',
-        'do not infer current activation from an artifact copy',
+        'same-PID module replacement and temporary resource cleanup must be proved by hot-reload',
+        'exercise the changed server behavior after replacement; browser verification is a separate step',
+        'a successful plan is not live activation; a failed hot-reload does not authorize Host restart',
       ],
     }
   }

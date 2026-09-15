@@ -61,11 +61,13 @@ describe('activation lifecycle decisions', () => {
     assert.match(added.preconditions.join(' '), /dependency.*prerequisite.*not make this a manifest branch/)
   })
 
-  it('keeps server activation undecided until exact module-HMR evidence exists', () => {
+  it('provides bounded hot reload as the next server operation without claiming activation or restart authority', () => {
     const decision = activationDecision('server', facts)
     assert.equal(decision.hostRestart, 'not-decided')
-    assert.match(decision.restartReason, /cannot be decided without exact.*module-HMR evidence/i)
-    assert.match(decision.blockers.join(' '), /pending.*module-HMR evidence/i)
+    assert.match(decision.method, /bounded.*hot.reload/i)
+    assert.deepEqual(decision.blockers, [])
+    assert.deepEqual(decision.nextAction, { tool: 'dshx_hot_reload', arguments: { name: facts.id } })
+    assert.match(decision.proof.join(' '), /same.PID|same pid/i)
     assert.doesNotMatch(`${decision.method} ${decision.restartReason}`, /has no explicit.*module-HMR/i)
   })
 

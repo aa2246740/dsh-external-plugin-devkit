@@ -17,7 +17,7 @@ export interface Report {
 
 export type PluginKind = 'function' | 'tool' | 'client' | 'object' | 'class'
 export type ProfileName = 'web' | 'headless'
-export type HotReloadScope = 'root' | 'preset'
+export type HotReloadScope = 'root' | 'preset' | 'mixed'
 export type ActivationChange = 'patch' | 'manifest' | 'preset' | 'client' | 'new-client' | 'server' | 'artifact'
 export type UpdateAction = 'plan' | 'prepare' | 'verify' | 'apply' | 'rollback'
 
@@ -90,7 +90,7 @@ export interface CliOptions {
   scope: HotReloadScope
 }
 
-export const DSHX_VERSION = '0.7.6'
+export const DSHX_VERSION = '0.7.7'
 export const DEFAULT_PORT = 3080
 export const DEFAULT_TIMEOUT_MS = 60_000
 export const DEFAULT_PROFILE: ProfileName = 'web'

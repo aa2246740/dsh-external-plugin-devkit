@@ -19,8 +19,8 @@ sources:
 
 1. 先读 [RC8 external client build](../contracts/client-build.md)，构建并检查 `lib/client.js` lazy-CJS handoff；`dshx check <plugin>` 必须通过。
 2. `dshx activation-plan <plugin> --change new-client`。
-3. 在 Creator Mode+ 内调用唯一固定工具 `dshx_activate_new_client({ name })`；在外部 CLI 使用 `dshx activate-new-client <name> --profile web --port <当前端口>`。该动作先用官方 `dsh plugin` 产生/修复 `link:`，确认 package 与 `lib/client.js` 从活动 profile 可解析，最后才写或重触发 watched patch。
-4. 命令成功标准是退出 0 且同时报告 `HOST_TREE_ACTIVE` 与 `CLIENT_MANIFEST_PRESENT`。失败时不得自己改 profile manifest/patch、补跑安装或重启 Host；只在 blocker 明说可重试时重试。若错误命名旧顺序留下的 pre-install resolution cache，交给外部 supervisor 一次性重启并复验；这不是正常 new-client 流程的要求。
+3. 在 Creator Mode+ 内调用固定工具 `dshx_activate_new_client({ name })`；在外部 CLI 使用 `dshx activate-new-client <name> --profile web --port <当前端口>`。该动作先用官方 `dsh plugin` 产生/修复 `link:`，确认 package 与 `lib/client.js` 从活动 profile 可解析，再由限定文件的官方 HMR 处理未挂载插件的导入缓存，清理临时观察器后写入或重触发 watched patch。已挂载插件跳过导入准备，Host PID 保持不变。
+4. 命令成功标准是退出 0 且同时报告 `HOST_TREE_ACTIVE` 与 `CLIENT_MANIFEST_PRESENT`。若失败，修正报错指向的源码、配置或访问问题，再调用同一工具；其他已授权步骤继续进行。源码改好后的旧导入失败缓存由工具处理，用户无需为此安排 Host 重启。临时 HMR 清理未被证实时，按错误中的事务目录排查。
 5. Creator+ 返回的 `hostPid` 是调用工具的当前 DSH Host PID；命令返回即证明过程中没有重启该 Host。
 6. 刷新/重开浏览器页面。旧页面只在 boot 时从 `__DSH_BOOT__` 建 loader tree（RC2 注入形式为 `globalThis["__DSH_BOOT__"]`），不采纳新 graph 行。
 7. 验新 boot manifest 含 package id，再验真实 UI/行为。

@@ -42,48 +42,20 @@ export default class ${pascal(id)}Service extends Service {
 `
 }
 
-function clientHostSource(id: string, marker: string): string {
-  return `import type { Context } from '@deepseek-ai/cordis'
-import { installSettingsSection, settingsNamespace } from '@deepseek-ai/dsh-settings'
-import z from '@deepseek-ai/schemastery'
-
-export const name = '${id}'
-export const inject = []
-
-const NS = settingsNamespace('${id}')
-
-export interface Config {
-  enabled?: boolean
-}
-
-export const Config: z<Config> = z.object({
-  enabled: z.boolean().default(true),
-})
-
-export function apply(ctx: Context, config: Config) {
-  console.log('${marker}')
-  let source = () => config
-  installSettingsSection(ctx, NS, Config, config, {
-    setSource: current => { source = current },
-    onChange: () => { void source() },
-  })
-}
-`
-}
 
 function clientSource(id: string): string {
   return `import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
-import type {} from '@deepseek-ai/dsh-client-ui-settings-plugins/client'
+import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
 
 export const name = '${id}-client'
-export const inject = ['slots', 'settingsScope']
+export const inject = ['slots']
 
 export function apply(ctx: ClientContext) {
-  // Official settings card: settings.plugin.item keyed by the Host namespace.
-  // Do not register a top-level settings.section unless you need a whole page.
-  ctx.slots.inject('settings.plugin.item', () => ctx.slots.register({
-    name: 'settings.plugin.item',
-    key: '${id}',
+  // Add this plugin's UI to a public slot; the Host half needs no settings API.
+  // Read the settings-card contract only when the feature needs preferences.
+  ctx.slots.inject('shell.overlay', () => ctx.slots.register({
+    name: 'shell.overlay',
+    id: '${id}',
   }, ${pascal(id)}Card))
 }
 
@@ -103,10 +75,8 @@ function clientTsconfig(): string {
     include: ['src'],
     references: [
       { path: '../../vendor/cordis' },
-      { path: '../../vendor/schemastery' },
-      { path: '../../packages/settings/settings' },
       { path: '../../packages/client/runtime' },
-      { path: '../../packages/client/ui-settings-plugins' },
+      { path: '../../packages/client/ui-layout' },
     ],
   }, null, 2)}\n`
 }
@@ -156,7 +126,10 @@ function resolveHarness() {
   return resolve(recorded)
 }
 
-const adapter = join(resolveHarness(), 'tools/dshx/src/client-build.js')
+const harnessRoot = resolveHarness()
+// Preserve this target when the adapter symlink resolves outside the checkout.
+process.env.DSHX_HARNESS = harnessRoot
+const adapter = join(harnessRoot, 'tools/dshx/src/client-build.js')
 if (!existsSync(adapter)) throw new Error(\`dshx client build adapter not found: \${adapter}\`)
 const { externalClientBundle } = await import(pathToFileURL(adapter).href)
 
@@ -214,7 +187,7 @@ function writeScaffold(dir: string, name: string, kind: string, externalWorkspac
   const source = kind === 'tool'
     ? toolSource(name, marker)
     : kind === 'client'
-      ? clientHostSource(name, marker)
+      ? functionSource(name, marker)
       : kind === 'object'
         ? objectSource(name, marker)
         : kind === 'class'
@@ -247,7 +220,7 @@ function writeScaffold(dir: string, name: string, kind: string, externalWorkspac
       },
       dsh: {
         client: {
-          inject: ['@deepseek-ai/dsh-client-ui-settings-plugins'],
+          inject: ['@deepseek-ai/dsh-client-ui-layout'],
           platform: 'web',
         },
       },
@@ -264,16 +237,12 @@ function writeScaffold(dir: string, name: string, kind: string, externalWorkspac
       license: 'MIT',
       peerDependencies: {
         '@deepseek-ai/cordis': '^4.0.1',
-        '@deepseek-ai/dsh-client-ui-settings-plugins': '^0.1.0-rc.8',
-        '@deepseek-ai/dsh-settings': '^0.1.0-rc.8',
-        '@deepseek-ai/schemastery': '^3.18.1',
+        '@deepseek-ai/dsh-client-ui-layout': '^0.1.0-rc.8',
       },
       devDependencies: {
         '@deepseek-ai/cordis': '^4.0.1',
         '@deepseek-ai/dsh-client-runtime': '^0.1.0-rc.8',
-        '@deepseek-ai/dsh-client-ui-settings-plugins': '^0.1.0-rc.8',
-        '@deepseek-ai/dsh-settings': '^0.1.0-rc.8',
-        '@deepseek-ai/schemastery': '^3.18.1',
+        '@deepseek-ai/dsh-client-ui-layout': '^0.1.0-rc.8',
         '@types/react': '~18.3.1',
         react: '^18.2.0',
         'react-dom': '^18.2.0',
