@@ -26,6 +26,7 @@ function isAllowedArgs(args) {
   }
   if (args.length === 4) {
     if (args[0] === 'creator') {
+      if (args[1] === 'takeover' && PLUGIN_ID.test(args[2]) && args[3] === '--json') return true
       return (args[1] === 'recovery'
           && args[2] === 'pull'
           && args[3] === '--json')
@@ -201,6 +202,7 @@ export function runDshx(args, exec, options = {}) {
         ...process.env,
         DSHX_HARNESS: root,
         DSHX_CREATOR_CONTEXT: JSON.stringify(creatorContext),
+        DSHX_CREATOR_TAKEOVER_GRANT: args[0] === 'creator' && args[1] === 'takeover' && options.takeoverGrant ? JSON.stringify(options.takeoverGrant) : '',
         DSHX_WEB_STARTUP_URL: startup,
       },
       stdio: ['ignore', 'pipe', 'pipe'],

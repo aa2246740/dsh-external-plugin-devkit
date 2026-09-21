@@ -32,7 +32,7 @@ own different plugins concurrently; the same plugin is exclusive, and only the
 short live activation transaction is globally serialized.
 Creator scaffold destinations must come from the immutable session cwd. DSHX,
 not the model or user, owns any required link into Harness `my-plugins`.
-Every release must execute the exact argv behind all eight fixed Creator+ tools and
+Every release must execute the exact argv behind all nine fixed Creator+ tools and
 the internal watch/release/recovery hooks through the bridge allowlist. Tool
 registration alone does not prove the bridge is callable.
 The eighth tool, `dshx_hot_reload`, accepts only a claimed plugin id and uses Host-derived identity for bounded official module HMR. It grants no process control and requires runtime replacement and cleanup proof before reporting module activation.
@@ -86,3 +86,12 @@ Scratch work belongs in my-plugins/<name>/; .dshx/ is generated state and must n
 - Never treat cordis_define / cordis_run process memory as delivery.
 - Never commit .env, secrets, .dshx/, or machine-absolute paths.
 - Do not patch Harness core to change an unrelated runtime policy.
+
+## User-confirmed takeover
+
+`dshx_request_takeover({name})` is the only model-facing handoff entry. It uses
+the public `userQuestions` service; an approval/request auto-allow or model
+boolean is not confirmation. A Host-lifetime, durable ownership fence blocks
+all tools in revoked old sessions except status and a new takeover request;
+this is separate from the narrow destructive-shell guard. It persists across
+preset generations, and never deletes session locks or restarts the Host.

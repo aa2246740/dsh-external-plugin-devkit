@@ -76,3 +76,9 @@ Do not undo quarantine and repeat unchanged bytes.
 - A client component remains click-through, supports `prefers-reduced-motion`, and does not depend on a particular App shell.
 - A failed or interrupted turn and a turn waiting for user input do not count as a completed AI answer.
 - RC8/RC2 optional Codex/Claude Code providers are Profile Bundles. Creator Mode+ does not install or enable them: provider installation is a `manifest` branch handled outside the session, and enabling a copied tool row is a `preset` branch verified in a new session.
+
+## 认领冲突直接申请接管
+
+如果 `dshx_claim_plugin` 或自动认领提示已有持有者，在当前对话调用 `dshx_request_takeover({name})`，让用户在原生选项卡里确认。工具自己查找实际持有者并负责停止、等待和转移。不要让用户先找旧对话，不要建议等 24 小时，不要手删认领或 session.lock。
+
+只能传插件 ID。不要传 `force`、`userApproved`、会话 ID、路径或令牌，也不要把聊天里的同意或自动审批结果冒充 UI 确认。取消、认领变化、停止失败时依照工具错误处理；成功后继续 check → 对应激活 → 行为验证。旧会话收到 `CREATOR_OWNERSHIP_REVOKED` 时停止开发；重新接手也要走同一个确认入口。

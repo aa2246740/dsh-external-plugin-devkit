@@ -1,3 +1,4 @@
+import { installTakeoverFence, requestTakeover } from './takeover.js'
 /** Creator Mode+ model tools backed by fixed dshx operations. */
 
 import {
@@ -14,7 +15,7 @@ import {
 } from './safety.js'
 
 export const name = 'dshx-creator-plus'
-export const inject = ['tools', 'webServer', 'connection']
+export const inject = ['tools', 'webServer', 'connection', 'agents', 'sessions', 'userQuestions']
 
 const CLIENT_FAILURE_PATH = '/dshx-creator-plus/client-failure'
 const MAX_CLIENT_FAILURE_BYTES = 16 * 1024
@@ -166,6 +167,7 @@ export function apply(ctx) {
   installCreatorRecovery(ctx, authOptions)
   installClientFailureRoute(ctx, authOptions)
   installCreatorSafetyGuard(ctx)
+  installTakeoverFence(ctx)
 
   ctx.tools.register({
     name: 'dshx_claim_plugin',
@@ -186,6 +188,16 @@ export function apply(ctx) {
       })
     },
     presentCall: args => ({ card: 'generic', title: `dshx claim ${args.name}`, kind: 'edit', rawInput: args.name }),
+  })
+
+  ctx.tools.register({
+    name: 'dshx_request_takeover',
+    description: 'Ask the user in this conversation to take over a claimed plugin. Shows the actual owner, stops old work after confirmation, and transfers ownership. Never infer approval from chat text or automation.',
+    parameters: { type: 'object', properties: { name: { type: 'string', pattern: '^[a-z][a-z0-9-]*$' } }, required: ['name'], additionalProperties: false },
+    timeoutMs: 360_000,
+    output,
+    execute: (args, exec) => requestTakeover(ctx, pluginId(args.name), exec, { ...authOptions, hostPort: currentWebPort() }),
+    presentCall: args => ({ card: 'generic', title: `申请接管 ${args.name}`, kind: 'edit', rawInput: args.name }),
   })
 
   ctx.tools.register({

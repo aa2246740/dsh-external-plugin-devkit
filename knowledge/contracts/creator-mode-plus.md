@@ -1,7 +1,7 @@
 ---
 type: Runtime Contract
 title: Creator Mode+ safe bridge
-description: Creator Mode+ 是 user preset 加八个固定 dshx 工具；支持受限同 PID 热替换和安全卸载，DSH 会话不能控制自身进程。
+description: Creator Mode+ 是 user preset 加九个固定 dshx 工具（独立版另有 browser-open）；支持受限同 PID 热替换和安全卸载，DSH 会话不能控制自身进程。
 tags: [creator-mode-plus, preset, webui, supervisor, safety]
 aliases: [Creator Mode+, 创造模式+, dshx plugin, dshx preset, supervisor]
 status: stable
@@ -35,7 +35,7 @@ Creator Mode+ 不修改也不替换 shipped `cordis` preset。它是独立的用
 
 | 角色 | 可以做什么 | 不可以做什么 |
 |---|---|---|
-| Creator Mode+ 会话 | claim-plugin、scaffold、check、activation-plan、activate-new-client、remove-plugin、hot-reload、status | 任意 shell/argv/path；手工拆 profile/plugin root；start/stop/restart DSH |
+| Creator Mode+ 会话 | claim-plugin、request-takeover、scaffold、check、activation-plan、activate-new-client、remove-plugin、hot-reload、status | 任意 shell/argv/path；手工拆 profile/plugin root；start/stop/restart DSH |
 | 外部 dshx + Guardian | 文件化构建、静态检查、事务日志、Host 恢复、官方 Loader 失败隔离 | 把 manifest/Loader 恢复冒充视觉或功能正确 |
 | 用户 | 批准有影响的激活、重启和回滚 | 不承担插件内部运行时职责 |
 
@@ -56,7 +56,7 @@ official WebUI
   -> new/blank Creator Mode+ session
   -> bridge v2 arms external Guardian with exact session identity
   -> claim one plugin for this session
-  -> one of eight fixed dshx tools
+  -> one of nine fixed dshx tools
   -> child dshx CLI with bounded output
   -> file-backed plugin and layered evidence
 
@@ -70,9 +70,10 @@ external dshx / Guardian
 
 # 固定 argv 合同
 
-八工具合同面向独立的 `dsh-creator-mode-plus` 新版。DSHX 包中保留的 legacy bundled bridge 仍是旧工具面，不能仅刷新它的 skill 就声称新增工具已加载；迁移或升级独立 bridge 后，必须核对实际工具注册和能力预检。
+DSHX 0.7.8 的 bundled bridge 提供九个固定工具；独立 `dsh-creator-mode-plus` 0.3.8 另提供无参数的 `dshx_browser_open`，共十个。两者均包含 `dshx_request_takeover`。不能仅刷新 skill 就声称新增工具已加载；必须核对实际注册和能力预检。
 
-八个模型可见工具分别只允许 `status`、`creator claim <id>`、
+九个模型可见工具分别只允许 `status`、`creator claim <id>`、
+`creator takeover <id> --json`（仅限用户问答后的一次性私有凭据）、
 `creator scaffold <id> <kind>`、`check <id>`、
 `activation-plan <id> --change <branch>` 和
 `activate-new-client <id> --profile web --port <Host 派生端口>`、

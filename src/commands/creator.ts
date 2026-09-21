@@ -1,3 +1,5 @@
+// @ts-ignore -- shared JS registry contract.
+import { inspectClaim, commitTakeover } from '../internal/creator-claims.mjs'
 import { bindBrowserAccess, discoverBrowserHost } from '../internal/browser-access.ts'
 import {
   acknowledgeCreatorIncident,
@@ -45,6 +47,20 @@ async function refreshBrowserHandoff(root: string, context: ReturnType<typeof re
 export async function cmdCreator(args: string[], options: CliOptions, root: string): Promise<number> {
   const action = args[0]
   try {
+    if (action === 'inspect') {
+      if (!args[1] || args.length !== 2) throw new Error('usage: dshx creator inspect <plugin> --json')
+      printReport(report('creator inspect', [], inspectClaim(root, args[1])), options.json)
+      return 0
+    }
+    if (action === 'takeover') {
+      if (!args[1] || args.length !== 2) throw new Error('usage: dshx creator takeover <plugin> --json')
+      const context = requireContext()
+      const grant = JSON.parse(process.env.DSHX_CREATOR_TAKEOVER_GRANT || 'null')
+      const receipt = commitTakeover(root, args[1], context, grant)
+      printReport(report('creator takeover', [finding('ok', 'transferred', 'CREATOR_TAKEOVER_COMPLETE')], { receipt }), options.json)
+      return 0
+    }
+
     if (action === 'claim') {
       const pluginId = args[1]
       if (!pluginId || args.length !== 2) throw new Error('usage: dshx creator claim <plugin>')
@@ -180,7 +196,7 @@ export async function cmdCreator(args: string[], options: CliOptions, root: stri
       return 0
     }
 
-    throw new Error('usage: dshx creator <watch|claim|scaffold|remove|status|release|disarm|client-failure|recovery>')
+    throw new Error('usage: dshx creator <watch|claim|inspect|takeover|scaffold|remove|status|release|disarm|client-failure|recovery>')
   } catch (error) {
     printReport(report('creator', [finding('error', 'creator', error instanceof Error ? error.message : String(error))]), options.json)
     return 1

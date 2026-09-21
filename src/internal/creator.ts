@@ -1,3 +1,5 @@
+// @ts-ignore -- shared plain-JS store is also loaded by the Host bridge.
+import { listClaims, claimPlugin, releaseClaims, assertUnfenced } from './creator-claims.mjs'
 import { randomUUID } from 'node:crypto'
 import {
   closeSync,
@@ -14,8 +16,6 @@ import { dirname, isAbsolute, join, resolve } from 'node:path'
 import {
   creatorActivationLockPath,
   creatorActiveTransactionPath,
-  creatorClaimsLockPath,
-  creatorClaimsPath,
   creatorIncidentsLockPath,
   creatorIncidentsPath,
   creatorQuarantinesPath,
@@ -25,7 +25,6 @@ import { planWatchedPatch, planWatchedPatchRemoval, writeWatchedPatch } from './
 import { pidAlive } from './host.ts'
 
 const PLUGIN_ID = /^[a-z][a-z0-9-]*$/
-const CLAIM_TTL_MS = 24 * 60 * 60 * 1000
 const MAX_CONTEXT_ID = 256
 const REGISTRY_LOCK_WAIT_MS = 1_000
 const REGISTRY_LOCK_STALE_MS = 10_000
@@ -120,10 +119,6 @@ export interface CreatorIncident {
   port?: number
   logExcerpt?: string
   acknowledgedBy: string[]
-}
-
-interface ClaimsFile {
-  claims: CreatorClaim[]
 }
 
 interface QuarantinesFile {
@@ -316,69 +311,22 @@ function validatePluginId(pluginId: string): void {
 }
 
 export function listCreatorClaims(root: string, now = Date.now()): CreatorClaim[] {
-  const file = readJson<ClaimsFile>(creatorClaimsPath(root), { claims: [] })
-  return file.claims.filter(claim => Date.parse(claim.expiresAt) > now)
+  return listClaims(root, now)
 }
 
-/** Claim exactly one plugin for a Creator session; other sessions may claim other plugins concurrently. */
-export function claimCreatorPlugin(
-  root: string,
-  pluginId: string,
-  context: CreatorContext,
-  now = Date.now(),
-): CreatorClaim {
-  validatePluginId(pluginId)
-  const release = acquireRegistryLock(creatorClaimsLockPath(root))
-  try {
-    const claims = listCreatorClaims(root, now)
-    const conflicting = claims.find(claim => claim.pluginId === pluginId && claim.sessionId !== context.sessionId)
-    if (conflicting) {
-      throw new Error([
-        `plugin ${pluginId} is already claimed by Creator+ session ${conflicting.sessionId}`,
-        `当前会话：${context.sessionId}；持有认领的会话：${conflicting.sessionId}。`,
-        '分叉会话拥有独立身份，不会自动继承原会话的插件认领；更换 turn 或调用 ID 不会造成此冲突。',
-        `请从会话列表查找持有者 ${conflicting.sessionId} 的真实标题并向用户指出该对话；不要把当前分叉误报为持有者，也不要编造标题或链接。`,
-        '继续开发可回到持有认领的对话。若要在当前会话接手，需要外部监督者核实原会话已停止操作并安排受控交接；不要抢占、删除认领文件、卸载插件或重启 Host。',
-        `认领最后刷新：${conflicting.lastSeenAt}；预计过期：${conflicting.expiresAt}。有效认领不等于持有者此刻正在运行，也不证明必须等待过期才能交付。`,
-        '本次请求已拒绝，原认领保持不变。',
-      ].join('\n'))
-    }
-    const previous = claims.find(claim => claim.sessionId === context.sessionId)
-    const claimedAt = previous?.pluginId === pluginId ? previous.claimedAt : iso(now)
-    const claim: CreatorClaim = {
-      pluginId,
-      sessionId: context.sessionId,
-      ...context.callId ? { callId: context.callId } : {},
-      ...context.rootCallId ? { rootCallId: context.rootCallId } : {},
-      claimedAt,
-      lastSeenAt: iso(now),
-      expiresAt: iso(now + CLAIM_TTL_MS),
-    }
-    const next = claims.filter(item => item.sessionId !== context.sessionId && item.pluginId !== pluginId)
-    next.push(claim)
-    writeJson(creatorClaimsPath(root), { claims: next } satisfies ClaimsFile)
-    return claim
-  } finally {
-    release()
-  }
+export function claimCreatorPlugin(root: string, pluginId: string, context: CreatorContext, now = Date.now()): CreatorClaim {
+  return claimPlugin(root, pluginId, context, now)
 }
 
 export function assertCreatorClaim(root: string, pluginId: string, context: CreatorContext): CreatorClaim {
+  assertUnfenced(root, context.sessionId, pluginId)
   const claim = listCreatorClaims(root).find(item => item.pluginId === pluginId && item.sessionId === context.sessionId)
-  if (!claim) {
-    throw new Error(`Creator+ session ${context.sessionId} must claim ${pluginId} before live activation`)
-  }
+  if (!claim) throw new Error(`Creator+ session ${context.sessionId} must claim ${pluginId} before live activation`)
   return claim
 }
 
 export function releaseCreatorClaim(root: string, sessionId: string): void {
-  const release = acquireRegistryLock(creatorClaimsLockPath(root))
-  try {
-    const claims = listCreatorClaims(root).filter(claim => claim.sessionId !== sessionId)
-    writeJson(creatorClaimsPath(root), { claims } satisfies ClaimsFile)
-  } finally {
-    release()
-  }
+  releaseClaims(root, sessionId)
 }
 
 function readQuarantines(root: string): CreatorQuarantine[] {
@@ -423,6 +371,8 @@ export function acquireCreatorActivationLock(root: string, pluginId: string, con
       } finally {
         closeSync(fd)
       }
+      try { if (context) assertCreatorClaim(root, pluginId, context) }
+      catch (error) { rmSync(path, { force: true }); throw error }
       return () => {
         try {
           const current = readJson<ActivationLock | undefined>(path, undefined)

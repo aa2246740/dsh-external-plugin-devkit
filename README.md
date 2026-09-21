@@ -125,7 +125,7 @@ DSHX 0.7.3 修复 bundle 插件卸载顺序。外部 supervisor 使用 `dshx plu
 
 需要隔离冷启动证明时才 `verify-boot`。需要把包装进 profile 时才 `sync-artifact`——它只会告诉你 `ARTIFACT_SYNCED; LIVE_ACTIVATION_UNPROVEN`。
 
-可选的 Creator Mode+ 是一个用户 preset，只暴露七个固定工具。见 [knowledge/contracts/creator-mode-plus.md](knowledge/contracts/creator-mode-plus.md)。
+DSHX 0.7.8 的内置 Creator Mode+ 是一个用户 preset，提供九个固定工具。独立 Creator+ 0.3.8 另提供 `dshx_browser_open`，共十个。发生认领冲突时，在当前对话调用 `dshx_request_takeover`；用户确认后会停止旧任务并接管，无需找回旧对话。见 [knowledge/contracts/creator-mode-plus.md](knowledge/contracts/creator-mode-plus.md)。
 
 更多：[从这里开始](knowledge/start-here.md) · [为什么出仓](knowledge/why-external.md) · [命令一览](knowledge/references/dshx-cli.md) · [站岗说明](AGENTS.md)
 

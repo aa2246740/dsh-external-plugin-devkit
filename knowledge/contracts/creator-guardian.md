@@ -53,7 +53,7 @@ Loader 明确报告的 `Failed to load plugins`，以及已认领且已进入 wa
 5. scaffold、编辑、build、check 可以并行；只有 watched live activation 的短事务使用
    一把全局锁，避免 profile patch 写入交错。
 6. 认领表和事故确认都用进程间原子锁与原子 rename；session dispose 会释放认领，
-   异常退出还有 24 小时租约上限。
+   24 小时租约到期后仍须核实旧工作停止，才能经确认移交。
 
 # 因果记录
 
@@ -139,3 +139,15 @@ Creator 会话的 bash guard 同时拒绝认领插件根、Harness link 与 acti
 事故消息优先于原任务。先读 incident 的归因等级、plugin、rollback 和日志；检查保留的
 源码，修复并跑 `dshx_check`。不要撤销 quarantine 后原样重试，不要手改 profile 行，
 不要从会话内重启 Host。
+
+## 用户确认后接管
+
+插件已被别的对话认领时，调用 `dshx_request_takeover({name})`。当前对话会展示原对话的实际标题、会话 ID、工作区、认领刷新时间和运行状态。用户选择“接管到当前对话”或“停止旧任务并接管”后，固定 bridge 才会暂停旧对话及其子任务的工具权限，停止并等待其后台命令和终端结束，再由 DSHX 原子转移认领。默认选择“取消”。无需找回旧对话，也无需等待 24 小时。
+
+确认走官方 `userQuestions` UI，独立于 `approval/request`。Approve for me 的自动允许、模型传入的布尔值和自由文本“已批准”都不能替代选项确认。确认绑定原认领快照，五分钟后失效；提交凭据只在 Host 闭包和固定 CLI 环境中传递，一次使用、有效期一分钟。原认领刷新、另一次接管或 Host 身份变化都会使旧确认失效。
+
+旧对话及已存在子任务的撤销记录独立于租约保存，所有普通工具调用都被拦截，保留 `dshx_status` 与重新申请接管的入口。该保护属于 Host 生命周期，跨 preset 卸载、HMR 和认领释放继续生效；不会修改会话日志锁。后台任务依照官方 jobs/terminals 的完成与资源释放约定等待，不能把“取消已请求”当成“已经停止”。
+
+正在激活、持有者状态无法核实、停止失败、确认取消或超时，都不会授予新会话权限。已开始的停止操作不会被自动恢复。可用外部 `dshx creator inspect <plugin> --json` 查看原认领及待处理交接；不要手删 claims 或 session.lock。`creator takeover` 是固定桥内部提交协议，缺少一次性凭据会拒绝，不能通过 `--force` 调用。
+
+租约到期只表示认领需要重新核验，不再自动授权第二个写入者。正常 `agent/disposed` 仍释放认领；移交中的 dispose 不得破坏正在比较的原认领。

@@ -73,6 +73,7 @@ describe('Creator Mode+ bridge', () => {
 
     assert.deepEqual(tools.map(tool => tool.name), [
       'dshx_claim_plugin',
+      'dshx_request_takeover',
       'dshx_scaffold',
       'dshx_check',
       'dshx_activation_plan',
@@ -118,6 +119,7 @@ describe('Creator Mode+ bridge', () => {
     const operations = [
       ['status'],
       ['creator', 'claim', 'demo'],
+      ['creator', 'takeover', 'demo', '--json'],
       ['creator', 'scaffold', 'demo', 'client'],
       ['check', 'demo'],
       ['activation-plan', 'demo', '--change', 'new-client'],
