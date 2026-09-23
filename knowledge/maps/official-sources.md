@@ -9,7 +9,7 @@ generated: { by: dshx/grok-4.6, at: 2026-08-17T14:00:00Z }
 stale_after: 2026-11-17
 ---
 
-当前工作台对照官方 **0.1.5-rc.2**（tag `dsh-v0.1.5-rc.2`，SHA `fb2c4b9e698e30edb738bca4cf0618587db7d203`）。更早合同篇仍可能钉在 rc.8 / rc.1；跨版本改插件 API 先读 [compat-0.1.5](/contracts/compat-0.1.5.md)。路径相对仓库根。
+当前工作台对照官方 **0.1.7-rc.1**（tag `dsh-v0.1.7-rc.1`，SHA `46a7f68b0922371ce7144b668b90e377d8e799f4`，包版本 `0.1.7-rc.1`）。省略 `dshx update plan` 的 `--target` 时使用这枚工作台钉，不跟随更高的 alpha。插件对 `@deepseek-ai/dsh` 与 `@deepseek-ai/dsh-*` 的 peer 范围是 `>=0.1.7-rc.1 <0.1.8`：接受 `0.1.7-rc.1`，拒绝 `0.1.7` alpha。`^0.1.5-rc.3` 接受不了 rc.1。更早合同篇仍可能钉在 rc.8 / rc.2；跨版本改插件 API 先读 [compat-0.1.5](/contracts/compat-0.1.5.md)。路径相对仓库根。
 
 **不要先把这些文件整篇读完。** 先走 [symptoms](symptoms.md) 或下面的「已拆成」列，需要逐条核对再打开原件。
 

@@ -346,7 +346,7 @@ export async function releaseCreatorClaim(agent, options = {}) {
 
 export function installCreatorRecovery(ctx, options = {}) {
   if (typeof ctx.on !== 'function') return
-  ctx.on('agent/session-start', ({ agent }) => {
+  ctx.on('agent/created', ({ agent }) => {
     void deliverCreatorRecovery(agent, options).catch((error) => {
       const message = `dshx/creator-plus: recovery delivery failed: ${error instanceof Error ? error.message : String(error)}`
       if (ctx.logger?.warn) ctx.logger.warn(message)

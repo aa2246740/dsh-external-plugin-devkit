@@ -2,7 +2,7 @@ import { existsSync, lstatSync, mkdirSync, realpathSync, rmSync, symlinkSync } f
 import { isAbsolute, join, relative, resolve } from 'node:path'
 import { finding, printReport, report, writeText } from '../internal/io.ts'
 import { pluginsDir } from '../internal/paths.ts'
-import type { CliOptions } from '../internal/types.ts'
+import { DSH_PEER_RANGE, type CliOptions } from '../internal/types.ts'
 
 const KINDS = new Set(['function', 'tool', 'client', 'object', 'class'])
 
@@ -237,12 +237,13 @@ function writeScaffold(dir: string, name: string, kind: string, externalWorkspac
       license: 'MIT',
       peerDependencies: {
         '@deepseek-ai/cordis': '^4.0.1',
-        '@deepseek-ai/dsh-client-ui-layout': '^0.1.0-rc.8',
+        '@deepseek-ai/dsh': DSH_PEER_RANGE,
+        '@deepseek-ai/dsh-client-ui-layout': DSH_PEER_RANGE,
       },
       devDependencies: {
         '@deepseek-ai/cordis': '^4.0.1',
-        '@deepseek-ai/dsh-client-runtime': '^0.1.0-rc.8',
-        '@deepseek-ai/dsh-client-ui-layout': '^0.1.0-rc.8',
+        '@deepseek-ai/dsh-client-runtime': DSH_PEER_RANGE,
+        '@deepseek-ai/dsh-client-ui-layout': DSH_PEER_RANGE,
         '@types/react': '~18.3.1',
         react: '^18.2.0',
         'react-dom': '^18.2.0',

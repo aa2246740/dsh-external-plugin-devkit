@@ -4,7 +4,8 @@ import { mkdtempSync, mkdirSync, readFileSync, realpathSync, symlinkSync, writeF
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { describe, it } from 'node:test'
-import { applyPluginSourceOverrides, collectUpdatePlan, latestReleaseRef, parseReleaseRef } from '../src/internal/update.ts'
+import { applyPluginSourceOverrides, collectUpdatePlan, latestReleaseRef, officialHarnessOrigin, parseReleaseRef, releaseRefByTag } from '../src/internal/update.ts'
+import { DESK_HARNESS_TAG } from '../src/internal/types.ts'
 import { candidateVerified, candidateWebGateFailures, combinedPluginNames } from '../src/internal/update-candidate.ts'
 import { assertNoStagingOnlyPluginSources, overlayTargetDependency, targetDependency } from '../src/internal/update-apply.ts'
 import type { CandidatePluginResult, CandidateWebGateResult, UpdateCandidateState } from '../src/internal/update-candidate.ts'
@@ -54,6 +55,33 @@ describe('update plan', () => {
     ].join('\n'))
     assert.equal(latest?.tag, 'dsh-v0.1.1-rc.10')
     assert.equal(parseReleaseRef('not-a-release', 'x'), undefined)
+  })
+
+  it('accepts a credentialed official Harness origin and rejects a different owner', () => {
+    assert.equal(officialHarnessOrigin('https://github.com/deepseek-ai/deepseek-harness.git'), true)
+    assert.equal(officialHarnessOrigin('https://x-access-token:example@github.com/deepseek-ai/deepseek-harness.git'), true)
+    assert.equal(officialHarnessOrigin('git@github.com:deepseek-ai/deepseek-harness.git'), true)
+    assert.equal(officialHarnessOrigin('https://x-access-token:example@github.com/other/deepseek-harness.git'), false)
+  })
+  it('keeps the desk tag when a later alpha sorts higher', () => {
+    const listed = [
+      'alpha\trefs/tags/dsh-v0.1.8-alpha.1',
+      'rc\trefs/tags/dsh-v0.1.7-rc.1',
+      'early\trefs/tags/dsh-v0.1.7-alpha.2',
+    ].join('\n')
+    assert.equal(latestReleaseRef(listed)?.tag, 'dsh-v0.1.8-alpha.1')
+    assert.equal(releaseRefByTag(listed, DESK_HARNESS_TAG)?.tag, 'dsh-v0.1.7-rc.1')
+    assert.equal(releaseRefByTag(listed, 'dsh-v0.1.7-alpha.2')?.tag, 'dsh-v0.1.7-alpha.2')
+  })
+
+  it('plans the desk tag when --target is omitted, even if a later alpha exists locally', () => {
+    const root = fakeHarness()
+    git(root, ['tag', 'dsh-v0.1.7-rc.1'])
+    git(root, ['tag', 'dsh-v0.1.8-alpha.1'])
+    git(root, ['tag', 'dsh-v0.1.7-alpha.2'])
+    const plan = collectUpdatePlan(root, undefined, isolatedEnv(root))
+    assert.equal(plan.target.tag, DESK_HARNESS_TAG)
+    assert.equal(plan.target.version, '0.1.7-rc.1')
   })
 
   it('inventories directories and symlinks without mutating a clean checkout', () => {

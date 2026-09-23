@@ -90,7 +90,14 @@ export interface CliOptions {
   scope: HotReloadScope
 }
 
-export const DSHX_VERSION = '0.7.8'
+export const DSHX_VERSION = '0.7.9'
+/** Official release this desk is proved against. Omitted `update` targets stay here. */
+export const DESK_HARNESS_TAG = 'dsh-v0.1.7-rc.1'
+/**
+ * Peer range for `@deepseek-ai/dsh` and `@deepseek-ai/dsh-*`.
+ * Accepts 0.1.7-rc.1. Rejects 0.1.7 alphas. `^0.1.5-rc.3` does not accept rc.1.
+ */
+export const DSH_PEER_RANGE = '>=0.1.7-rc.1 <0.1.8'
 export const DEFAULT_PORT = 3080
 export const DEFAULT_TIMEOUT_MS = 60_000
 export const DEFAULT_PROFILE: ProfileName = 'web'

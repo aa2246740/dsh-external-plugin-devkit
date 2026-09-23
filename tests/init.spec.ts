@@ -5,6 +5,7 @@ import { join } from 'node:path'
 import { describe, it } from 'node:test'
 import { cmdInit, scaffoldCreatorPlugin } from '../src/commands/init.ts'
 import { checkPlugin } from '../src/internal/check.ts'
+import { DSH_PEER_RANGE } from '../src/internal/types.ts'
 import { loadJson, parseCli } from '../src/internal/io.ts'
 import { loadPlugin } from '../src/internal/plugin.ts'
 
@@ -36,12 +37,18 @@ describe('init scaffolds', () => {
     const pkg = loadJson<{
       exports: Record<string, string | { default: string }>,
       scripts: Record<string, string>,
+      peerDependencies: Record<string, string>,
+      devDependencies: Record<string, string>,
     }>(join(root, 'my-plugins/client-demo/package.json'))
     assert.deepEqual(pkg.exports['./client'], {
       types: './lib/types/client/index.d.ts',
       default: './lib/client.js',
     })
     assert.equal(pkg.scripts.build, 'tsc -p tsconfig.json && tsdown')
+    assert.equal(pkg.peerDependencies['@deepseek-ai/dsh'], DSH_PEER_RANGE)
+    assert.equal(pkg.peerDependencies['@deepseek-ai/dsh-client-ui-layout'], DSH_PEER_RANGE)
+    assert.equal(pkg.devDependencies['@deepseek-ai/dsh-client-runtime'], DSH_PEER_RANGE)
+    assert.equal(pkg.devDependencies['@deepseek-ai/dsh-client-ui-layout'], DSH_PEER_RANGE)
     assert.match(readFileSync(join(root, 'my-plugins/client-demo/tsdown.config.ts'), 'utf8'), /externalClientBundle/)
     assert.match(readFileSync(join(root, 'my-plugins/client-demo/tsconfig.json'), 'utf8'), /tsconfig\.base\.client\.json/)
     const findings = checkPlugin(loadPlugin(root, 'client-demo'), root)

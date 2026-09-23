@@ -7,6 +7,7 @@ import { resolveLocalSpec } from './file-copy.ts'
 import { pluginsDir, profileDir, resolveDshHome } from './paths.ts'
 import { captureOfficialPluginDisables, officialDisableOnlyDirty, type OfficialPluginPolicy } from './official-plugin-policy.ts'
 import { loadPlugin, pluginSource } from './plugin.ts'
+import { DESK_HARNESS_TAG } from './types.ts'
 
 interface GitResult {
   ok: boolean
@@ -184,8 +185,22 @@ export function latestReleaseRef(text: string): ReleaseRef | undefined {
   return releases.sort(compareReleaseRefs).at(-1)
 }
 
-function officialOrigin(url: string): boolean {
-  return /^(?:https:\/\/github\.com\/|git@github\.com:|ssh:\/\/git@github\.com\/)?deepseek-ai\/deepseek-harness(?:\.git)?$/.test(url)
+/** Exact tag from `git ls-remote` output. A higher alpha in the same list does not win. */
+export function releaseRefByTag(text: string, tag: string): ReleaseRef | undefined {
+  for (const line of text.split(/\r?\n/)) {
+    const [sha, ref] = line.trim().split(/\s+/, 2)
+    if (!sha || ref !== `refs/tags/${tag}`) continue
+    return parseReleaseRef(tag, sha)
+  }
+  return undefined
+}
+
+function publicOrigin(url: string): string {
+  return url.replace(/^(https:\/\/)[^@/\s]+@/i, '$1')
+}
+
+export function officialHarnessOrigin(url: string): boolean {
+  return /^(?:https:\/\/(?:[^@/\s]+@)?github\.com\/|git@github\.com:|ssh:\/\/(?:[^@/\s]+@)?git@github\.com\/)?deepseek-ai\/deepseek-harness(?:\.git)?$/.test(url)
 }
 
 function gitValue(root: string, args: readonly string[], label: string): string {
@@ -195,26 +210,21 @@ function gitValue(root: string, args: readonly string[], label: string): string 
 }
 
 function resolveTarget(root: string, requested?: string): UpdateTargetState {
-  if (requested) {
-    const local = git(root, ['rev-parse', '--verify', `${requested}^{commit}`])
-    if (local.ok) {
-      const parsed = parseReleaseRef(requested, local.stdout.trim())
-      if (!parsed) throw new Error(`--target must be a release tag like dsh-v0.1.1-rc.2: ${requested}`)
-      return { tag: parsed.tag, sha: parsed.sha, version: parsed.tag.slice('dsh-v'.length), local: true }
-    }
-    const remote = git(root, ['ls-remote', '--tags', '--refs', 'origin', `refs/tags/${requested}`])
-    const hit = latestReleaseRef(remote.stdout)
-    if (!remote.ok || !hit || hit.tag !== requested) {
-      throw new Error(`target release not found locally or on origin: ${requested}`)
-    }
-    return { tag: hit.tag, sha: hit.sha, version: hit.tag.slice('dsh-v'.length), local: false }
+  // An omitted flag stays on the desk pin. Scanning every dsh-v* tag would
+  // let a later alpha outrank the release this desk is proved against.
+  const tag = requested ?? DESK_HARNESS_TAG
+  const local = git(root, ['rev-parse', '--verify', `${tag}^{commit}`])
+  if (local.ok) {
+    const parsed = parseReleaseRef(tag, local.stdout.trim())
+    if (!parsed) throw new Error(`--target must be a release tag like ${DESK_HARNESS_TAG}: ${tag}`)
+    return { tag: parsed.tag, sha: parsed.sha, version: parsed.tag.slice('dsh-v'.length), local: true }
   }
-  const remote = git(root, ['ls-remote', '--tags', '--refs', 'origin', 'refs/tags/dsh-v*'])
-  if (!remote.ok) throw new Error(`cannot query official release tags: ${remote.stderr.trim() || 'git ls-remote failed'}`)
-  const hit = latestReleaseRef(remote.stdout)
-  if (!hit) throw new Error('origin exposes no dsh-v* release tags')
-  const local = git(root, ['cat-file', '-e', `${hit.sha}^{commit}`]).ok
-  return { tag: hit.tag, sha: hit.sha, version: hit.tag.slice('dsh-v'.length), local }
+  const remote = git(root, ['ls-remote', '--tags', '--refs', 'origin', `refs/tags/${tag}`])
+  const hit = releaseRefByTag(remote.stdout, tag)
+  if (!remote.ok || !hit) {
+    throw new Error(`target release not found locally or on origin: ${tag}`)
+  }
+  return { tag: hit.tag, sha: hit.sha, version: hit.tag.slice('dsh-v'.length), local: false }
 }
 
 function statusState(root: string): Pick<UpdateCheckoutState, 'trackedChanges' | 'untrackedPaths'> {
@@ -455,7 +465,7 @@ export function collectUpdatePlan(root: string, requestedTarget?: string, env: N
   const { staleProfileDependencies } = inventory
   const officialPluginDisables = captureOfficialPluginDisables(root, env)
   const blockers: string[] = []
-  if (!officialOrigin(origin)) blockers.push(`origin is not deepseek-ai/deepseek-harness: ${origin}`)
+  if (!officialHarnessOrigin(origin)) blockers.push(`origin is not deepseek-ai/deepseek-harness: ${publicOrigin(origin)}`)
   if (
     checkout.trackedChanges.length > 0
     && !officialDisableOnlyDirty(root, checkout.trackedChanges, officialPluginDisables)

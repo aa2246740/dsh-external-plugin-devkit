@@ -1,5 +1,9 @@
 # Directory Update Log
 
+## 2026-09-23
+
+* **0.7.9 Harness 0.1.7-rc.1**: desk update target is `dsh-v0.1.7-rc.1` (SHA `46a7f68b0922371ce7144b668b90e377d8e799f4`). Omitted `--target` does not float onto a later alpha. Peer and generated scaffold pins are `>=0.1.7-rc.1 <0.1.8`. Client inline allowlist matches rc.1. Creator+ recovery listens on `agent/created`.
+
 ## 2026-09-11
 
 * **0.7.6 0.1.5-rc.2 plugin compat**: `dshx check` diagnoses removed 0.1.2 APIs (`MessageText`, `addImages`, `createDraftImages`, `PendingSubmission.images`, `CommandInputDescriptor.images`, `EpochHeader.system`, `assistant/chunk`, `ctx.agent`) and the client `tsdown` template that fail-closes when `DSHX_HARNESS` and `~/.config/dshx/harness` disagree. New scaffolds prefer the env pin so `update prepare` can read the candidate platform table. Update inventory skips `dsh-external-plugin-devkit`. Apply rebuilds link `@types/node` and `typescript` from the target checkout. Agents start at `kb cat contracts/compat-0.1.5`.
