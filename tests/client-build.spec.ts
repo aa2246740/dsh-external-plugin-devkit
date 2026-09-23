@@ -73,6 +73,13 @@ export function apply(ctx) { ctx.locale.register('demo', { en: {} }) }
     assert.equal(client.deps.neverBundle('@deepseek-ai/dsh-util-workspace-path'), false)
     assert.equal(client.deps.alwaysBundle('@deepseek-ai/dsh-util-workspace-path'), true)
     assert.equal(client.plugins[0].resolveId('@deepseek-ai/dsh-util-workspace-path'), null)
+    assert.equal(client.plugins[0].resolveId('@deepseek-ai/dsh-plugin-manager/registry'), null)
+    assert.equal(client.plugins[0].resolveId('@deepseek-ai/dsh-agent-preset-registry/display'), null)
+    assert.equal(client.plugins[0].resolveId('@deepseek-ai/dsh-native-command/types'), null)
+    assert.throws(
+      () => client.plugins[0].resolveId('@deepseek-ai/dsh-agent-presets/display'),
+      /not a shared baseline or dsh\.client\.external request/,
+    )
     assert.throws(
       () => client.plugins[0].resolveId('@deepseek-ai/dsh-unapproved-runtime'),
       /not a shared baseline or dsh\.client\.external request/,
@@ -81,6 +88,7 @@ export function apply(ctx) { ctx.locale.register('demo', { en: {} }) }
 
   it('uses the target Harness platform table when dshx is symlinked from another checkout', () => {
     const harness = mkdtempSync(join(tmpdir(), 'dshx-target-platform-'))
+    writeFileSync(join(harness, 'package.json'), '{"type":"module"}\n')
     const platform = join(harness, 'packages/client/web/src/platform.ts')
     mkdirSync(dirname(platform), { recursive: true })
     writeFileSync(platform, [

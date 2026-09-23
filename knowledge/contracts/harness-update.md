@@ -24,7 +24,8 @@ stale_after: 2026-11-24
 
 # 不变量
 
-- 只接受官方 `deepseek-ai/deepseek-harness` origin 和 `dsh-v*` release tag。
+- 只接受官方 `deepseek-ai/deepseek-harness` origin 和 `dsh-v*` release tag。省略 `--target` 时目标是工作台钉 `dsh-v0.1.7-rc.1`，不是 origin 上版本号更高的 alpha。
+- 新脚手架写入的 `@deepseek-ai/dsh` / `@deepseek-ai/dsh-*` peer 与 dev 范围是 `>=0.1.7-rc.1 <0.1.8`。Host 在导入插件前用这个范围对照运行时版本；`^0.1.5-rc.3` 接受不了 `0.1.7-rc.1`。
 - tracked Harness dirty、会被目标覆盖的 untracked 路径、无效插件清单都阻断 apply。唯一例外：工作区改动只是把用户已禁用的官方插件在出厂 preset 上保持 `disabled: true`。这类改动记在 `$DSH_HOME/.dshx/official-plugin-policy.json`，apply 切到官方树之后必须 restamp，不得把官方插件偷偷打开。
 - apply / plan 必须汇报用户禁用的官方插件清单（id、包名、所在 preset/patch 面、restamp 结果）。清单给用户判断；缺行报 warn，restamp 失败则 apply 失败并回滚。已记录的禁用只能被用户显式重新打开，升级不得删除。
 - `my-plugins` 的真实目录和 symlink，以及活动 Web profile 依赖中的本地 `file:` / `link:` 源都进入矩阵；同名或同一稳定 plugin ID 时 profile 的活动源优先，避免验证过期副本。两个活动 profile 包声明同一 ID 属于真实组合冲突，必须在 plan 阶段失败关闭。缺失的 profile 本地目标必须显式告警且不进入候选 staging。候选验证不改插件源字节。`dsh-external-plugin-devkit` 是 CLI / Creator+ 源，不是产品插件，盘点时跳过，避免 apply 把它的 `node_modules` 当成插件依赖搬空。

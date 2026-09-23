@@ -130,7 +130,7 @@ Creator 会话的 bash guard 同时拒绝认领插件根、Harness link 与 acti
 - `dshx stop` 与 `restart-supervised` 拒绝手工控制领养的 Host。只有检测到真实失败的
   Guardian recovery 可以启动替代 Web Host。
 - 若 App 壳先恢复相同端口，Guardian 禁止创建第二个 listener，并等下一次 Creator+
-  session-start 再重新武装。
+  `agent/created`（已替代删除的 `agent/session-start`）再重新武装。
 - browser sentry 只识别官方 Loader 的 `FAILED`/boot failure，不把组件内异常、样式错误、
   交互错误或业务结果错误升级成自动 quarantine。
 
