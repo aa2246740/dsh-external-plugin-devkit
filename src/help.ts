@@ -86,7 +86,7 @@ export const HELP = `dshx — DeepSeek Harness 进程外插件工作台
   --harness <path>              所有命令的 checkout 消歧器；显式值优先
   --dry-run / --print-prompt
   --task "..."
-  --target dsh-v0.1.7-rc.1     update 的显式官方 release tag；省略时使用工作台钉，不跟随更高的 alpha
+  --target dsh-v0.1.7-rc.2     update 的显式官方 release tag；省略时使用工作台钉，不跟随更高的 alpha
   --candidate <path>           update 候选 checkout 的显式路径
   --plugin-source name=/path   仅候选 staging 使用指定兼容源码；不改活动源，apply 会拒绝
 

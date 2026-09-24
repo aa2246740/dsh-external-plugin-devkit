@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.1 - 2026-09-24
+
+- Pin the desk Harness target to official `dsh-v0.1.7-rc.2` (package `0.1.7-rc.2`, SHA `477b4f420553e8a52c2fbccc464d7561b239c443`). `dshx update plan --target dsh-v0.1.7-rc.2` resolves that tag. Omitting `--target` stays on it and does not follow a later alpha.
+- Keep `@deepseek-ai/dsh` peer `>=0.1.7-rc.1 <0.1.8`. The range accepts `0.1.7-rc.2` and still rejects `0.1.7` alphas.
+- Align the client-bundle inline allowlist with rc.2: `@deepseek-ai/dsh-api-workspace-controller/default-workspace` is inline-safe. The package root is not.
+- The client-build spec's fabricated platform table is an ES module, matching an official checkout, so Node 22.22 can import it.
+
 ## 0.9.0 - 2026-09-24
 
 Supersedes 0.7.9, which was never released; includes everything in that entry plus the fixes below.

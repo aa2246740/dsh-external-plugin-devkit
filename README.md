@@ -4,7 +4,7 @@
 
 **这不是 Host 功能插件。** 不要用 `dsh plugin add` 装本仓库，也没有 `github:aa2246740/dsh-external-plugin-devkit` 这种 Host 安装命令。
 
-只跑官方 DeepSeek Harness（例如 **0.1.7-rc.1**）、不写插件的人：**跳过这个仓库。** 官方原装 DSH 没有 Creator Mode，也没有 DSHX；功能插件的安装写在那个插件自己的 README 里。
+只跑官方 DeepSeek Harness（例如 **0.1.7-rc.2**）、不写插件的人：**跳过这个仓库。** 官方原装 DSH 没有 Creator Mode，也没有 DSHX；功能插件的安装写在那个插件自己的 README 里。
 
 本仓库是 **dshx CLI / 工作台**。给**手里有一份 [Harness checkout](https://github.com/deepseek-ai/deepseek-harness)、要在仓外写或维护文件插件**的作者用（Cursor、Claude Code、Codex、Grok，或人自己跑）。
 
@@ -70,14 +70,14 @@ dshx update plan
 
 ## 0.7.4 更新助手与 RC1 Web 门禁
 
-更新不是一次 `git pull`。分阶段门禁；省略 `--target` 时停在工作台钉 `dsh-v0.1.7-rc.1`，不跟随更高的 alpha。
+更新不是一次 `git pull`。分阶段门禁；省略 `--target` 时停在工作台钉 `dsh-v0.1.7-rc.2`，不跟随更高的 alpha。
 
 ```sh
 dshx update plan
-dshx update prepare --target dsh-v0.1.7-rc.1
-dshx update verify --target dsh-v0.1.7-rc.1
-dshx update apply --target dsh-v0.1.7-rc.1
-dshx update rollback --target dsh-v0.1.7-rc.1
+dshx update prepare --target dsh-v0.1.7-rc.2
+dshx update verify --target dsh-v0.1.7-rc.2
+dshx update apply --target dsh-v0.1.7-rc.2
+dshx update rollback --target dsh-v0.1.7-rc.2
 ```
 
 下面的截图是历史 RC2 样例：本机从 `0.1.0-rc.8` 规划到 `0.1.1-rc.2`，1 个插件入账，没有监督中的 Host。它不替代当前 target 的候选结果：
@@ -125,7 +125,7 @@ DSHX 0.7.3 修复 bundle 插件卸载顺序。外部 supervisor 使用 `dshx plu
 
 需要隔离冷启动证明时才 `verify-boot`。需要把包装进 profile 时才 `sync-artifact`——它只会告诉你 `ARTIFACT_SYNCED; LIVE_ACTIVATION_UNPROVEN`。
 
-DSHX 0.9.0 的内置 Creator Mode+ 是一个用户 preset，提供九个固定工具。独立 Creator+ 0.3.8 另提供 `dshx_browser_open`，共十个。发生认领冲突时，在当前对话调用 `dshx_request_takeover`；用户确认后会停止旧任务并接管，无需找回旧对话。见 [knowledge/contracts/creator-mode-plus.md](knowledge/contracts/creator-mode-plus.md)。
+DSHX 0.9.1 的内置 Creator Mode+ 是一个用户 preset，提供九个固定工具。独立 Creator+ 0.3.8 另提供 `dshx_browser_open`，共十个。发生认领冲突时，在当前对话调用 `dshx_request_takeover`；用户确认后会停止旧任务并接管，无需找回旧对话。见 [knowledge/contracts/creator-mode-plus.md](knowledge/contracts/creator-mode-plus.md)。
 
 更多：[从这里开始](knowledge/start-here.md) · [为什么出仓](knowledge/why-external.md) · [命令一览](knowledge/references/dshx-cli.md) · [站岗说明](AGENTS.md)
 
