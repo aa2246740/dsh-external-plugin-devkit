@@ -66,22 +66,34 @@ describe('update plan', () => {
   it('keeps the desk tag when a later alpha sorts higher', () => {
     const listed = [
       'alpha\trefs/tags/dsh-v0.1.8-alpha.1',
-      'rc\trefs/tags/dsh-v0.1.7-rc.1',
+      'rc\trefs/tags/dsh-v0.1.7-rc.2',
       'early\trefs/tags/dsh-v0.1.7-alpha.2',
     ].join('\n')
     assert.equal(latestReleaseRef(listed)?.tag, 'dsh-v0.1.8-alpha.1')
-    assert.equal(releaseRefByTag(listed, DESK_HARNESS_TAG)?.tag, 'dsh-v0.1.7-rc.1')
+    assert.equal(releaseRefByTag(listed, DESK_HARNESS_TAG)?.tag, 'dsh-v0.1.7-rc.2')
     assert.equal(releaseRefByTag(listed, 'dsh-v0.1.7-alpha.2')?.tag, 'dsh-v0.1.7-alpha.2')
   })
 
   it('plans the desk tag when --target is omitted, even if a later alpha exists locally', () => {
     const root = fakeHarness()
-    git(root, ['tag', 'dsh-v0.1.7-rc.1'])
+    git(root, ['tag', 'dsh-v0.1.7-rc.2'])
     git(root, ['tag', 'dsh-v0.1.8-alpha.1'])
     git(root, ['tag', 'dsh-v0.1.7-alpha.2'])
     const plan = collectUpdatePlan(root, undefined, isolatedEnv(root))
     assert.equal(plan.target.tag, DESK_HARNESS_TAG)
-    assert.equal(plan.target.version, '0.1.7-rc.1')
+    assert.equal(plan.target.version, '0.1.7-rc.2')
+    assert.equal(plan.blockers.length, 0)
+  })
+
+  it('plans an explicit dsh-v0.1.7-rc.2 target and does not follow a later alpha', () => {
+    const root = fakeHarness()
+    git(root, ['tag', 'dsh-v0.1.7-rc.2'])
+    git(root, ['tag', 'dsh-v0.1.8-alpha.1'])
+    const plan = collectUpdatePlan(root, 'dsh-v0.1.7-rc.2', isolatedEnv(root))
+    assert.equal(plan.target.tag, 'dsh-v0.1.7-rc.2')
+    assert.equal(plan.target.version, '0.1.7-rc.2')
+    assert.notEqual(plan.target.tag, 'dsh-v0.1.8-alpha.1')
+    assert.equal(plan.blockers.length, 0)
   })
 
   it('inventories directories and symlinks without mutating a clean checkout', () => {
