@@ -2,6 +2,7 @@ import { existsSync, lstatSync, readdirSync, realpathSync, statSync } from 'node
 import { basename, dirname, isAbsolute, join, posix, relative, resolve } from 'node:path'
 import { loadYaml, readText } from './io.ts'
 import { pluginsDir, profileDir, resolveDshHome } from './paths.ts'
+import { packageRootEntry } from './runtime-package.ts'
 import type { PluginKind, PluginManifest, ProfileName } from './types.ts'
 
 interface RawManifest {
@@ -262,9 +263,12 @@ export function loadPlugin(root: string, nameOrPath?: string): PluginManifest {
   }
 }
 
-/** Current Harness releases discover browser bundles from resolvable package names, not source-file loader rows. */
+/** Packaged plugins mount through resolvable package names; sources without an executable root export keep source-file loader rows. */
 export function runtimePluginSpecifier(plugin: PluginManifest): string {
-  return plugin.runtimePackage?.webClient === true ? plugin.runtimePackage.name : plugin.entryAbs
+  const runtimePackage = plugin.runtimePackage
+  if (!runtimePackage) return plugin.entryAbs
+  if (runtimePackage.webClient === true) return runtimePackage.name
+  return packageRootEntry(runtimePackage.manifestPath) === undefined ? plugin.entryAbs : runtimePackage.name
 }
 
 export function readCommittedOverlay(dir: string): unknown {

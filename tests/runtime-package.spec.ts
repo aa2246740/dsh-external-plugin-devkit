@@ -60,6 +60,28 @@ describe('native runtime package seam', () => {
     assert.equal(ensureRuntimePackageLink(plugin, join(root, 'home'), 'web'), undefined)
   })
 
+  it('links packaged server plugins by name instead of an absolute loader row', () => {
+    const root = mkdtempSync(join(tmpdir(), 'dshx-runtime-server-package-'))
+    write(join(root, 'apps/cli/src/bin.ts'), 'export {}\n')
+    write(join(root, 'tools/dshx/src/cli.ts'), 'export {}\n')
+    const pluginDir = join(root, 'my-plugins', 'server-package')
+    write(join(pluginDir, 'src/index.ts'), "export function apply() { console.log('[server-package] loaded') }\n")
+    write(join(pluginDir, 'dshx.yml'), 'id: server-package\nentry: src/index.ts\nmarker: "[server-package] loaded"\nkind: function\nprofile: web\n')
+    write(join(pluginDir, 'package.json'), JSON.stringify({
+      name: 'server-package',
+      private: true,
+      type: 'module',
+      exports: { '.': './src/index.ts' },
+    }))
+    const plugin = loadPlugin(root, 'server-package')
+    const home = join(root, 'server-package-home')
+    const linked = ensureRuntimePackageLink(plugin, home, 'web')
+    assert.equal(runtimePluginSpecifier(plugin), 'server-package')
+    assert.match(renderOverlay(plugin), /name: "server-package"/)
+    assert.equal(realpathSync(linked?.link ?? ''), realpathSync(pluginDir))
+    assert.equal(linked?.entry, join(realpathSync(pluginDir), 'src/index.ts'))
+  })
+
   it('makes update probes package-resolvable without changing the staged client bundle', () => {
     const { root, plugin: pluginDir } = clientHarness()
     const probe = createApplyProbe(root, 'demo-client')

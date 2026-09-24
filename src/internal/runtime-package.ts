@@ -14,11 +14,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
-function serverEntry(plugin: PluginManifest): string {
-  const runtimePackage = plugin.runtimePackage
-  if (!runtimePackage) throw new Error(`plugin has no runtime package: ${plugin.id}`)
-  const parsed: unknown = JSON.parse(readFileSync(runtimePackage.manifestPath, 'utf8'))
-  if (!isRecord(parsed)) throw new Error(`package manifest must hold an object: ${runtimePackage.manifestPath}`)
+/** Executable root entry of a runtime package manifest, or undefined when it does not expose one. */
+export function packageRootEntry(manifestPath: string): string | undefined {
+  const parsed: unknown = JSON.parse(readFileSync(manifestPath, 'utf8'))
+  if (!isRecord(parsed)) throw new Error(`package manifest must hold an object: ${manifestPath}`)
   const exports = isRecord(parsed.exports) ? parsed.exports : undefined
   const rootExport = exports?.['.']
   const entry = typeof rootExport === 'string'
@@ -30,15 +29,15 @@ function serverEntry(plugin: PluginManifest): string {
         : typeof parsed.main === 'string'
           ? parsed.main
           : undefined
-  if (!entry) throw new Error(`web client package has no executable root export: ${runtimePackage.manifestPath}`)
-  const absolute = resolve(dirname(runtimePackage.manifestPath), entry)
-  if (!existsSync(absolute)) throw new Error(`web client package root export is missing: ${absolute}`)
-  return realpathSync(absolute)
+  if (!entry) return undefined
+  const absolute = resolve(dirname(manifestPath), entry)
+  return existsSync(absolute) ? realpathSync(absolute) : undefined
 }
 
 /**
- * Link a local browser plugin into the selected profile's native package-resolution seam.
- * Server-only source plugins keep their absolute TypeScript overlay and require no link.
+ * Link a local packaged plugin into the selected profile's native package-resolution seam.
+ * Manifest-less sources and packages without an executable root export keep their absolute
+ * TypeScript overlay and require no link; web-client packages fail loudly instead.
  */
 export function ensureRuntimePackageLink(
   plugin: PluginManifest,
@@ -46,7 +45,14 @@ export function ensureRuntimePackageLink(
   profile: ProfileName,
 ): RuntimePackageLink | undefined {
   const runtimePackage = plugin.runtimePackage
-  if (runtimePackage?.webClient !== true) return undefined
+  if (!runtimePackage) return undefined
+  const entry = packageRootEntry(runtimePackage.manifestPath)
+  if (entry === undefined) {
+    if (runtimePackage.webClient === true) {
+      throw new Error(`web client package ${runtimePackage.name} has no executable root export: ${runtimePackage.manifestPath}`)
+    }
+    return undefined
+  }
   const target = realpathSync(plugin.dir)
   const dir = profileDir(home, profile)
   const link = join(dir, 'node_modules', runtimePackage.name)
@@ -65,5 +71,5 @@ export function ensureRuntimePackageLink(
     }
     symlinkSync(target, link, 'dir')
   }
-  return { name: runtimePackage.name, link, target, entry: serverEntry(plugin) }
+  return { name: runtimePackage.name, link, target, entry }
 }

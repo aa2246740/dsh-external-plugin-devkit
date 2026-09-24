@@ -448,7 +448,9 @@ export function applyPluginSourceOverrides(root: string, plugins: readonly Updat
 }
 
 export function collectUpdatePlan(root: string, requestedTarget?: string, env: NodeJS.ProcessEnv = process.env, sourceOverrides: readonly string[] = []): UpdatePlan {
-  const origin = gitValue(root, ['remote', 'get-url', 'origin'], 'origin')
+  // git remote get-url expands url.*.insteadOf rewrites (auth proxies);
+  // the provenance gate belongs on the configured remote.origin.url.
+  const origin = gitValue(root, ['config', '--get', 'remote.origin.url'], 'origin')
   const target = resolveTarget(root, requestedTarget)
   const status = statusState(root)
   const checkout: UpdateCheckoutState = {
