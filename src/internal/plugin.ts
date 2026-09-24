@@ -1,7 +1,7 @@
 import { existsSync, lstatSync, readdirSync, realpathSync, statSync } from 'node:fs'
 import { basename, dirname, isAbsolute, join, posix, relative, resolve } from 'node:path'
 import { loadYaml, readText } from './io.ts'
-import { pluginsDir } from './paths.ts'
+import { pluginsDir, profileDir, resolveDshHome } from './paths.ts'
 import { packageRootEntry } from './runtime-package.ts'
 import type { PluginKind, PluginManifest, ProfileName } from './types.ts'
 
@@ -132,6 +132,57 @@ export function listPluginNames(root: string): string[] {
     .sort()
 }
 
+function readPackageManifest(dir: string): Record<string, unknown> | undefined {
+  const manifestPath = join(dir, 'package.json')
+  if (!existsSync(manifestPath)) return undefined
+  try {
+    const parsed: unknown = JSON.parse(readText(manifestPath))
+    return isRecord(parsed) ? parsed : undefined
+  } catch {
+    return undefined
+  }
+}
+
+function packageNameAt(dir: string): string | undefined {
+  const name = readPackageManifest(dir)?.name
+  return typeof name === 'string' ? name : undefined
+}
+
+/**
+ * Resolve a plugin source linked into a profile as a `link:`/`file:` dependency.
+ * Matches by dependency name first, then the target's package name, then the
+ * target directory basename. Returns the distinct real targets found.
+ */
+export function profileLinkedPluginDirs(home: string, name: string): string[] {
+  const profilesRoot = join(home, 'profiles')
+  if (!existsSync(profilesRoot)) return []
+  const byDependencyName = new Map<string, string>()
+  const byPackageOrDirName = new Map<string, string>()
+  for (const profile of readdirSync(profilesRoot, { withFileTypes: true })) {
+    if (!profile.isDirectory()) continue
+    const dir = profileDir(home, profile.name)
+    // An unreadable profile must not break name lookup for every other profile.
+    const parsed = readPackageManifest(dir)
+    if (parsed === undefined) continue
+    for (const section of ['dependencies', 'devDependencies'] as const) {
+      const deps = parsed[section]
+      if (!isRecord(deps)) continue
+      for (const [dependency, rawSpec] of Object.entries(deps)) {
+        if (typeof rawSpec !== 'string') continue
+        const prefix = rawSpec.startsWith('link:') ? 'link:'.length : rawSpec.startsWith('file:') ? 'file:'.length : 0
+        if (prefix === 0) continue
+        const target = resolve(dir, rawSpec.slice(prefix))
+        if (!existsSync(target)) continue
+        const real = realpathSync(target)
+        if (dependency === name) byDependencyName.set(real, target)
+        if (packageNameAt(target) === name || basename(target) === name) byPackageOrDirName.set(real, target)
+      }
+    }
+  }
+  const hits = byDependencyName.size > 0 ? byDependencyName : byPackageOrDirName
+  return [...hits.keys()]
+}
+
 export function resolvePluginDir(root: string, nameOrPath?: string): string {
   if (!nameOrPath) {
     const names = listPluginNames(root)
@@ -145,7 +196,12 @@ export function resolvePluginDir(root: string, nameOrPath?: string): string {
   }
   const under = join(pluginsDir(root), nameOrPath)
   if (existsSync(under)) return under
-  throw new Error(`plugin not found: ${nameOrPath} (looked at ${asPath} and ${under})`)
+  const linked = profileLinkedPluginDirs(resolveDshHome(), nameOrPath)
+  if (linked.length === 1) return linked[0]!
+  if (linked.length > 1) {
+    throw new Error(`plugin name ${nameOrPath} matches several profile-linked sources: ${linked.join(', ')}. Pass an explicit path`)
+  }
+  throw new Error(`plugin not found: ${nameOrPath} (looked at ${asPath}, ${under}, and profile link/file dependencies)`)
 }
 
 function pickEntry(dir: string, id: string): string {
