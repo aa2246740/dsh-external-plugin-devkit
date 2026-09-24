@@ -4,7 +4,7 @@
 
 **This is not a Host feature plugin.** Do not install this repo with `dsh plugin add`. There is no Host install spec such as `github:aa2246740/dsh-external-plugin-devkit`.
 
-If you only run official DeepSeek Harness (for example **0.1.5-rc.2**) and you are not writing plugins: **skip this repository.** Stock DSH has no Creator Mode and no DSHX. Feature-plugin install lives in that plugin's own README.
+If you only run official DeepSeek Harness (for example **0.1.7-rc.1**) and you are not writing plugins: **skip this repository.** Stock DSH has no Creator Mode and no DSHX. Feature-plugin install lives in that plugin's own README.
 
 This repo is the **dshx CLI / workbench**. It is for **plugin authors who already have a [Harness checkout](https://github.com/deepseek-ai/deepseek-harness)** and want to write or maintain file-backed plugins outside the Host (Cursor, Claude Code, Codex, Grok, or a human).
 
@@ -125,7 +125,7 @@ DSHX 0.7.3 fixes bundle-plugin removal ordering. The external supervisor runs `d
 
 Use `verify-boot` only when you need an isolated cold-boot proof. Use `sync-artifact` only when a package must land in the profile — it will say `ARTIFACT_SYNCED; LIVE_ACTIVATION_UNPROVEN` and stop there.
 
-DSHX 0.7.9 includes a Creator Mode+ user preset with nine fixed tools. Standalone Creator+ 0.3.8 adds `dshx_browser_open` for ten. On a claim conflict, call `dshx_request_takeover` in the current conversation; explicit user confirmation stops old work before transferring ownership. See [knowledge/contracts/creator-mode-plus.md](knowledge/contracts/creator-mode-plus.md).
+DSHX 0.9.0 includes a Creator Mode+ user preset with nine fixed tools. Standalone Creator+ 0.3.8 adds `dshx_browser_open` for ten. On a claim conflict, call `dshx_request_takeover` in the current conversation; explicit user confirmation stops old work before transferring ownership. See [knowledge/contracts/creator-mode-plus.md](knowledge/contracts/creator-mode-plus.md).
 
 More: [start here](knowledge/start-here.md) · [why work outside Creator Mode](knowledge/why-external.md) · [command surface](knowledge/references/dshx-cli.md) · [standing orders](AGENTS.md)
 

@@ -90,7 +90,7 @@ export interface CliOptions {
   scope: HotReloadScope
 }
 
-export const DSHX_VERSION = '0.7.9'
+export const DSHX_VERSION = '0.9.0'
 /** Official release this desk is proved against. Omitted `update` targets stay here. */
 export const DESK_HARNESS_TAG = 'dsh-v0.1.7-rc.1'
 /**

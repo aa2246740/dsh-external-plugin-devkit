@@ -4,8 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { describe, it } from 'node:test'
-import { externalClientBundle } from '../src/client-build.js'
+import { before, describe, it } from 'node:test'
 import { writeText } from '../src/internal/io.ts'
 
 function packageRoot(manifest: object): string {
@@ -14,7 +13,34 @@ function packageRoot(manifest: object): string {
   return root
 }
 
+function harnessRoot(): string {
+  const harness = mkdtempSync(join(tmpdir(), 'dshx-platform-table-'))
+  const platform = join(harness, 'packages/client/web/src/platform.ts')
+  mkdirSync(dirname(platform), { recursive: true })
+  writeFileSync(platform, [
+    "export const PLATFORM_MODULES = ['react', '@deepseek-ai/dsh-client-store'] as const",
+    "export const PRELOADED_CLIENT_EXTERNALS = ['react/jsx-runtime'] as const",
+    '',
+  ].join('\n'))
+  return harness
+}
+
 describe('externalClientBundle', () => {
+  // client-build.js resolves the Harness platform table at module load, so it
+  // must be imported only after the spec's fabricated harness is in place;
+  // otherwise a plain `npm test` without DSHX_HARNESS fails on import alone.
+  interface BundleConfig {
+    name: string
+    deps: { neverBundle(specifier: string): boolean; alwaysBundle(specifier: string): boolean }
+    plugins: Array<{ resolveId(source: string): unknown }>
+    outputOptions: { banner: string }
+  }
+  let externalClientBundle: (id: string, libEntry: string[], options?: { packageRoot?: string; clientEntry?: string }) => [BundleConfig, BundleConfig]
+  before(async () => {
+    process.env.DSHX_HARNESS ??= harnessRoot()
+    // @ts-expect-error client-build.js ships no type declarations
+    ;({ externalClientBundle } = await import('../src/client-build.js'))
+  })
   it('builds an out-of-tree package without workspace manifest discovery', () => {
     const root = packageRoot({
       name: 'external-demo',

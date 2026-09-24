@@ -4,6 +4,7 @@ import { describe, it } from 'node:test'
 import { activationDecision } from '../src/internal/activation.ts'
 
 const facts = {
+  id: 'demo',
   bundleDeclared: true,
   bundleRegistered: true,
   hasClient: true,

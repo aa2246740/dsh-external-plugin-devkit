@@ -157,7 +157,7 @@ export function inspectActivation(root: string, profile: ProfileName, raw: strin
   }
 }
 
-export function activationDecision(change: ActivationChange, facts: Pick<ActivationFacts, 'bundleDeclared' | 'bundleRegistered' | 'hasClient' | 'inOfflineComposition' | 'packageResolvable'>): ActivationDecision {
+export function activationDecision(change: ActivationChange, facts: Pick<ActivationFacts, 'id' | 'bundleDeclared' | 'bundleRegistered' | 'hasClient' | 'inOfflineComposition' | 'packageResolvable'>): ActivationDecision {
   if (change === 'patch') {
     return {
       method: 'watched cordis.patch.yml reconciliation',

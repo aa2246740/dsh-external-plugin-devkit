@@ -1,3 +1,4 @@
+// @ts-nocheck — hand-mocked Cordis loader/runtime shapes; annotate mocks before enabling strict checks here
 import assert from 'node:assert/strict'
 import { mkdtempSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'

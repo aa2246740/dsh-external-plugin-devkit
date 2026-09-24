@@ -27,9 +27,10 @@ const CLIENT_BASELINE = new Set([
   'react-dom',
   'react-dom/client',
   '@deepseek-ai/cordis',
+  '@deepseek-ai/dsh-client-store',
   '@deepseek-ai/dsh-client-ui-slots',
   '@deepseek-ai/dsh-client-ui-primitives',
-  '@deepseek-ai/dsh-client-runtime/client',
+  '@deepseek-ai/dsh-client-ui-dockkit',
 ])
 
 export function resolveFileSpec(spec: string, fromDir: string): string | undefined {

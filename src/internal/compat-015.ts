@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
-import { join, relative } from 'node:path'
-import { finding } from './io.ts'
+import { join } from 'node:path'
+import { displayPath, finding } from './io.ts'
 import type { Finding, PluginManifest } from './types.ts'
 
 const SKIP_DIRS = new Set(['node_modules', 'lib', 'dist', 'out', '.dshx', '.git', '.build'])
@@ -95,7 +95,7 @@ export function compat015Findings(plugin: PluginManifest, repoRoot: string): Fin
   const seen = new Set<string>()
   for (const path of walkSources(plugin.dir)) {
     const text = readFileSync(path, 'utf8')
-    const rel = relative(repoRoot, path)
+    const rel = displayPath(repoRoot, path)
     for (const rule of RULES) {
       const key = `${rule.code}:${rel}`
       if (seen.has(key) || !rule.match(text)) continue

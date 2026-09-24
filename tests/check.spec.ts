@@ -133,6 +133,49 @@ export function apply(ctx: Context) {
   })
 })
 
+describe('0.1.7 compat diagnostics', () => {
+  it('fails APIs removed or renamed in 0.1.7-rc.1 and accepts the rc.1 forms', () => {
+    const root = mkdtempSync(join(tmpdir(), 'dshx-compat017-'))
+    writePlugin(root, 'legacy', {
+      'dshx.yml': 'id: legacy\nentry: src/legacy.ts\nmarker: "[legacy] loaded"\nkind: function\n',
+      'src/legacy.ts': `import type { Context } from '@deepseek-ai/cordis'
+import { Display } from '@deepseek-ai/dsh-agent-presets/display'
+export function apply(ctx: Context) {
+  ctx.on('agent/session-start', () => {})
+  console.log(ctx.jobs.get('x')?.ownerSession)
+  console.log('[legacy] loaded')
+}
+`,
+      'src/client.tsx': `import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
+export function apply(ctx: ClientContext) {}
+`,
+    })
+    const broken = checkPlugin(loadPlugin(root, 'legacy'), root)
+    const codes = broken.filter(item => item.level === 'error').map(item => item.code)
+    assert.ok(codes.includes('compat-017-session-start'), JSON.stringify(broken, null, 2))
+    assert.ok(codes.includes('compat-017-agent-presets'), JSON.stringify(broken, null, 2))
+    assert.ok(codes.includes('compat-017-job-owner'), JSON.stringify(broken, null, 2))
+    assert.ok(codes.includes('compat-017-client-runtime'), JSON.stringify(broken, null, 2))
+
+    writePlugin(root, 'current', {
+      'dshx.yml': 'id: current\nentry: src/current.ts\nmarker: "[current] loaded"\nkind: function\n',
+      'src/current.ts': `import type { Context } from '@deepseek-ai/cordis'
+export function apply(ctx: Context) {
+  ctx.on('agent/created', () => {})
+  console.log(ctx.jobs.get('x')?.owner)
+  console.log('[current] loaded')
+}
+`,
+      'src/client.tsx': `import type { Context as ClientContext } from '@deepseek-ai/cordis'
+import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
+export function apply(ctx: ClientContext) {}
+`,
+    })
+    const ok = checkPlugin(loadPlugin(root, 'current'), root)
+    assert.equal(ok.some(item => item.code.startsWith('compat-017-') && item.level === 'error'), false, JSON.stringify(ok, null, 2))
+  })
+})
+
 describe('out-of-tree client build diagnostics', () => {
   it('rejects a missing relative tsconfig base despite an existing valid old bundle', () => {
     const root = mkdtempSync(join(tmpdir(), 'dshx-build-config-'))

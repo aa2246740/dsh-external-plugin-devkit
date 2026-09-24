@@ -5,7 +5,9 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { PassThrough } from 'node:stream'
 import { afterEach, describe, it } from 'node:test'
+// @ts-expect-error install-creator-plus.mjs ships no type declarations
 import { installCreatorPlus } from '../scripts/install-creator-plus.mjs'
+// @ts-expect-error creator-plus/index.js ships no type declarations
 import { apply, installClientFailureRoute } from '../src/creator-plus/index.js'
 import {
   CREATOR_BRIDGE_VERSION,
@@ -15,10 +17,12 @@ import {
   resolveHarnessRoot,
   runClientFailureDshx,
   runDshx,
+// @ts-expect-error creator-plus/runner.js ships no type declarations
 } from '../src/creator-plus/runner.js'
 import {
   creatorDestructiveCommandReason,
   rememberCreatorClaim,
+// @ts-expect-error creator-plus/safety.js ships no type declarations
 } from '../src/creator-plus/safety.js'
 
 const temporaryRoots: string[] = []

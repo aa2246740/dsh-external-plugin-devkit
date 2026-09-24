@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { dirname } from 'node:path'
+import { dirname, relative, sep } from 'node:path'
 import yaml from 'js-yaml'
 import type { ActivationChange, CliOptions, Finding, HotReloadScope, Level, PluginKind, ProfileName, Report } from './types.ts'
 import { DEFAULT_PORT, DEFAULT_PROFILE, DEFAULT_TIMEOUT_MS } from './types.ts'
@@ -10,6 +10,11 @@ export function ensureDir(path: string): void {
 
 export function readText(path: string): string {
   return readFileSync(path, 'utf8')
+}
+
+export function displayPath(root: string, path: string): string {
+  const rel = relative(root, path)
+  return rel.startsWith(`..${sep}`) || rel === '..' ? path : rel
 }
 
 export function writeText(path: string, text: string): void {

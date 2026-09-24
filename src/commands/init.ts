@@ -44,8 +44,9 @@ export default class ${pascal(id)}Service extends Service {
 
 
 function clientSource(id: string): string {
-  return `import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
+  return `import type { Context as ClientContext } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
+import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 
 export const name = '${id}-client'
 export const inject = ['slots']
@@ -75,8 +76,8 @@ function clientTsconfig(): string {
     include: ['src'],
     references: [
       { path: '../../vendor/cordis' },
-      { path: '../../packages/client/runtime' },
       { path: '../../packages/client/ui-layout' },
+      { path: '../../packages/client/ui-renderer' },
     ],
   }, null, 2)}\n`
 }
@@ -228,7 +229,7 @@ function writeScaffold(dir: string, name: string, kind: string, externalWorkspac
       },
       dsh: {
         client: {
-          inject: ['@deepseek-ai/dsh-client-ui-layout'],
+          inject: ['@deepseek-ai/dsh-client-ui-layout', '@deepseek-ai/dsh-client-ui-renderer'],
           platform: 'web',
         },
       },
@@ -247,11 +248,12 @@ function writeScaffold(dir: string, name: string, kind: string, externalWorkspac
         '@deepseek-ai/cordis': '^4.0.1',
         '@deepseek-ai/dsh': DSH_PEER_RANGE,
         '@deepseek-ai/dsh-client-ui-layout': DSH_PEER_RANGE,
+        '@deepseek-ai/dsh-client-ui-renderer': DSH_PEER_RANGE,
       },
       devDependencies: {
         '@deepseek-ai/cordis': '^4.0.1',
-        '@deepseek-ai/dsh-client-runtime': DSH_PEER_RANGE,
         '@deepseek-ai/dsh-client-ui-layout': DSH_PEER_RANGE,
+        '@deepseek-ai/dsh-client-ui-renderer': DSH_PEER_RANGE,
         '@types/react': '~18.3.1',
         react: '^18.2.0',
         'react-dom': '^18.2.0',
