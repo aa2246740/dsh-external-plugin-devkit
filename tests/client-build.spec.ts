@@ -5,7 +5,6 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { before, describe, it } from 'node:test'
-import type { externalClientBundle as externalClientBundleType } from '../src/client-build.js'
 import { writeText } from '../src/internal/io.ts'
 
 function packageRoot(manifest: object): string {
@@ -30,9 +29,16 @@ describe('externalClientBundle', () => {
   // client-build.js resolves the Harness platform table at module load, so it
   // must be imported only after the spec's fabricated harness is in place;
   // otherwise a plain `npm test` without DSHX_HARNESS fails on import alone.
-  let externalClientBundle: typeof externalClientBundleType
+  interface BundleConfig {
+    name: string
+    deps: { neverBundle(specifier: string): boolean; alwaysBundle(specifier: string): boolean }
+    plugins: Array<{ resolveId(source: string): unknown }>
+    outputOptions: { banner: string }
+  }
+  let externalClientBundle: (id: string, libEntry: string[], options?: { packageRoot?: string; clientEntry?: string }) => [BundleConfig, BundleConfig]
   before(async () => {
     process.env.DSHX_HARNESS ??= harnessRoot()
+    // @ts-expect-error client-build.js ships no type declarations
     ;({ externalClientBundle } = await import('../src/client-build.js'))
   })
   it('builds an out-of-tree package without workspace manifest discovery', () => {

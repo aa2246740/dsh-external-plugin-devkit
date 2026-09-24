@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { test } from 'node:test'
+// @ts-expect-error new-client-import-observer.mjs ships no type declarations
 import { apply } from '../src/runtime/new-client-import-observer.mjs'
 
 function fixture(mounted = false) {
