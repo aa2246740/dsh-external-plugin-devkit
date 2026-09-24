@@ -4,7 +4,7 @@
 
 **这不是 Host 功能插件。** 不要用 `dsh plugin add` 装本仓库，也没有 `github:aa2246740/dsh-external-plugin-devkit` 这种 Host 安装命令。
 
-只跑官方 DeepSeek Harness（例如 **0.1.5-rc.2**）、不写插件的人：**跳过这个仓库。** 官方原装 DSH 没有 Creator Mode，也没有 DSHX；功能插件的安装写在那个插件自己的 README 里。
+只跑官方 DeepSeek Harness（例如 **0.1.7-rc.1**）、不写插件的人：**跳过这个仓库。** 官方原装 DSH 没有 Creator Mode，也没有 DSHX；功能插件的安装写在那个插件自己的 README 里。
 
 本仓库是 **dshx CLI / 工作台**。给**手里有一份 [Harness checkout](https://github.com/deepseek-ai/deepseek-harness)、要在仓外写或维护文件插件**的作者用（Cursor、Claude Code、Codex、Grok，或人自己跑）。
 

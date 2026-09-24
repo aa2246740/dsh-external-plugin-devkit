@@ -1,6 +1,6 @@
 import { existsSync, lstatSync, mkdirSync, readFileSync, readlinkSync, rmSync, symlinkSync, unlinkSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { dirname, join } from 'node:path'
+import { delimiter, dirname, join } from 'node:path'
 import { finding } from './io.ts'
 import { dshxPackageRoot, skillPackageDir } from './paths.ts'
 import type { Finding } from './types.ts'
@@ -13,14 +13,15 @@ export interface SkillTarget {
 
 export function discoverSkillTargets(harnessRoot: string): SkillTarget[] {
   const targets: SkillTarget[] = []
-  const homes: Array<{ id: string; home: string | undefined }> = [
-    { id: 'codex', home: firstExisting([process.env.CODEX_HOME, join(homedir(), '.codex')]) },
-    { id: 'claude', home: firstExisting([join(homedir(), '.claude')]) },
-    { id: 'grok', home: firstExisting([process.env.GROK_HOME, join(homedir(), '.grok')]) },
+  const homes: Array<{ id: string; command: string; home: string | undefined }> = [
+    { id: 'codex', command: 'codex', home: firstExisting([process.env.CODEX_HOME, join(homedir(), '.codex')]) },
+    { id: 'claude', command: 'claude', home: firstExisting([join(homedir(), '.claude')]) },
+    { id: 'grok', command: 'grok', home: firstExisting([process.env.GROK_HOME, join(homedir(), '.grok')]) },
   ]
   for (const item of homes) {
-    if (!item.home) continue
-    targets.push({ id: item.id, dest: join(item.home, 'skills', 'dshx'), kind: 'skill-dir' })
+    if (!item.home && !commandOnPath(item.command)) continue
+    const home = item.home ?? join(homedir(), `.${item.id}`)
+    targets.push({ id: item.id, dest: join(home, 'skills', 'dshx'), kind: 'skill-dir' })
   }
   if (existsSync(join(harnessRoot, '.agents'))) {
     targets.push({ id: 'agents', dest: join(harnessRoot, '.agents', 'skills', 'dshx'), kind: 'skill-dir' })
@@ -97,6 +98,17 @@ function skillStatusFinding(source: string, target: SkillTarget): Finding {
 
 function dshxPackageRootFromSkill(): string {
   return dshxPackageRoot()
+}
+
+function commandOnPath(command: string): boolean {
+  const pathEnv = process.env.PATH ?? ''
+  const extensions = process.platform === 'win32' ? (process.env.PATHEXT ?? '.EXE;.CMD;.BAT').split(';') : ['']
+  for (const dir of pathEnv.split(delimiter)) {
+    for (const ext of extensions) {
+      if (existsSync(join(dir, command + ext))) return true
+    }
+  }
+  return false
 }
 
 function firstExisting(paths: Array<string | undefined>): string | undefined {

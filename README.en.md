@@ -4,7 +4,7 @@
 
 **This is not a Host feature plugin.** Do not install this repo with `dsh plugin add`. There is no Host install spec such as `github:aa2246740/dsh-external-plugin-devkit`.
 
-If you only run official DeepSeek Harness (for example **0.1.5-rc.2**) and you are not writing plugins: **skip this repository.** Stock DSH has no Creator Mode and no DSHX. Feature-plugin install lives in that plugin's own README.
+If you only run official DeepSeek Harness (for example **0.1.7-rc.1**) and you are not writing plugins: **skip this repository.** Stock DSH has no Creator Mode and no DSHX. Feature-plugin install lives in that plugin's own README.
 
 This repo is the **dshx CLI / workbench**. It is for **plugin authors who already have a [Harness checkout](https://github.com/deepseek-ai/deepseek-harness)** and want to write or maintain file-backed plugins outside the Host (Cursor, Claude Code, Codex, Grok, or a human).
 

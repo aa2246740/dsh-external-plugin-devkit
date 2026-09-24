@@ -1,9 +1,9 @@
 import { existsSync, readFileSync } from 'node:fs'
-import { join, relative } from 'node:path'
+import { join } from 'node:path'
 import { compat015Findings } from './compat-015.ts'
 import { compat017Findings } from './compat-017.ts'
 import { clientEntryFindings } from './file-copy.ts'
-import { finding } from './io.ts'
+import { displayPath, finding } from './io.ts'
 import { pluginSource, readCommittedOverlay, runtimePluginSpecifier } from './plugin.ts'
 import type { Finding, PluginManifest } from './types.ts'
 
@@ -13,12 +13,12 @@ const MACHINE_PATH = /\/workspace\/|\/home\/[^/]+\//
 export function checkPlugin(plugin: PluginManifest, repoRoot: string): Finding[] {
   const findings: Finding[] = []
   const source = pluginSource(plugin)
-  const rel = relative(repoRoot, plugin.entryAbs)
+  const rel = displayPath(repoRoot, plugin.entryAbs)
 
   if (plugin.inferred) {
     findings.push(finding('info', 'manifest-inferred', 'no dshx.yml; id/entry/marker were inferred', { path: plugin.dir }))
   } else {
-    findings.push(finding('ok', 'manifest', 'dshx.yml present', { path: `${relative(repoRoot, plugin.dir)}/dshx.yml` }))
+    findings.push(finding('ok', 'manifest', 'dshx.yml present', { path: `${displayPath(repoRoot, plugin.dir)}/dshx.yml` }))
   }
 
   const hasName = /export\s+const\s+name\s*=/.test(source)
