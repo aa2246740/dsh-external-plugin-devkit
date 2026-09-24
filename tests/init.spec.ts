@@ -7,7 +7,7 @@ import { cmdInit, scaffoldCreatorPlugin } from '../src/commands/init.ts'
 import { checkPlugin } from '../src/internal/check.ts'
 import { DSH_PEER_RANGE } from '../src/internal/types.ts'
 import { loadJson, parseCli } from '../src/internal/io.ts'
-import { loadPlugin } from '../src/internal/plugin.ts'
+import { loadPlugin, runtimePluginSpecifier } from '../src/internal/plugin.ts'
 
 function init(root: string, name: string, kind: string): number {
   const { options } = parseCli(['init', name, '--kind', kind, '--json'])
@@ -29,6 +29,16 @@ describe('init scaffolds', () => {
       const findings = checkPlugin(loadPlugin(root, name), root)
       assert.equal(findings.some(item => item.level === 'error'), false, JSON.stringify(findings, null, 2))
     }
+  })
+
+  it('scaffolds a resolvable package manifest for server plugins so they mount by name', () => {
+    const root = mkdtempSync(join(tmpdir(), 'dshx-init-'))
+    assert.equal(init(root, 'fn-demo', 'function'), 0)
+    const pkg = loadJson<{ name: string, private: boolean, exports: Record<string, string> }>(join(root, 'my-plugins/fn-demo/package.json'))
+    assert.equal(pkg.name, 'fn-demo')
+    assert.equal(pkg.private, true)
+    assert.equal(pkg.exports['.'], './src/fn-demo.ts')
+    assert.equal(runtimePluginSpecifier(loadPlugin(root, 'fn-demo')), 'fn-demo')
   })
 
   it('points client exports at lib/client.js and fails closed until it is built', () => {

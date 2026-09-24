@@ -194,6 +194,14 @@ function writeScaffold(dir: string, name: string, kind: string, externalWorkspac
           ? classSource(name, marker)
           : functionSource(name, marker)
   writeText(join(dir, entry), source)
+  if (kind !== 'client') {
+    writeText(join(dir, 'package.json'), `${JSON.stringify({
+      name,
+      private: true,
+      type: 'module',
+      exports: { '.': `./${entry}` },
+    }, null, 2)}\n`)
+  }
   if (kind === 'client') {
     writeText(join(dir, 'src/client/index.tsx'), clientSource(name))
     writeText(join(dir, 'package.json'), `${JSON.stringify({

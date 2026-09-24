@@ -3,7 +3,7 @@ import { join, relative } from 'node:path'
 import { compat015Findings } from './compat-015.ts'
 import { clientEntryFindings } from './file-copy.ts'
 import { finding } from './io.ts'
-import { pluginSource, readCommittedOverlay } from './plugin.ts'
+import { pluginSource, readCommittedOverlay, runtimePluginSpecifier } from './plugin.ts'
 import type { Finding, PluginManifest } from './types.ts'
 
 const ABS_PATH = /(?:^|['"])(\/(?:workspace|home|Users|opt)\/|\/[A-Za-z]:\\)/
@@ -90,9 +90,9 @@ export function checkPlugin(plugin: PluginManifest, repoRoot: string): Finding[]
 
   const overlay = readCommittedOverlay(plugin.dir)
   if (overlay === undefined) {
-    findings.push(finding('info', 'cordis-yml', plugin.runtimePackage?.webClient === true
-      ? 'no committed cordis.yml (dshx will link the package into the selected profile and generate a package-name --patch)'
-      : 'no committed cordis.yml (dshx overlay will generate an absolute --patch file)', { path: plugin.dir }))
+    findings.push(finding('info', 'cordis-yml', runtimePluginSpecifier(plugin) === plugin.entryAbs
+      ? 'no committed cordis.yml (dshx overlay will generate an absolute --patch file)'
+      : 'no committed cordis.yml (dshx will link the package into the selected profile and generate a package-name --patch)', { path: plugin.dir }))
   } else if (!Array.isArray(overlay)) {
     findings.push(finding('error', 'cordis-yml', 'cordis.yml must be a top-level YAML array', { path: `${plugin.dir}/cordis.yml` }))
   } else {
