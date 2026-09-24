@@ -86,6 +86,19 @@ describe('resolvePluginDir profile link/file fallback', () => {
     assert.throws(() => resolvePluginDir(root, 'ghost'), /profile link\/file dependencies/)
   })
 
+  it('skips a profile with a malformed package.json', () => {
+    const root = mkdtempSync(join(tmpdir(), 'dshx-harness-'))
+    const home = mkdtempSync(join(tmpdir(), 'dshx-home-'))
+    const source = join(home, 'scratch', 'survivor')
+    writeSource(source)
+    writeProfile(home, 'web', { survivor: `link:${source}` })
+    mkdirSync(join(home, 'profiles', 'broken'), { recursive: true })
+    writeFileSync(join(home, 'profiles', 'broken', 'package.json'), '{ "name": broken')
+    process.env.DSH_HOME = home
+    assert.equal(resolvePluginDir(root, 'survivor'), realpathSync(source))
+    assert.throws(() => resolvePluginDir(root, 'ghost'), /profile link\/file dependencies/)
+  })
+
   it('keeps my-plugins entries ahead of profile links', () => {
     const root = mkdtempSync(join(tmpdir(), 'dshx-harness-'))
     const home = mkdtempSync(join(tmpdir(), 'dshx-home-'))

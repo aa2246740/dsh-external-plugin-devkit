@@ -131,15 +131,20 @@ export function listPluginNames(root: string): string[] {
     .sort()
 }
 
-function packageNameAt(dir: string): string | undefined {
+function readPackageManifest(dir: string): Record<string, unknown> | undefined {
   const manifestPath = join(dir, 'package.json')
   if (!existsSync(manifestPath)) return undefined
   try {
     const parsed: unknown = JSON.parse(readText(manifestPath))
-    return isRecord(parsed) && typeof parsed.name === 'string' ? parsed.name : undefined
+    return isRecord(parsed) ? parsed : undefined
   } catch {
     return undefined
   }
+}
+
+function packageNameAt(dir: string): string | undefined {
+  const name = readPackageManifest(dir)?.name
+  return typeof name === 'string' ? name : undefined
 }
 
 /**
@@ -155,10 +160,9 @@ export function profileLinkedPluginDirs(home: string, name: string): string[] {
   for (const profile of readdirSync(profilesRoot, { withFileTypes: true })) {
     if (!profile.isDirectory()) continue
     const dir = profileDir(home, profile.name)
-    const manifestPath = join(dir, 'package.json')
-    if (!existsSync(manifestPath)) continue
-    const parsed: unknown = JSON.parse(readText(manifestPath))
-    if (!isRecord(parsed)) continue
+    // An unreadable profile must not break name lookup for every other profile.
+    const parsed = readPackageManifest(dir)
+    if (parsed === undefined) continue
     for (const section of ['dependencies', 'devDependencies'] as const) {
       const deps = parsed[section]
       if (!isRecord(deps)) continue
