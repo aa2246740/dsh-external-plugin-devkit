@@ -6,17 +6,21 @@
 
 **这不是 Host 功能插件。** 不要用 `dsh plugin add` 装本仓库，也没有 `github:aa2246740/dsh-external-plugin-devkit` 这种 Host 安装命令。
 
-只跑官方 DeepSeek Harness（例如 **0.1.7-rc.2**）、不写插件的人：**跳过这个仓库。** 官方原装 DSH 没有 Creator Mode，也没有 DSHX；功能插件的安装写在那个插件自己的 README 里。
+只跑官方 DeepSeek Harness（例如 **0.2.0-rc.1**）、不写插件的人：**跳过这个仓库。** 官方原装 DSH 没有 Creator Mode，也没有 DSHX；功能插件的安装写在那个插件自己的 README 里。
 
 本仓库是 **dshx CLI / 工作台**。给**手里有一份 [Harness checkout](https://github.com/deepseek-ai/deepseek-harness)、要在仓外写或维护文件插件**的作者用（Cursor、Claude Code、Codex、Grok，或人自己跑）。
 
 官方 Creator Mode 适合在活进程里探针。dshx 管另一半：把插件写成文件、检查合同、看这次改的是哪一层，再决定要不要重启 Host、刷新页面。**不是 `dsh`，不是 Harness 的 fork，也不是 Creator Mode 的替代品。**
 
-0.9.1 对齐官方 **0.1.7-rc.2**，补齐桌面 Host 识别、profile 操作与热替换，并强制保护官方源码。`update plan` 保留只读盘点；修改 Harness 的更新阶段已禁用。
+0.9.2 对齐官方 **0.2.0-rc.1**。`update plan` 保留只读盘点；修改 Harness 的更新阶段已禁用。
+
+## 0.9.2：工作台钉到 0.2.0-rc.1
+
+工作台默认目标为 `dsh-v0.2.0-rc.1`（SHA `4878cdabd87d4041bdaff61d04c966883b9fd07a`，官方包 `@deepseek-ai/dsh@0.2.0-rc.1`）。`@deepseek-ai/dsh` peer 为 `>=0.2.0-rc.1 <0.2.1`：接受该 RC，拒绝 `0.2.0` alpha。官方客户端 `INLINE_SAFE` 与 `0.1.7-rc.2` 相同。
 
 ## 0.9.1：RC2 与桌面支持
 
-工作台默认目标为 `dsh-v0.1.7-rc.2`。桌面支持包括 Host 身份识别、desktop profile 选择、热替换事务，以及只输出条目身份的只读配置检查。Guardian 将桌面恢复交给 App。
+0.9.1 的默认目标是 `dsh-v0.1.7-rc.2`。桌面支持包括 Host 身份识别、desktop profile 选择、热替换事务，以及只输出条目身份的只读配置检查。Guardian 将桌面恢复交给 App。
 
 桌面 profile 的安装和卸载需要当前 Creator+ 的固定工具及 Host 签发的能力凭据；外部 CLI 不会绕过这个入口。Web 与桌面 profile 分别验证，具体插件仍需按变更面完成激活和行为检查。
 
@@ -99,7 +103,7 @@ DSHX 0.7.3 修复 bundle 插件卸载顺序。外部 supervisor 使用 `dshx plu
 
 需要隔离冷启动证明时才 `verify-boot`。需要把包装进 profile 时才 `sync-artifact`——它只会告诉你 `ARTIFACT_SYNCED; LIVE_ACTIVATION_UNPROVEN`。
 
-DSHX 0.9.1 的内置 Creator Mode+ 是一个用户 preset，提供九个固定工具。独立 Creator+ 0.3.8 另提供 `dshx_browser_open`，共十个。发生认领冲突时，在当前对话调用 `dshx_request_takeover`；用户确认后会停止旧任务并接管，无需找回旧对话。见 [knowledge/contracts/creator-mode-plus.md](knowledge/contracts/creator-mode-plus.md)。
+DSHX 0.9.2 的内置 Creator Mode+ 是一个用户 preset，提供九个固定工具。独立 Creator+ 0.3.8 另提供 `dshx_browser_open`，共十个。发生认领冲突时，在当前对话调用 `dshx_request_takeover`；用户确认后会停止旧任务并接管，无需找回旧对话。见 [knowledge/contracts/creator-mode-plus.md](knowledge/contracts/creator-mode-plus.md)。
 
 更多：[从这里开始](knowledge/start-here.md) · [为什么出仓](knowledge/why-external.md) · [命令一览](knowledge/references/dshx-cli.md) · [站岗说明](AGENTS.md)
 

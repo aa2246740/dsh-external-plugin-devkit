@@ -90,17 +90,18 @@ export interface CliOptions {
   scope: HotReloadScope
 }
 
-export const DSHX_VERSION = '0.9.1'
+export const DSHX_VERSION = '0.9.2'
 /** Official release this desk is proved against. Omitted `update` targets stay here. */
-export const DESK_HARNESS_TAG = 'dsh-v0.1.7-rc.2'
+export const DESK_HARNESS_TAG = 'dsh-v0.2.0-rc.1'
 /** Commit of {@link DESK_HARNESS_TAG} on deepseek-ai/deepseek-harness. */
-export const DESK_HARNESS_SHA = '477b4f420553e8a52c2fbccc464d7561b239c443'
+export const DESK_HARNESS_SHA = '4878cdabd87d4041bdaff61d04c966883b9fd07a'
 /**
  * Peer range for `@deepseek-ai/dsh` and `@deepseek-ai/dsh-*`.
- * Accepts 0.1.7-rc.1 and 0.1.7-rc.2. Rejects 0.1.7 alphas.
- * `^0.1.5-rc.3` does not accept rc.1 or rc.2.
+ * Official `apps/cli` package `@deepseek-ai/dsh` at this tag is `0.2.0-rc.1`.
+ * Accepts `0.2.0-rc.1` and later `0.2.0` builds below `0.2.1`. Rejects `0.2.0` alphas.
+ * `>=0.1.7-rc.1 <0.1.8` does not accept `0.2.0-rc.1`.
  */
-export const DSH_PEER_RANGE = '>=0.1.7-rc.1 <0.1.8'
+export const DSH_PEER_RANGE = '>=0.2.0-rc.1 <0.2.1'
 export const DEFAULT_PORT = 3080
 export const DEFAULT_TIMEOUT_MS = 60_000
 export const DEFAULT_PROFILE: ProfileName = 'web'

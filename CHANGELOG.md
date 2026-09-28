@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.2 - 2026-09-28
+
+- Pin the desk Harness target to official `dsh-v0.2.0-rc.1` (package `@deepseek-ai/dsh@0.2.0-rc.1`, SHA `4878cdabd87d4041bdaff61d04c966883b9fd07a`). `dshx update plan --target dsh-v0.2.0-rc.1` resolves that tag. Omitting `--target` stays on it and does not follow a later alpha.
+- Move `@deepseek-ai/dsh` peer to `>=0.2.0-rc.1 <0.2.1`, matching the official package version the same way `0.7.9` pinned `>=0.1.7-rc.1 <0.1.8`. The range accepts `0.2.0-rc.1` and rejects `0.2.0` alphas. `>=0.1.7-rc.1 <0.1.8` does not accept this RC.
+- Keep the client-bundle inline allowlist. Official `INLINE_SAFE` at `dsh-v0.2.0-rc.1` is the same expression as `dsh-v0.1.7-rc.2`.
+
 ## 0.9.1 - 2026-09-28
 
 - Pin the desk Harness target to official `dsh-v0.1.7-rc.2` (package `0.1.7-rc.2`, SHA `477b4f420553e8a52c2fbccc464d7561b239c443`). `dshx update plan --target dsh-v0.1.7-rc.2` resolves that tag. Omitting `--target` stays on it and does not follow a later alpha.
