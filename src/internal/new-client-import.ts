@@ -18,7 +18,7 @@ const hash = (path: string) => createHash('sha256').update(readFileSync(path)).d
 export async function prepareNewClientImport(root: string, plugin: PluginManifest, port: number, timeoutMs: number) {
   const home = realpathSync(resolveDshHome()), hostRoot = realpathSync(root)
   const host = currentHost(root)
-  if (!host || host.profile !== 'web' || host.port !== port || host.home !== home || host.hostRoot !== hostRoot) {
+  if (!host || (host.profile !== 'web' && host.profile !== 'desktop') || host.port !== port || host.home !== home || (host.profile === 'web' && host.hostRoot !== hostRoot)) {
     throw new Error('new-client import preparation requires the identified current Web Host')
   }
   const assertHost = () => {
@@ -41,7 +41,7 @@ export async function prepareNewClientImport(root: string, plugin: PluginManifes
   const runtime = fileURLToPath(new URL('../runtime/', import.meta.url))
   copyFileSync(join(runtime, 'new-client-import-observer.mjs'), observer)
   copyFileSync(join(runtime, 'hot-reload-hmr-audit.mjs'), join(directory, 'hot-reload-hmr-audit.mjs'))
-  const patchPath = join(profileDir(home, 'web'), 'cordis.patch.yml')
+  const patchPath = join(profileDir(home, host.profile), 'cordis.patch.yml')
   const config = { transactionId, pluginId: plugin.id, expectedPid: host.pid, hmrEntryId, entryPath, targetFiles: artifacts.map(item => item.absolutePath), reportPath }
   const block = `\n# dshx import preparation ${transactionId}\n- insert:\n    - id: ${hmrEntryId}\n      name: '@deepseek-ai/cordis-plugin-hmr'\n      isolate:\n        hmr: true\n      config:\n        base: ${JSON.stringify(packageDir)}\n        root: ${JSON.stringify(artifacts.map(item => item.path))}\n        ignored: []\n        debounce: 50\n    - id: dshx-import-observer-${suffix}\n      name: ${JSON.stringify(observer)}\n      config: ${JSON.stringify(config)}\n# dshx import preparation end ${transactionId}\n`
   const deadline = Date.now() + Math.min(timeoutMs, 20_000)

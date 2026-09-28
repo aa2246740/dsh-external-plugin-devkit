@@ -9,8 +9,8 @@ export interface DiscoveredWebHost {
   pid: number
   parentPid: number
   port: number
-  launcher: 'source' | 'binary'
-  profile: 'web'
+  launcher: 'source' | 'binary' | 'desktop'
+  profile: 'web' | 'desktop'
   home: HomeEvidence
   root: RootEvidence
   rootPath?: string
@@ -27,8 +27,8 @@ interface ProcessCandidate {
   pid: number
   parentPid: number
   port: number
-  launcher: 'source' | 'binary'
-  profile: 'web'
+  launcher: 'source' | 'binary' | 'desktop'
+  profile: 'web' | 'desktop'
   rootPath?: string
 }
 
@@ -113,6 +113,14 @@ export function parseWebProcessTable(text: string, root: string): ProcessCandida
     const pid = Number(match[1])
     const parentPid = Number(match[2])
     const command = match[3]!
+    // macOS ps does not quote executable paths containing spaces. Match the
+    // official child entry, never a shell that merely mentions that entry.
+    const desktop = /^(\/[^\n]*\.app\/Contents\/MacOS\/[^\n]+?) --expose-internals (\/[^\n]*?\/node_modules\/@deepseek-ai\/dsh-desktop-host\/lib\/index\.js)(?:\s|$)/.exec(command)
+    if (desktop && !desktop[1]!.includes(' -')) {
+      out.push({ pid, parentPid, port: 19387, launcher: 'desktop', profile: 'desktop',
+        rootPath: desktop[2]!.slice(0, -'/node_modules/@deepseek-ai/dsh-desktop-host/lib/index.js'.length) })
+      continue
+    }
     const words = commandWords(command)
     const sourceAt = sourceCliIndex(words, root)
     const builtAt = builtCliIndex(words, root)
@@ -193,7 +201,7 @@ function systemOpenFiles(pid: number): PathsProbe {
 function homeEvidence(paths: readonly string[], home: string): HomeEvidence {
   const target = canonical(home)
   if (paths.some(path => within(path, target))) return 'same'
-  const profileFile = /[/\\]profiles[/\\](?:web|headless)[/\\](?:cordis(?:\.patch)?\.yml|package\.json|pnpm-lock\.yaml)$/
+  const profileFile = /[/\\]profiles[/\\](?:web|headless|desktop)[/\\](?:cordis(?:\.patch)?\.yml|package\.json|pnpm-lock\.yaml)$/
   return paths.some(path => profileFile.test(path)) ? 'other' : 'unknown'
 }
 

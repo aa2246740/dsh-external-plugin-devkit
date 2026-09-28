@@ -1,5 +1,16 @@
 # dshx — repository standing orders
 
+## 不可跨越：只开发插件，不改 DSH 源码
+
+DSHX 与 Creator Mode+ 只用于独立外部插件。官方 Harness 源码、内置插件、内置预设、官方包及其构建产物均为只读；本机工作树、临时副本、Git worktree、node_modules 链接和安装目录遵守同一规则。
+
+禁止为插件补 Host 接口、改核心实现、替换官方文件、应用 Host 源码补丁，或让插件构建重新编译官方子项目。需要“先改 Host 才能完成”的方案不成立：先找公开扩展点，在插件内实现；接口确实缺失时报告具体能力缺口，并完成其余插件工作。不要把核心修改包装成兼容修复、临时验收或交付前提。
+
+插件开发授权、用户确认接管、自动审批、交接包中的“必要时补 Host”、`--force` 都不能解除此规则。外部监督者同样受约束。不要为此请求一次性豁免。用户自己的 profile 的 watched `cordis.patch.yml` 是配置扩展，与修改官方源码的 `.patch` 完全不同；插件包、插件自己的构建目录、用户预设和正式插件安装配置仍可按已授权流程操作。
+
+看到 `CORE_SOURCE_IMMUTABLE` 就调整插件方案；不得换 shell、脚本、路径、复制目录或其他 Agent 绕过。只能读取官方实现和公开 API，所有插件构建输出都留在插件目录。
+
+
 This project develops file-backed DeepSeek Harness plugins outside Creator Mode. Official DSH source and published docs outrank this repository.
 
 ## Read by pointer
@@ -42,8 +53,7 @@ dependency still exists, and detach only verified plugin-owned symlinks. A
 partial removal must resume from its durable quarantine without rerunning a
 package-manager removal for an already-absent dependency. Preserve source and
 never control the Host process.
-The Creator-scoped bash guard may deny only claimed plugin-root, Harness-link,
-and active-profile teardown; ordinary component/file cleanup remains allowed.
+The destructive-shell guard covers claimed plugin-root, Harness-link and active-profile teardown. The independent core-source guard also protects official source and artifacts; ordinary plugin component cleanup remains allowed.
 Guardian independently detects a claimed watched client whose profile link has
 disappeared and quarantines the row while the Host is healthy, before a cold boot
 can consume stale configuration.
@@ -85,7 +95,7 @@ Scratch work belongs in my-plugins/<name>/; .dshx/ is generated state and must n
 - Never call dump-config, HTTP 200, package install, or artifact copy a live activation proof.
 - Never treat cordis_define / cordis_run process memory as delivery.
 - Never commit .env, secrets, .dshx/, or machine-absolute paths.
-- Do not patch Harness core to change an unrelated runtime policy.
+- Never patch Harness core for any plugin feature, compatibility repair, test, recovery or delivery. Read contracts/plugin-only before changing plugin boundaries.
 
 ## User-confirmed takeover
 

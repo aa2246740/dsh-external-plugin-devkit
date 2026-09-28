@@ -193,7 +193,7 @@ export function clientEntryFindings(pluginDir: string): Finding[] {
   const buildConfigPath = join(pluginDir, 'tsdown.config.ts')
   if (existsSync(buildConfigPath)) {
     const buildConfig = readFileSync(buildConfigPath, 'utf8')
-    if (/packages\/client\/tsdown\.client/.test(buildConfig)) {
+    if (/['"][^'"\n]*packages\/client\/tsdown\.client[^'"\n]*['"]/.test(buildConfig)) {
       findings.push(finding('error', 'rc8-external-client-build', 'repository clientBundle only accepts packages/*/* and cannot build my-plugins/*', {
         path: buildConfigPath,
         hint: "import externalClientBundle from '../../tools/dshx/src/client-build.js' instead",

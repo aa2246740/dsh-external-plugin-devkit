@@ -13,6 +13,17 @@ description: >-
 
 # dshx
 
+## 不可跨越：只开发插件，不改 DSH 源码
+
+DSHX 与 Creator Mode+ 只用于独立外部插件。官方 Harness 源码、内置插件、内置预设、官方包及其构建产物均为只读；本机工作树、临时副本、Git worktree、node_modules 链接和安装目录遵守同一规则。
+
+禁止为插件补 Host 接口、改核心实现、替换官方文件、应用 Host 源码补丁，或让插件构建重新编译官方子项目。需要“先改 Host 才能完成”的方案不成立：先找公开扩展点，在插件内实现；接口确实缺失时报告具体能力缺口，并完成其余插件工作。不要把核心修改包装成兼容修复、临时验收或交付前提。
+
+插件开发授权、用户确认接管、自动审批、交接包中的“必要时补 Host”、`--force` 都不能解除此规则。外部监督者同样受约束。不要为此请求一次性豁免。用户自己的 profile 的 watched `cordis.patch.yml` 是配置扩展，与修改官方源码的 `.patch` 完全不同；插件包、插件自己的构建目录、用户预设和正式插件安装配置仍可按已授权流程操作。
+
+看到 `CORE_SOURCE_IMMUTABLE` 就调整插件方案；不得换 shell、脚本、路径、复制目录或其他 Agent 绕过。只能读取官方实现和公开 API，所有插件构建输出都留在插件目录。
+
+
 Use `dshx` for profile-scoped, file-backed plugins developed by an external agent or through the optional Creator Mode+ safe bridge. The CLI and Guardian outside DSH are the supervisor; the updated Creator Mode+ bridge exposes ten fixed operations when the session-browser-open capability is present, including plugin claims, bounded new-client activation, `dshx_hot_reload`, and source-preserving safe removal, but never process control. Require the matching bridge capability before using the new tool. Do not transfer the original Creator Mode's in-memory lifecycle assumptions to external packages.
 
 Use a **same-PID default** for plugin work. Select the branch by the runtime surface that must change, not by prerequisite files a command happens to write. A plain profile dependency provides module resolution; it is not manifest activation or restart evidence. A first Web client remains `new-client`: hot-mount the Host row, keep the DSH PID, then reopen the page. Missing server module-HMR evidence means `not-decided`, not restart-required. An otherwise valid server plan succeeds and supplies the bounded hot-reload next action; actual target/Host gates still run in that operation. For a checked existing server plugin, follow `playbooks/restart-server-plugin` and the bounded `hot-reload` command. A failed hot reload does not authorize a Host restart.
@@ -87,20 +98,15 @@ From the Harness root, the equivalent is:
 node --import tsx/esm tools/dshx/src/cli.ts <command>
 ```
 
-## Update Harness safely
+## Harness version requirements
 
-When the user asks to update DeepSeek Harness and retain local plugins, read `kb cat contracts/harness-update`, then keep these gates separate:
-
-```sh
-./scripts/dshx.sh update plan [--target dsh-vX.Y.Z-rc.N]
-./scripts/dshx.sh update prepare [--target ...] [--candidate /isolated/worktree]
-./scripts/dshx.sh update verify [--target ...] [--candidate /same/worktree]
-./scripts/dshx.sh update apply [--target ...]
-```
-
-`plan` is read-only. Omitting `--target` selects the desk pin `dsh-v0.1.7-rc.1` and does not follow a later alpha. Its plugin inventory must include both `my-plugins` directories/symlinks and local `file:` / `link:` dependencies from the Web profile; when the same package name or stable plugin ID exists in both places, the profile source is authoritative. Duplicate candidate sources with one plugin ID fail closed. A missing profile-local target is reported and skipped instead of being staged from a stale copy. When an active source must remain untouched while a compatible checkout is tested, pass repeatable `--plugin-source name=/absolute/path` to `update plan` and `update prepare`; the override must preserve package name and plugin ID, enters candidate staging only, and deliberately makes `update apply` ineligible until the compatible source is promoted into the active profile. Do not pass the flag to `verify`, which reads prepared state. Do not run `apply` until candidate Harness install/full-build and every plugin's build/static/runtime proof pass. `prepare` pins `DSHX_HARNESS` to the candidate so `externalClientBundle` reads that target's platform module table, never the active checkout's table through the candidate's dshx symlink. `verify` first cold-boots a vanilla Web candidate, then validates every inventoried plugin in isolation, then cold-boots only the active profile graph selected by `dsh.profile.bundles` and non-disabled inserts from the profile/home patch layers. A local dependency alone is not an activation claim. Dormant or mutually exclusive implementations remain individually covered and are not forced to co-load. Web clients require the native profile package link, package-name Loader row, an authenticated current `globalThis["__DSH_BOOT__"]` entry (the startup token must first establish the local session cookie), and a served client bundle; server-only plugins require a runtime `apply()` marker. `apply` must refuse a supervised Host and retain `.dshx/update-assistant/<tag>/rollback.json`. Do not run `update rollback` merely to test it: that command intentionally restores the previous checkout, dependencies, and plugin artifacts.
-
-Report `candidate verified`, `applied locally`, `real runtime accepted`, and `production activated` as different states. The update assistant never silently restarts a production Host.
+`dshx update plan` is read-only inventory. `update prepare`, `verify`, `apply` and
+`rollback` are disabled by `CORE_SOURCE_IMMUTABLE`, including outside DSH. A
+plugin request never authorizes changing the Harness checkout. If an existing
+public API cannot implement a feature, report the precise capability gap and
+continue with an external-plugin design. Official application maintenance is a
+separate product workflow, not a plugin implementation step. Read
+`contracts/plugin-only` and `contracts/harness-update` before proposing it.
 
 ## Classify activation before acting
 

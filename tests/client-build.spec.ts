@@ -15,6 +15,9 @@ function packageRoot(manifest: object): string {
 
 function harnessRoot(): string {
   const harness = mkdtempSync(join(tmpdir(), 'dshx-platform-table-'))
+  // Official checkouts are `"type": "module"`. Without it, Node 22.22
+  // require()s the platform table while the ESM import is in flight.
+  writeFileSync(join(harness, 'package.json'), '{"type":"module"}\n')
   const platform = join(harness, 'packages/client/web/src/platform.ts')
   mkdirSync(dirname(platform), { recursive: true })
   writeFileSync(platform, [
@@ -101,7 +104,12 @@ export function apply(ctx) { ctx.locale.register('demo', { en: {} }) }
     assert.equal(client.plugins[0].resolveId('@deepseek-ai/dsh-util-workspace-path'), null)
     assert.equal(client.plugins[0].resolveId('@deepseek-ai/dsh-plugin-manager/registry'), null)
     assert.equal(client.plugins[0].resolveId('@deepseek-ai/dsh-agent-preset-registry/display'), null)
+    assert.equal(client.plugins[0].resolveId('@deepseek-ai/dsh-api-workspace-controller/default-workspace'), null)
     assert.equal(client.plugins[0].resolveId('@deepseek-ai/dsh-native-command/types'), null)
+    assert.throws(
+      () => client.plugins[0].resolveId('@deepseek-ai/dsh-api-workspace-controller'),
+      /not a shared baseline or dsh\.client\.external request/,
+    )
     assert.throws(
       () => client.plugins[0].resolveId('@deepseek-ai/dsh-agent-presets/display'),
       /not a shared baseline or dsh\.client\.external request/,

@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import { displayPath, finding } from './io.ts'
 import type { Finding, PluginManifest } from './types.ts'
 
-const SKIP_DIRS = new Set(['node_modules', 'lib', 'dist', 'out', '.dshx', '.git', '.build'])
+const SKIP_DIRS = new Set(['node_modules', 'lib', 'dist', 'out', '.dshx', '.git', '.build', 'test', 'tests', '__tests__'])
 const SOURCE = /\.(?:[cm]?[jt]sx?)$/
 const DECLARATION = /\.d\.(?:[cm]?ts)$/
 

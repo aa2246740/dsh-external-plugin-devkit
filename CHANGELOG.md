@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.9.1 - 2026-09-28
+
+- Pin the desk Harness target to official `dsh-v0.1.7-rc.2` (package `0.1.7-rc.2`, SHA `477b4f420553e8a52c2fbccc464d7561b239c443`). `dshx update plan --target dsh-v0.1.7-rc.2` resolves that tag. Omitting `--target` stays on it and does not follow a later alpha.
+- Keep `@deepseek-ai/dsh` peer `>=0.1.7-rc.1 <0.1.8`. The range accepts `0.1.7-rc.2` and still rejects `0.1.7` alphas.
+- Align the client-bundle inline allowlist with rc.2: `@deepseek-ai/dsh-api-workspace-controller/default-workspace` is inline-safe. The package root is not.
+- The client-build spec's fabricated platform table is an ES module, matching an official checkout, so Node 22.22 can import it.
+
+- Add Desktop Host discovery and identity checks, profile-aware plugin operations and hot reload. Keep transaction journals in the development checkout, outside the application bundle.
+- Keep Desktop Host recovery owned by the desktop app; Guardian quarantines attributable failures without starting a second Host.
+- Add external read-only desktop profile inspection through the public boot API; output includes row identity only, never configuration values.
+- Fix Guardian profile narrowing so the complete TypeScript check passes with desktop support.
+- Fix Creator shell guards reading sandbox policy and shell capabilities through undeclared Agent contexts. Resolve them through live injected service scopes and keep failing closed when dependencies disappear.
+- Report `CREATOR_SANDBOX_UNAVAILABLE` for unavailable policy wiring instead of mislabeling normal plugin commands as official-source writes.
+- Add native Agent + real sandbox Git commit/tag/push regression tests, including protected core writes, policy changes and dependency replacement.
+
+- Treat official DSH source, installed packages, worktrees and artifacts as read-only. Reject core targets, symlink escapes, Host patches and compiler output outside the plugin.
+- Enforce Creator filesystem/shell write guards after approval and add the rule to the runtime prompt. Keep normal plugin writes and read-only Host inspection.
+- Keep `update plan`; disable source-changing Harness update stages inside and outside DSHX.
+
 ## 0.9.0 - 2026-09-24
 
 Supersedes 0.7.9, which was never released; includes everything in that entry plus the fixes below.
@@ -21,7 +40,6 @@ Supersedes 0.7.9, which was never released; includes everything in that entry pl
 - Declare `@deepseek-ai/dsh` peer `>=0.1.7-rc.1 <0.1.8`, and write the same range into generated client scaffolds. The range accepts `0.1.7-rc.1` and rejects `0.1.7` alphas. `^0.1.5-rc.3` does not accept rc.1.
 - Align the client-bundle inline allowlist with rc.1, including `dsh-agent-preset-registry/display`, `dsh-plugin-manager/registry`, and `dsh-native-command/types`.
 - Deliver Creator+ recovery on `agent/created`. `agent/session-start` is gone.
-
 ## 0.7.8 - 2026-09-21
 
 - Add user-confirmed Creator+ takeover with atomic, snapshot-bound claims, private single-use grants, durable revocations and ownership checks inside the activation lock.

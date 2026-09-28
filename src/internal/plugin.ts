@@ -1,3 +1,5 @@
+// @ts-ignore -- portable JS boundary is shared with the Host bridge.
+import { assertPluginSource } from '../core-boundary.js'
 import { existsSync, lstatSync, readdirSync, realpathSync, statSync } from 'node:fs'
 import { basename, dirname, isAbsolute, join, posix, relative, resolve } from 'node:path'
 import { loadYaml, readText } from './io.ts'
@@ -229,6 +231,7 @@ function inferMarker(source: string): string | undefined {
 
 export function loadPlugin(root: string, nameOrPath?: string): PluginManifest {
   const dir = resolvePluginDir(root, nameOrPath)
+  assertPluginSource(root, dir)
   const idGuess = basename(dir)
   const rawPath = join(dir, 'dshx.yml')
   let raw: RawManifest = {}
@@ -243,6 +246,7 @@ export function loadPlugin(root: string, nameOrPath?: string): PluginManifest {
   const id = raw.id ?? idGuess
   const entry = raw.entry ?? pickEntry(dir, id)
   const entryAbs = resolve(dir, entry)
+  assertPluginSource(root, dir, entryAbs)
   if (!existsSync(entryAbs)) throw new Error(`plugin entry missing: ${entryAbs}`)
   const source = readText(entryAbs)
   const hotReload = raw.hotReload === undefined ? undefined : hotReloadConfig(dir, entry, raw.hotReload)

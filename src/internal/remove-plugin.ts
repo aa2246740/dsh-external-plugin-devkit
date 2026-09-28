@@ -111,7 +111,7 @@ export async function removeCreatorPlugin(
   }
   const claim = assertCreatorClaim(root, pluginId, context)
   const home = resolve(dependencies.dshHome ?? resolveDshHome())
-  const prof = profileDir(home, 'web')
+  const prof = profileDir(home, context.hostProfile ?? 'web')
   const patchPath = join(prof, 'cordis.patch.yml')
   const manifestPath = join(prof, 'package.json')
   if (!existsSync(manifestPath)) throw new Error(`Web profile manifest missing: ${manifestPath}`)
@@ -152,7 +152,7 @@ export async function removeCreatorPlugin(
   let profileDependencyAction: RemoveCreatorPluginResult['profileDependencyAction'] = 'already-absent'
   if (hadDependency) {
     const remove = dependencies.removeProfileDependency ?? ((input: { root: string; pluginId: string; timeoutMs: number }) => (
-      runDsh(input.root, ['plugin', '--profile', 'web', 'remove', input.pluginId], input.timeoutMs)
+      runDsh(input.root, ['plugin', '--profile', context.hostProfile ?? 'web', 'remove', input.pluginId], input.timeoutMs)
     ))
     const result = remove({ root, pluginId, timeoutMs })
     if (result.code !== 0) {
@@ -213,8 +213,9 @@ export function claimedPluginIntegrityFailure(
   root: string,
   pluginId: string,
   dshHome = resolveDshHome(),
+  profile = 'web',
 ): { patchPath: string; installedPath: string } | undefined {
-  const prof = profileDir(resolve(dshHome), 'web')
+  const prof = profileDir(resolve(dshHome), profile)
   const patchPath = join(prof, 'cordis.patch.yml')
   if (!existsSync(patchPath)) return undefined
   let plan

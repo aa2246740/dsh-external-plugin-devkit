@@ -69,6 +69,13 @@ export async function cmdStart(args: string[], options: CliOptions, root: string
     const discovery = profile === 'web' ? discoverWebHosts(root, home) : undefined
     const sameHome = discovery?.hosts.filter(host => host.home === 'same') ?? []
     const uncertain = discovery?.hosts.filter(incompleteIdentity) ?? []
+    const desktop = sameHome.find(host => host.profile === 'desktop')
+    if (desktop) {
+      printReport(report('start', [finding('error', 'desktop-owned-host', `official Desktop owns Host pid ${desktop.pid} on 127.0.0.1:${desktop.port}; refusing a second Host`, {
+        hint: 'use the official Desktop plugin manager for this profile; dshx web lifecycle commands do not own the Desktop Host',
+      })], { home, discovery }), options.json)
+      return 1
+    }
     if (discovery?.complete && (sameHome.length > 1 || (supervised && sameHome.some(host => host.pid !== supervised.pid)))) {
       printReport(report('start', [finding('error', 'shared-home-collision', `multiple Web Hosts use the same DSH_HOME: ${hostList(sameHome)}`, {
         hint: 'do not start or restart another Host. Keep one user Host; cold-boot proof belongs in verify-boot\'s temporary DSH_HOME',

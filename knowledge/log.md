@@ -1,5 +1,9 @@
 # Directory Update Log
 
+## 2026-09-24
+
+* **0.9.1 Harness 0.1.7-rc.2**: desk update target is `dsh-v0.1.7-rc.2` (SHA `477b4f420553e8a52c2fbccc464d7561b239c443`). `dshx update plan --target dsh-v0.1.7-rc.2` resolves that tag. Omitted `--target` does not float onto a later alpha. Peer range stays `>=0.1.7-rc.1 <0.1.8` (accepts rc.2, rejects 0.1.7 alphas). Client inline allowlist adds `dsh-api-workspace-controller/default-workspace`.
+
 ## 2026-09-23
 
 * **0.7.9 Harness 0.1.7-rc.1**: desk update target is `dsh-v0.1.7-rc.1` (SHA `46a7f68b0922371ce7144b668b90e377d8e799f4`). Omitted `--target` does not float onto a later alpha. Peer and generated scaffold pins are `>=0.1.7-rc.1 <0.1.8`. Client inline allowlist matches rc.1. Creator+ recovery listens on `agent/created`.

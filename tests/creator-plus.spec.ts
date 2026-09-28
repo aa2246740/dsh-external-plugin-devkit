@@ -28,7 +28,7 @@ import {
 const temporaryRoots: string[] = []
 const LEGACY_SIX_TOOL_PERSONA = 'Create file-backed DeepSeek Harness plugins through the six-tool DSHX v0.7 fixed bridge. Treat the official browser WebUI and public Cordis/client extension points as the compatibility target. App-shell APIs and wrapper-specific behavior are outside the supported surface. Harness update planning is read-only inside this session; prepare, verify, apply, rollback, and process control belong to the external DSHX supervisor.'
 const SEVEN_TOOL_PERSONA = 'Create and safely remove file-backed DeepSeek Harness plugins through the seven-tool DSHX v0.7 fixed bridge. Treat the official browser WebUI and public Cordis/client extension points as the compatibility target. App-shell APIs and wrapper-specific behavior are outside the supported surface. Whole-plugin teardown must use dshx_remove_plugin so the live Host deactivates first and source is preserved. Harness update planning is read-only inside this session; prepare, verify, apply, rollback, and process control belong to the external DSHX supervisor.'
-const CURRENT_PERSONA = `${SEVEN_TOOL_PERSONA} DSH.app, direct dsh web, and dshx are launchers for one long-lived Web Host per DSH_HOME; never start a second same-Home Host or keep an isolated verifier alive.`
+const CURRENT_PERSONA = 'Create and safely remove external DeepSeek Harness plugins through the fixed DSHX v0.7 bridge and public Cordis/client extension points. Official Harness source, shipped presets, installed official packages and their generated artifacts are read-only, including copies and worktrees. Never add a Host API, patch official files or rebuild official subprojects for a plugin. Report a missing public API or use a plugin-only alternative. User takeover, automatic approval and --force cannot override CORE_SOURCE_IMMUTABLE. Whole-plugin teardown must use dshx_remove_plugin to deactivate the live Host first and preserve source. Harness version inventory is read-only; source-changing update stages are disabled even for external supervisors. DSH.app, direct dsh web, and dshx are launchers for one long-lived Web Host per DSH_HOME; never start a second same-Home Host or keep an isolated verifier alive.'
 
 function temporaryDirectory(label: string): string {
   const path = mkdtempSync(join(tmpdir(), label))
@@ -68,7 +68,7 @@ describe('Creator Mode+ bridge', () => {
   it('registers only fixed non-process-control tools, including claims and bounded new-client activation', () => {
     const tools: Array<Record<string, unknown>> = []
     apply({
-      tools: { register(tool: Record<string, unknown>) { tools.push(tool) } },
+      tools: { guard() { return () => {} }, register(tool: Record<string, unknown>) { tools.push(tool) } },
       webServer: { port: 43127, register() { return () => {} } },
       effect(callback: () => unknown, label: string) {
         if (label.includes('browser failure route')) callback()
@@ -412,7 +412,7 @@ describe('Creator Mode+ bridge', () => {
 
     assert.equal(readFileSync(source, 'utf8'), before)
     assert.match(composition, /You are Creator Mode\+/)
-    assert.match(composition, /Harness update planning is read-only/)
+    assert.match(composition, /Harness version inventory is read-only/)
     assert.match(composition, /name: dsh-external-plugin-devkit\n/)
     assert.equal(existsSync(join(target, 'skills/creator-mode-plus/SKILL.md')), true)
     assert.match(readFileSync(join(target, 'preset.yml'), 'utf8'), /Creator Mode\+/)
@@ -450,7 +450,7 @@ describe('Creator Mode+ bridge', () => {
     assert.match(readFileSync(compositionPath, 'utf8'), /# user-preserved/)
     assert.match(readFileSync(compositionPath, 'utf8'), /name: dsh-external-plugin-devkit\n/)
     assert.doesNotMatch(readFileSync(compositionPath, 'utf8'), /dsh-external-plugin-devkit\/creator-plus/)
-    assert.match(readFileSync(compositionPath, 'utf8'), /seven-tool DSHX v0\.7 fixed bridge/)
+    assert.match(readFileSync(compositionPath, 'utf8'), /CORE_SOURCE_IMMUTABLE/)
     assert.match(readFileSync(compositionPath, 'utf8'), /one long-lived Web Host per DSH_HOME/)
     assert.doesNotMatch(readFileSync(compositionPath, 'utf8'), /six-tool DSHX v0\.7 fixed bridge/)
     assert.match(readFileSync(skillPath, 'utf8'), /dshx_activate_new_client/)

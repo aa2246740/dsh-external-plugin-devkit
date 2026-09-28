@@ -2,21 +2,23 @@
 
 [English](README.en.md) · [中文](README.md)
 
+**Plugin-only boundary:** official DSH source and artifacts are read-only, including copies and worktrees. Use public extension points; missing APIs never authorize a Host patch. Takeover, approval and `--force` cannot override `CORE_SOURCE_IMMUTABLE`.
+
 **This is not a Host feature plugin.** Do not install this repo with `dsh plugin add`. There is no Host install spec such as `github:aa2246740/dsh-external-plugin-devkit`.
 
-If you only run official DeepSeek Harness (for example **0.1.7-rc.1**) and you are not writing plugins: **skip this repository.** Stock DSH has no Creator Mode and no DSHX. Feature-plugin install lives in that plugin's own README.
+If you only run official DeepSeek Harness (for example **0.1.7-rc.2**) and you are not writing plugins: **skip this repository.** Stock DSH has no Creator Mode and no DSHX. Feature-plugin install lives in that plugin's own README.
 
 This repo is the **dshx CLI / workbench**. It is for **plugin authors who already have a [Harness checkout](https://github.com/deepseek-ai/deepseek-harness)** and want to write or maintain file-backed plugins outside the Host (Cursor, Claude Code, Codex, Grok, or a human).
 
 Official Creator Mode is for probing a live process. dshx is the other half: write the plugin as files, check the contract, name the layer you changed, then decide whether the Host restarts or the page reloads. **It is not `dsh`, not a Harness fork, and not a Creator Mode replacement.**
 
-0.7.4 adds a transactional update assistant: official release, candidate build, plugin cold boot, complete Web composition, and exact rollback as separate gates. It **does not** restart a production Host for you.
+0.9.1 targets official **0.1.7-rc.2**, adds Desktop Host discovery, profile operations and hot reload, and enforces the official-source boundary. `update plan` remains read-only; stages that modify Harness are disabled.
 
-![Local xfce4-terminal: `dshx update plan` (rc.8 → rc.2), then `dshx update verify --target dsh-v0.1.1-rc.2`; hello plugin cold-boot passed](docs/screenshots/update-plan.gif)
+## 0.9.1: RC2 and desktop support
 
-*2026-08-25 · machine `cursor` (Linux) · `dshx update plan` → `dshx update verify --target dsh-v0.1.1-rc.2`*
+The default target is `dsh-v0.1.7-rc.2`. Desktop support covers Host identity, desktop profile selection, hot-reload transactions, and read-only profile inspection that emits row identities. Guardian leaves desktop recovery to the app.
 
-That GIF is the local CLI. The Harness checkout is `dsh-v0.1.0-rc.8` with dependencies installed, so `doctor`'s `dump-config` can run. The official Web UI was not booted. There is no official window to show. `dump-config` exiting 0 is not a boot proof.
+Desktop profile installation and removal require the current Creator+ fixed tools and a Host-issued capability. The external CLI does not bypass that bridge. Validate Web and desktop profiles separately; each plugin still needs activation and behavior checks for its changed surface.
 
 ## Authors: set up the workbench
 
@@ -68,39 +70,11 @@ The stills below are from the same local run. The official UI was not opened.
 
 *2026-08-25 · machine `cursor` (Linux) · `dshx activation-plan hello --change patch`*
 
-## 0.7.4 update assistant and RC1 Web gates
+## Harness version inventory
 
-An update is more than `git pull`. The gates are staged. Without `--target`, the plan stays on the desk pin `dsh-v0.1.7-rc.1` and does not follow a later alpha.
+`dshx update plan` reads current and target versions, working-tree state and plugin inventory. It does not prove a target build or plugin behavior.
 
-```sh
-dshx update plan
-dshx update prepare --target dsh-v0.1.7-rc.1
-dshx update verify --target dsh-v0.1.7-rc.1
-dshx update apply --target dsh-v0.1.7-rc.1
-dshx update rollback --target dsh-v0.1.7-rc.1
-```
-
-The screenshots below are a historical RC2 example: this machine planned `0.1.0-rc.8` → `0.1.1-rc.2`, inventoried one plugin, and was not supervising a Host. They are not proof for a current target:
-
-![dshx update plan: current 0.1.0-rc.8 → target 0.1.1-rc.2; no tracked dirty; one plugin](docs/screenshots/update-plan.png)
-
-*2026-08-25 · machine `cursor` (Linux) · `dshx update plan`*
-
-`plan` / `prepare` inventory both `my-plugins` and local `file:` / `link:` plugins from the active Web profile. When both name the same package, the profile's active source wins; a missing target is reported and not replaced with a stale copy. `prepare` does a frozen install and full target-Harness build in an isolated worktree, then copies and builds every plugin. It does not switch the active checkout. During plugin builds, `DSHX_HARNESS` is pinned to the candidate so the external client adapter reads the target `platform.ts` instead of following the dshx symlink back to the active older checkout. `verify` first cold-boots a vanilla Web candidate, then runs the static contract and isolated cold boot for every candidate plugin, then starts the complete candidate Web graph. An RC1 Web page must exchange the startup URL token for its local cookie before DSHX reads `globalThis["__DSH_BOOT__"]` and each served bundle; a bare `HTTP 200/401` is not client acceptance.
-
-![dshx update verify: candidate build passed; hello build/check/cold-boot all true; 1/1 verify-gate; source plugin bytes untouched](docs/screenshots/update-verify.png)
-
-*2026-08-25 · machine `cursor` (Linux) · `dshx update verify --target dsh-v0.1.1-rc.2`*
-
-`apply` accepts only a complete candidate gate, including vanilla and combined Web gates, refuses a supervised Host, transactionally switches to `dshx/<release>`, and keeps an exact backup. `rollback` restores the pre-update branch, dependencies, and plugin `lib/`.
-
-Keep three states distinct:
-
-- **Upgrade complete** — checkout is on the target tag; backups live under `.dshx/update-assistant/`
-- **Live runtime proof** — you ran the Host / browser and saw the behavior
-- **Official activation** — the single branch from `activation-plan` actually mounted
-
-The assistant does not restart a production Host. See [knowledge/contracts/harness-update.md](knowledge/contracts/harness-update.md).
+`update prepare`, `verify`, `apply` and `rollback` are disabled with `CORE_SOURCE_IMMUTABLE`. DSHX does not create official-source candidates, rebuild or switch the Harness, or replace official files. Official application upgrades belong to a separate maintenance task. See the [plugin-only boundary](knowledge/contracts/plugin-only.md).
 
 ## There is no universal hot reload
 
@@ -125,7 +99,7 @@ DSHX 0.7.3 fixes bundle-plugin removal ordering. The external supervisor runs `d
 
 Use `verify-boot` only when you need an isolated cold-boot proof. Use `sync-artifact` only when a package must land in the profile — it will say `ARTIFACT_SYNCED; LIVE_ACTIVATION_UNPROVEN` and stop there.
 
-DSHX 0.9.0 includes a Creator Mode+ user preset with nine fixed tools. Standalone Creator+ 0.3.8 adds `dshx_browser_open` for ten. On a claim conflict, call `dshx_request_takeover` in the current conversation; explicit user confirmation stops old work before transferring ownership. See [knowledge/contracts/creator-mode-plus.md](knowledge/contracts/creator-mode-plus.md).
+DSHX 0.9.1 includes a Creator Mode+ user preset with nine fixed tools. Standalone Creator+ 0.3.8 adds `dshx_browser_open` for ten. On a claim conflict, call `dshx_request_takeover` in the current conversation; explicit user confirmation stops old work before transferring ownership. See [knowledge/contracts/creator-mode-plus.md](knowledge/contracts/creator-mode-plus.md).
 
 More: [start here](knowledge/start-here.md) · [why work outside Creator Mode](knowledge/why-external.md) · [command surface](knowledge/references/dshx-cli.md) · [standing orders](AGENTS.md)
 

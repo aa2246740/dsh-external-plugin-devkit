@@ -7,6 +7,18 @@ const root = '/work/deepseek-harness'
 const source = join(root, 'apps/cli/src/bin.ts')
 
 describe('Web Host discovery', () => {
+  it('recognizes the official Desktop child with unquoted macOS app paths', () => {
+    const app = '/Users/test/Applications/DeepSeek Harness.app/Contents'
+    const runtime = `${app}/Resources/app.asar/dsh`
+    const command = `${app}/MacOS/DeepSeek Harness --expose-internals ${runtime}/node_modules/@deepseek-ai/dsh-desktop-host/lib/index.js ${runtime} /Users/test/.dsh/profiles/desktop`
+    const rows = parseWebProcessTable(`901 900 ${command}\n902 1 /bin/zsh -c ${command}`, root)
+    assert.deepEqual(rows, [{ pid: 901, parentPid: 900, port: 19387, launcher: 'desktop', profile: 'desktop', rootPath: runtime }])
+    assert.throws(() => assertNoAffectedWebHosts(root, '/Users/test/.dsh', 'update apply', {
+      processTable: () => ({ ok: true, text: `901 900 ${command}` }),
+      openFiles: () => ({ ok: true, paths: ['/Users/test/.dsh/profiles/desktop/package.json'] }),
+      processStart: () => ({ ok: true, text: 'start-901' }),
+    }), /refusing update apply/)
+  })
   it('finds App-shell and direct CLI Web Hosts without assuming one port', () => {
     const rows = parseWebProcessTable([
       `101 1 /opt/node --import tsx/esm ${source} web --port 43127 --no-open`,

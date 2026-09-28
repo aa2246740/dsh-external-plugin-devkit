@@ -2,21 +2,23 @@
 
 [中文](README.md) · [English](README.en.md)
 
+**插件开发红线：DSH 官方源码只读。** 不为插件修改 Host、内置包或官方构建产物，临时副本和 worktree 也不例外。缺少公开接口时调整插件方案；`CORE_SOURCE_IMMUTABLE` 不可通过接管、审批或 `--force` 绕过。
+
 **这不是 Host 功能插件。** 不要用 `dsh plugin add` 装本仓库，也没有 `github:aa2246740/dsh-external-plugin-devkit` 这种 Host 安装命令。
 
-只跑官方 DeepSeek Harness（例如 **0.1.7-rc.1**）、不写插件的人：**跳过这个仓库。** 官方原装 DSH 没有 Creator Mode，也没有 DSHX；功能插件的安装写在那个插件自己的 README 里。
+只跑官方 DeepSeek Harness（例如 **0.1.7-rc.2**）、不写插件的人：**跳过这个仓库。** 官方原装 DSH 没有 Creator Mode，也没有 DSHX；功能插件的安装写在那个插件自己的 README 里。
 
 本仓库是 **dshx CLI / 工作台**。给**手里有一份 [Harness checkout](https://github.com/deepseek-ai/deepseek-harness)、要在仓外写或维护文件插件**的作者用（Cursor、Claude Code、Codex、Grok，或人自己跑）。
 
 官方 Creator Mode 适合在活进程里探针。dshx 管另一半：把插件写成文件、检查合同、看这次改的是哪一层，再决定要不要重启 Host、刷新页面。**不是 `dsh`，不是 Harness 的 fork，也不是 Creator Mode 的替代品。**
 
-0.7.4 的事务化更新助手把官方 release、候选构建、插件冷启动、完整 Web 组合图和精确回滚分阶段过门。它**不会**替你重启正式 Host。
+0.9.1 对齐官方 **0.1.7-rc.2**，补齐桌面 Host 识别、profile 操作与热替换，并强制保护官方源码。`update plan` 保留只读盘点；修改 Harness 的更新阶段已禁用。
 
-![本机 xfce4-terminal：先 `dshx update plan`（rc.8 → rc.2），再 `dshx update verify --target dsh-v0.1.1-rc.2`，hello 插件 cold-boot 通过](docs/screenshots/update-plan.gif)
+## 0.9.1：RC2 与桌面支持
 
-*2026-08-25 · 机器 `cursor`（Linux）· `dshx update plan` → `dshx update verify --target dsh-v0.1.1-rc.2`*
+工作台默认目标为 `dsh-v0.1.7-rc.2`。桌面支持包括 Host 身份识别、desktop profile 选择、热替换事务，以及只输出条目身份的只读配置检查。Guardian 将桌面恢复交给 App。
 
-上面是本机刚跑过的 CLI。Harness 在 `dsh-v0.1.0-rc.8`，依赖已装，所以 `doctor` 的 `dump-config` 能过。官方 Web UI 没有起来，所以没有官方窗口。`dump-config` 退出 0 不是 boot 证明。
+桌面 profile 的安装和卸载需要当前 Creator+ 的固定工具及 Host 签发的能力凭据；外部 CLI 不会绕过这个入口。Web 与桌面 profile 分别验证，具体插件仍需按变更面完成激活和行为检查。
 
 ## 作者：装工作台
 
@@ -68,39 +70,11 @@ dshx update plan
 
 *2026-08-25 · 机器 `cursor`（Linux）· `dshx activation-plan hello --change patch`*
 
-## 0.7.4 更新助手与 RC1 Web 门禁
+## Harness 版本检查
 
-更新不是一次 `git pull`。分阶段门禁；省略 `--target` 时停在工作台钉 `dsh-v0.1.7-rc.1`，不跟随更高的 alpha。
+`dshx update plan` 只读盘点当前版本、官方目标版本、工作树状态和插件清单；它不证明目标版本或插件通过验收。
 
-```sh
-dshx update plan
-dshx update prepare --target dsh-v0.1.7-rc.1
-dshx update verify --target dsh-v0.1.7-rc.1
-dshx update apply --target dsh-v0.1.7-rc.1
-dshx update rollback --target dsh-v0.1.7-rc.1
-```
-
-下面的截图是历史 RC2 样例：本机从 `0.1.0-rc.8` 规划到 `0.1.1-rc.2`，1 个插件入账，没有监督中的 Host。它不替代当前 target 的候选结果：
-
-![dshx update plan：current 0.1.0-rc.8 → target 0.1.1-rc.2；无 tracked dirty；1 个插件](docs/screenshots/update-plan.png)
-
-*2026-08-25 · 机器 `cursor`（Linux）· `dshx update plan`*
-
-`plan` / `prepare` 同时盘点 `my-plugins` 和 Web profile 里的本地 `file:` / `link:` 插件源；同名或同一稳定 plugin ID 时以 profile 解析到的源为准，缺失目标会明确告警且不会把过期副本装进候选环境。两个候选源如果声明同一 ID，会在 plan 阶段失败关闭，避免等到组合 Web 才崩。需要验证一个不能改动的旧活动源的兼容实现时，可在 `plan` / `prepare` 重复传入 `--plugin-source name=/absolute/compatible/source`；替代源必须保持同一 package name 与 plugin ID，且只进入 candidate staging，`apply` 会明确拒绝，直到你自行把该源码提升为活动 profile 源。`prepare` 在隔离 worktree 冻安装并完整构建目标 Harness，再复制构建全部插件；不切换当前 checkout。插件构建期间 `DSHX_HARNESS` 固定为 candidate，外部 client adapter 读取目标版本的 `platform.ts`，不会经由 dshx 符号链接误用当前旧 checkout 的平台表。`verify` 先冷启动无插件的 Web candidate，再对全部候选插件逐个做静态合同和隔离冷启动，最后只按当前 Web profile 的 `dsh.profile.bundles` 与 profile/home patch 中未禁用的 insert 组合活动插件图；仅安装为依赖但未插入图的休眠实现仍会单独验证，不会被强行与互斥的新实现共载。probe 使用包声明的 `exports["./client"]` `.js` lazy-CJS 入口，不硬编码 `lib/`。RC1 的 Web 页必须先用启动 URL 的 token 换取本地 cookie，之后才读取 `globalThis["__DSH_BOOT__"]` 和每个 bundle；裸 `HTTP 200/401` 都不算 client 验收。
-
-![dshx update verify：candidate 构建通过；hello build/check/cold-boot 全 true；1/1 verify-gate；源插件字节未改](docs/screenshots/update-verify.png)
-
-*2026-08-25 · 机器 `cursor`（Linux）· `dshx update verify --target dsh-v0.1.1-rc.2`*
-
-`apply` 只接受完整候选门禁（包括 vanilla 与组合 Web），拒绝正在监督的 Host，事务化切到 `dshx/<release>` 并留下精确备份。`rollback` 恢复升级前的分支、依赖和插件 `lib/`。
-
-三件事情不要混：
-
-- **升级完成** — checkout 已切到目标 tag，备份落在 `.dshx/update-assistant/`
-- **真实运行时验收** — 你自己跑 Host / 浏览器，看到行为
-- **正式激活** — 按 `activation-plan` 选中的那一条分支挂上
-
-更新助手不重启正式 Host。详细合同见 [knowledge/contracts/harness-update.md](knowledge/contracts/harness-update.md)。
+`update prepare`、`verify`、`apply`、`rollback` 已禁用，会返回 `CORE_SOURCE_IMMUTABLE`。DSHX 不创建官方源码候选、不重建或切换 Harness，也不替换官方文件。官方应用升级应作为独立维护任务处理。详见 [插件边界](knowledge/contracts/plugin-only.md)。
 
 ## 没有万能热重载
 
@@ -125,7 +99,7 @@ DSHX 0.7.3 修复 bundle 插件卸载顺序。外部 supervisor 使用 `dshx plu
 
 需要隔离冷启动证明时才 `verify-boot`。需要把包装进 profile 时才 `sync-artifact`——它只会告诉你 `ARTIFACT_SYNCED; LIVE_ACTIVATION_UNPROVEN`。
 
-DSHX 0.9.0 的内置 Creator Mode+ 是一个用户 preset，提供九个固定工具。独立 Creator+ 0.3.8 另提供 `dshx_browser_open`，共十个。发生认领冲突时，在当前对话调用 `dshx_request_takeover`；用户确认后会停止旧任务并接管，无需找回旧对话。见 [knowledge/contracts/creator-mode-plus.md](knowledge/contracts/creator-mode-plus.md)。
+DSHX 0.9.1 的内置 Creator Mode+ 是一个用户 preset，提供九个固定工具。独立 Creator+ 0.3.8 另提供 `dshx_browser_open`，共十个。发生认领冲突时，在当前对话调用 `dshx_request_takeover`；用户确认后会停止旧任务并接管，无需找回旧对话。见 [knowledge/contracts/creator-mode-plus.md](knowledge/contracts/creator-mode-plus.md)。
 
 更多：[从这里开始](knowledge/start-here.md) · [为什么出仓](knowledge/why-external.md) · [命令一览](knowledge/references/dshx-cli.md) · [站岗说明](AGENTS.md)
 
@@ -138,3 +112,7 @@ MIT。DeepSeek Harness 是另一个项目。这里和 DeepSeek 没有隶属关�
 用 `dshx browser status` 检查当前 Host 的访问状态。Creator watch/claim 会通过官方 Connection 自动交接认证；没有 Creator 的官方 CLI 用户，可用 `browser bind` 从私密环境变量 `DSHX_WEB_STARTUP_URL` 绑定启动链接。不要把带 token 的链接写进命令参数或聊天。
 
 `browser open` 使用 `DSHX_BROWSER_ADAPTER` 指定的可执行适配器，通过 stdin 私密传入认证信息。具体适配协议、凭据有效期和随包提供的 Codex 双浏览器上下文测试见[浏览器访问合同](knowledge/contracts/browser-access.md)。HTTP 认证、浏览器访问和具体功能验收分别报告。
+
+### Creator Shell 回归验证
+
+修改 Creator 守卫后，运行 `DSHX_HARNESS=<absolute-checkout> npm run test:native`。测试使用真实 Cordis、Agent、工具和沙箱，在临时本地 Git 仓库完成提交、打标签与推送；不需要 GitHub 凭据。沙箱不可用时测试失败，不回退到无隔离执行。

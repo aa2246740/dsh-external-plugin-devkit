@@ -21,6 +21,9 @@ sources:
     title: External package compatibility adapter
 ---
 
+
+> 当前强制规则：DSH 官方源码与构建产物只读。插件工作不允许 Host patch、修改临时官方副本或重建官方子项目。`update prepare/verify/apply/rollback` 已禁用，仅保留 `update plan`；后文历史版本说明不解除该规则。
+
 # 边界，不是报错绕行
 
 官方 `packages/client/tsdown.client.ts` 的 `clientBundle()` 是仓库内部
@@ -45,7 +48,7 @@ tsdown: no packages/*/*/package.json declares the name <id>
 - `window.__ModuleLoader__.load({ id, factory })` 注册；
 - React、Cordis 和其他共享模块保持同一运行时 identity；
 - CSS Modules、全局 CSS 与 `?inline` CSS 由插件拥有并可随 fiber 清理；
-- 官方声明为 browser-safe 的纯函数包（当前包括 `dsh-util-workspace-path`）随插件内联，不生成 Loader module-table 请求；
+- 官方声明为 browser-safe 的纯函数包（当前包括 `dsh-util-workspace-path`，以及 rc.2 的 `@deepseek-ai/dsh-api-workspace-controller/default-workspace`）随插件内联，不生成 Loader module-table 请求；该包的其它入口仍要声明 `dsh.client.external` 或改走服务；
 - 未声明的 `@deepseek-ai/*` runtime import 失败关闭，避免把服务 identity 私自打包进去。
 - client entry 直接读取的 `ctx.<service>` 必须出现在该入口导出的 Cordis `inject` 中；构建和 `dshx check` 都会在产物进入 Host 前拒绝缺项。
 
@@ -70,8 +73,7 @@ preset、`platform.ts` 和真实 WebUI。
 外部 CLI 的 `dshx init <name> --kind client` 在 Harness `my-plugins` 内生成相对
 adapter 配置。Creator+ 的 `dshx_scaffold` 则在可信会话工作区生成等价的便携配置：
 它优先读 `DSHX_HARNESS`，没有时才读 `~/.config/dshx/harness`，再加载同一
-`externalClientBundle()`，不会把本机绝对路径写进项目。`update prepare` 会把
-`DSHX_HARNESS` 钉到 candidate；两个根路径不一致时必须采用环境变量，不能失败关闭。
+`externalClientBundle()`，不会把本机绝对路径写进项目。生成的 TypeScript 配置只编译插件自己的 `src`，输出到插件的 `lib`；不得通过 project references 重建 Harness 子项目。
 
 Harness 内形状为：
 

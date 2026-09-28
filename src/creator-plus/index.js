@@ -7,6 +7,7 @@ import {
   runClaimedDshx,
   runClientFailureDshx,
   runDshx,
+  resolveHarnessRoot,
 } from './runner.js'
 import {
   forgetCreatorClaim,
@@ -166,7 +167,7 @@ export function apply(ctx) {
   const authOptions = { getWebStartupUrl: port => typeof ctx.connection.authenticatedUrl === 'function' ? ctx.connection.authenticatedUrl(`http://127.0.0.1:${port}/`) : undefined }
   installCreatorRecovery(ctx, authOptions)
   installClientFailureRoute(ctx, authOptions)
-  installCreatorSafetyGuard(ctx)
+  installCreatorSafetyGuard(ctx, () => resolveHarnessRoot())
   installTakeoverFence(ctx)
 
   ctx.tools.register({

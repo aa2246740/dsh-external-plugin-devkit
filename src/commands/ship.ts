@@ -1,3 +1,5 @@
+// @ts-ignore -- portable plugin-only boundary.
+import { auditPluginSource } from '../core-boundary.js'
 import { existsSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { runDsh } from '../internal/dsh.ts'
@@ -64,6 +66,8 @@ export async function cmdShip(args: string[], options: CliOptions, root: string)
   const prof = profileDir(resolveDshHome(), options.profile)
   try {
     const target = resolveShipTarget(root, prof, args[0])
+    const boundary = auditPluginSource(root, target.source)
+    if (boundary.length) throw new Error(boundary.map((item: { message: string }) => item.message).join('\n'))
     const findings: Finding[] = [
       finding('ok', 'target', `${target.name} ← ${target.source}`),
     ]

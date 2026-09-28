@@ -26,8 +26,8 @@ export function discoverBrowserHost(root: string): BrowserHostIdentity {
   const hosts = discovery.hosts.filter(host => host.home === 'same')
   if (hosts.length !== 1) throw new Error(hosts.length ? 'WEB_HOST_COLLISION: multiple same-Home Hosts' : 'WEB_HOST_MISSING: no same-Home Web Host')
   const host = hosts[0]!
-  if (host.root !== 'same' || !host.rootPath) throw new Error('WEB_HOST_ROOT_MISMATCH: select the running Host checkout')
-  return { home, root: realpathSync(host.rootPath), pid: host.pid, processStartedAt: host.processStartedAt!, port: host.port }
+  if ((host.root !== 'same' && host.launcher !== 'desktop') || !host.rootPath) throw new Error('WEB_HOST_ROOT_MISMATCH: select the running Host checkout')
+  return { home, root: host.launcher === 'desktop' ? host.rootPath : realpathSync(host.rootPath), pid: host.pid, processStartedAt: host.processStartedAt!, port: host.port }
 }
 
 export function sameBrowserHost(a: BrowserHostIdentity, b: BrowserHostIdentity): boolean {

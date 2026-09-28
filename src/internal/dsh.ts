@@ -1,3 +1,5 @@
+import { desktopProfileCommand } from './desktop-profile.ts'
+import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
@@ -27,6 +29,18 @@ export function runDsh(
   timeoutMs = 30_000,
   env: NodeJS.ProcessEnv = dshEnv(root),
 ): DshResult {
+  if (args.includes('desktop')) {
+    // Offline inspection is read-only and does not need a Host-issued mutation
+    // ticket. Managed invocations still use their exact launcher-owned context.
+    if (args.length === 3 && args[0] === '--profile' && args[1] === 'desktop' && args[2] === '--dump-config'
+      && !env.DSH_SHELL && !env.DSHX_CREATOR_CONTEXT) {
+      const result = spawnSync(process.execPath, [fileURLToPath(new URL('../runtime/desktop-profile-inspect.mjs', import.meta.url)), root], {
+        cwd: root, env, encoding: 'utf8', timeout: timeoutMs, maxBuffer: 8 * 1024 * 1024,
+      })
+      return { code: result.status ?? 1, stdout: result.stdout ?? '', stderr: result.stderr ?? '' }
+    }
+    return desktopProfileCommand(args, timeoutMs)
+  }
   const { cmd, prefix } = dshBin(root)
   const result = spawnSync(cmd, [...prefix, ...args], {
     cwd: root,

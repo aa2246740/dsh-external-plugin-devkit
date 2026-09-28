@@ -1,3 +1,4 @@
+import { discoverWebHosts } from './host-discovery.ts'
 import { createHash, randomUUID } from 'node:crypto'
 import {
   existsSync,
@@ -106,7 +107,7 @@ interface BoundHost {
   processStartedAt: string
   home: string
   root: string
-  profile: 'web'
+  profile: 'web' | 'desktop'
   port: number
 }
 
@@ -148,7 +149,7 @@ export interface HotReloadProof {
 
 export interface HotReloadPluginResult {
   pluginId: string
-  profile: 'web'
+  profile: 'web' | 'desktop'
   hostPid: number
   hostPort: number
   sourcePath: string
@@ -173,6 +174,7 @@ export interface HotReloadPluginResult {
 export interface HotReloadDependencies {
   dshHome?: string
   currentHost?: (root: string) => HostState | undefined
+  discoverHosts?: typeof discoverWebHosts
   processStart?: (pid: number) => TextProbe
   portProbe?: (port: number) => Promise<PortProbe>
   creatorContext?: () => CreatorContext | undefined
@@ -750,18 +752,23 @@ async function assertBoundHost(
         ? 'currentHost identity disappeared while waiting for hot-reload health'
         : 'hot reload requires one existing currentHost; it never starts or adopts a Host')
     }
-    if (host.profile !== 'web' || host.port !== port || host.processStartedAt === undefined
+    if ((host.profile !== 'web' && host.profile !== 'desktop') || host.port !== port || host.processStartedAt === undefined
       || host.home === undefined || host.hostRoot === undefined
       || canonicalExisting(host.home, 'currentHost home') !== canonicalHome
-      || canonicalExisting(host.hostRoot, 'currentHost root') !== canonicalRoot) {
+      || (host.profile === 'web' && canonicalExisting(host.hostRoot, 'currentHost root') !== canonicalRoot)) {
       throw new Error('currentHost identity does not exactly match pid/start/home/profile/root/port')
+    }
+    if (host.profile === 'desktop') {
+      const found = (dependencies.discoverHosts ?? discoverWebHosts)(root, home)
+      const peers = found.hosts.filter(item => item.home === 'same')
+      if (!found.complete || peers.length !== 1 || peers[0]?.pid !== host.pid || peers[0]?.launcher !== 'desktop' || peers[0]?.rootPath !== host.hostRoot || peers[0]?.port !== port) throw new Error('Desktop Host identity changed')
     }
     const bound: BoundHost = {
       pid: host.pid,
       processStartedAt: host.processStartedAt,
       home: canonicalHome,
-      root: canonicalRoot,
-      profile: 'web',
+      root: host.profile === 'desktop' ? host.hostRoot : canonicalRoot,
+      profile: host.profile,
       port,
     }
     if (boundExpected && JSON.stringify(bound) !== JSON.stringify(boundExpected)) {
@@ -797,7 +804,7 @@ export async function hotReloadPlugin(
 ): Promise<HotReloadPluginResult> {
   const targetScope: HotReloadScope = typeof scopeOrDependencies === 'string' ? scopeOrDependencies : 'root'
   const dependencies = typeof scopeOrDependencies === 'string' ? providedDependencies : scopeOrDependencies
-  if (profile !== 'web') throw new Error('hot reload supports only the web profile')
+  if (profile !== 'web' && profile !== 'desktop') throw new Error('hot reload supports only the web and desktop profiles')
   if (targetScope !== 'root' && targetScope !== 'preset' && targetScope !== 'mixed') throw new Error('hot reload scope must be root or preset or mixed')
   if (!PLUGIN_ID.test(pluginId)) throw new Error('hot reload requires a lower-case kebab-case plugin id, not a path')
   if (!Number.isSafeInteger(port) || port < 1 || port > 65_535) throw new Error('hot reload requires a valid Host port')
@@ -806,6 +813,7 @@ export async function hotReloadPlugin(
   const deadline = Date.now() + timeoutMs
   const home = resolve(dependencies.dshHome ?? resolveDshHome())
   const host = await assertBoundHost(root, home, port, undefined, deadline, dependencies)
+  if (host.profile !== profile) throw new Error('hot-reload profile does not match the bound Host')
   const context = (dependencies.creatorContext ?? readCreatorContext)()
   if (targetScope !== 'root' && context) {
     throw new Error(`${targetScope} hot reload is external-only and refuses CreatorContext`)
@@ -830,6 +838,9 @@ export async function hotReloadPlugin(
   const packageDir = canonicalExisting(plugin.dir, 'plugin package')
   const checkedEntryPath = canonicalExisting(plugin.entryAbs, 'plugin entry')
   const canonicalRoot = host.root
+  // Desktop runtime identity belongs to the immutable application bundle.
+  // Transaction records belong to the separately validated development root.
+  const developmentRoot = canonicalExisting(root, 'Harness development root')
   if (!within(checkedEntryPath, packageDir)) throw new Error('plugin entry escapes the real package directory through a symlink')
   if (packageDir.split(sep).includes('node_modules')) throw new Error('hot reload refuses a package whose real path is inside node_modules')
   for (const protectedName of ['apps', 'packages', 'vendor']) {
@@ -839,10 +850,10 @@ export async function hotReloadPlugin(
   }
   const release = acquireCreatorActivationLock(root, pluginId, context)
   try {
-  const prof = profileDir(home, 'web')
+  const prof = profileDir(home, profile)
   const patchPath = join(prof, 'cordis.patch.yml')
   const hostState = (dependencies.currentHost ?? currentHost)(root)!
-  const patchFiles = activePatchFiles(home, 'web', hostState)
+  const patchFiles = activePatchFiles(home, profile, hostState)
   const bundlePatches = targetScope !== 'preset' ? registeredBundlePatch(plugin, packageDir, prof) : []
   const rows = composedRows([...bundlePatches, ...patchFiles])
   const target = targetScope !== 'preset'
@@ -908,7 +919,7 @@ export async function hotReloadPlugin(
       pid: host.pid,
       processStartedAt: host.processStartedAt,
       port: host.port,
-      profile: 'web',
+      profile,
       home: host.home,
       root: host.root,
     },
@@ -931,7 +942,7 @@ export async function hotReloadPlugin(
     fields: Partial<Pick<HotReloadJournalRecord, 'status' | 'cleanup' | 'evidence' | 'failure'>> = {},
   ): void => {
     const next = { ...journal, ...fields, stage, updatedAt: new Date(now()).toISOString() }
-    const nextPath = writeHotReloadJournal(canonicalRoot, next)
+    const nextPath = writeHotReloadJournal(developmentRoot, next)
     journal = next
     journalPath = nextPath
   }
@@ -1039,7 +1050,7 @@ export async function hotReloadPlugin(
     })
     result = {
       pluginId,
-      profile: 'web',
+      profile,
       hostPid: host.pid,
       hostPort: host.port,
       sourcePath: packageDir,

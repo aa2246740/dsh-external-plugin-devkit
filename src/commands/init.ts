@@ -1,3 +1,5 @@
+// @ts-ignore -- portable plugin-only boundary.
+import { assertPluginSource } from '../core-boundary.js'
 import { existsSync, lstatSync, mkdirSync, realpathSync, rmSync, symlinkSync } from 'node:fs'
 import { isAbsolute, join, relative, resolve } from 'node:path'
 import { finding, printReport, report, writeText } from '../internal/io.ts'
@@ -64,22 +66,6 @@ function ${pascal(id)}Card() {
   return null
 }
 `
-}
-
-function clientTsconfig(): string {
-  return `${JSON.stringify({
-    extends: '../../tsconfig.base.client.json',
-    compilerOptions: {
-      rootDir: 'src',
-      outDir: 'lib/types',
-    },
-    include: ['src'],
-    references: [
-      { path: '../../vendor/cordis' },
-      { path: '../../packages/client/ui-layout' },
-      { path: '../../packages/client/ui-renderer' },
-    ],
-  }, null, 2)}\n`
 }
 
 function clientBuildConfig(id: string): string {
@@ -261,7 +247,7 @@ function writeScaffold(dir: string, name: string, kind: string, externalWorkspac
         typescript: '^6.0.3',
       },
     }, null, 2)}\n`)
-    writeText(join(dir, 'tsconfig.json'), externalWorkspace ? externalClientTsconfig() : clientTsconfig())
+    writeText(join(dir, 'tsconfig.json'), externalClientTsconfig())
     writeText(join(dir, 'tsdown.config.ts'), externalWorkspace ? externalClientBuildConfig(name) : clientBuildConfig(name))
   }
   writeText(join(dir, 'dshx.yml'), [
@@ -343,6 +329,7 @@ export function scaffoldCreatorPlugin(root: string, workspaceRoot: string, name:
   const linkPath = resolve(pluginsDir(root), name)
   const useHarnessPath = containsPath(workspace, linkPath)
   const dir = useHarnessPath ? linkPath : resolve(workspace, name)
+  assertPluginSource(root, dir)
   if (lexicalExists(dir)) throw new Error(`already exists: ${dir}`)
   if (!useHarnessPath && lexicalExists(linkPath)) throw new Error(`my-plugins link already exists: ${linkPath}`)
 
@@ -369,6 +356,8 @@ export function cmdInit(args: string[], options: CliOptions, root: string): numb
     return 1
   }
   const dir = join(pluginsDir(root), name)
+  try { assertPluginSource(root, dir) }
+  catch (error) { printReport(report('init', [finding('error', 'core-source-immutable', error instanceof Error ? error.message : String(error))]), options.json); return 1 }
   if (existsSync(dir) && !options.force) {
     printReport(report('init', [finding('error', 'exists', `already exists: ${dir}`, { hint: 'pass --force to overwrite scaffold files' })]), options.json)
     return 1

@@ -1,3 +1,5 @@
+// @ts-ignore -- portable plugin-only boundary.
+import { auditPluginSource } from '../core-boundary.js'
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { compat015Findings } from './compat-015.ts'
@@ -11,7 +13,7 @@ const ABS_PATH = /(?:^|['"])(\/(?:workspace|home|Users|opt)\/|\/[A-Za-z]:\\)/
 const MACHINE_PATH = /\/workspace\/|\/home\/[^/]+\//
 
 export function checkPlugin(plugin: PluginManifest, repoRoot: string): Finding[] {
-  const findings: Finding[] = []
+  const findings: Finding[] = auditPluginSource(repoRoot, plugin.dir).map((item: { path: string, message: string }) => finding('error', 'core-source-immutable', item.message, { path: item.path }))
   const source = pluginSource(plugin)
   const rel = displayPath(repoRoot, plugin.entryAbs)
 

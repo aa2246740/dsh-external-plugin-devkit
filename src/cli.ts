@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { readCreatorContext } from './internal/creator.ts'
 import { HELP, LOOP } from './help.ts'
 import { cmdBrowser } from './commands/browser.ts'
 import { cmdCheck } from './commands/check.ts'
@@ -35,6 +36,9 @@ async function main(): Promise<number> {
     return 0
   }
   const { command, args, options } = parseCli(raw)
+  const creatorContext = readCreatorContext()
+  if (creatorContext?.hostProfile === 'desktop') { options.profile = 'desktop'; options.port = creatorContext.hostPort }
+  if (options.profile === 'desktop' && ['start', 'stop', 'restart', 'restart-supervised', 'verify', 'verify-boot'].includes(command)) throw new Error('Desktop process lifecycle belongs to the Electron app')
   if (command === 'help') {
     process.stdout.write(HELP)
     return 0

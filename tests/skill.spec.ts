@@ -24,7 +24,7 @@ describe('dshx skill workflow', () => {
     assert.match(creatorSkill, /detached-orphan-symlink/)
     assert.match(creatorSkill, /seven fixed model tools/)
     assert.match(creatorSkill, /fresh `new-client`.*only after `dshx_check` exits `0`/s)
-    assert.match(creatorSkill, /update plan → prepare → verify → apply/)
+    assert.match(creatorSkill, /Only `dshx update plan` remains available/)
     assert.match(creatorSkill, /external `dshx plugin remove <package>/)
   })
 })

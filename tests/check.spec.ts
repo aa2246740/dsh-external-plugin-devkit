@@ -128,6 +128,7 @@ export function apply(ctx: Context) {
 }
 `,
     })
+    writePlugin(root, 'current', { 'test/compat.test.ts': `assert.equal(deps.includes('@deepseek-ai/dsh-client-runtime'), false)` })
     const ok = checkPlugin(loadPlugin(root, 'current'), root)
     assert.equal(ok.some(item => item.code.startsWith('compat-015-') && item.level === 'error'), false, JSON.stringify(ok, null, 2))
   })
@@ -171,6 +172,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 export function apply(ctx: ClientContext) {}
 `,
     })
+    writePlugin(root, 'current', { 'test/compat.test.ts': `assert.equal(deps.includes('@deepseek-ai/dsh-client-runtime'), false)` })
     const ok = checkPlugin(loadPlugin(root, 'current'), root)
     assert.equal(ok.some(item => item.code.startsWith('compat-017-') && item.level === 'error'), false, JSON.stringify(ok, null, 2))
   })

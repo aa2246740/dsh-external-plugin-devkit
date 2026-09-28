@@ -1,33 +1,7 @@
 import { collectUpdatePlan } from '../internal/update.ts'
-import {
-  candidateFailures,
-  candidateSummary,
-  candidateVerified,
-  candidateWebGateFailures,
-  prepareUpdateCandidate,
-  verifyUpdateCandidate,
-} from '../internal/update-candidate.ts'
-import { applyUpdate, rollbackUpdate } from '../internal/update-apply.ts'
 import { officialDisableOnlyDirty } from '../internal/official-plugin-policy.ts'
 import { finding, printReport, report } from '../internal/io.ts'
-import type { OfficialDisableReportItem } from '../internal/official-plugin-policy.ts'
 import type { CliOptions, Finding, UpdateAction } from '../internal/types.ts'
-
-function officialDisableFindings(items: readonly OfficialDisableReportItem[]): Finding[] {
-  if (items.length === 0) {
-    return [finding('ok', 'official-plugin-disable', 'no user-disabled official plugins to keep')]
-  }
-  return [
-    ...items.map(item => {
-      const surfaces = item.surfaces.map(entry => `${entry.surface} (${entry.status})`).join(', ')
-      const absent = item.surfaces.some(entry => entry.status === 'absent')
-      return finding(absent ? 'warn' : 'info', 'official-plugin-disable', `${item.id} (${item.name}): ${surfaces}`, {
-        hint: 'kept disabled on purpose; re-enable only if you want the official plugin back',
-      })
-    }),
-    finding('info', 'official-plugin-disable-summary', `${items.length} official plugin disable(s) reported for your judgment; update does not silently re-enable them`),
-  ]
-}
 
 function updateAction(value: string | undefined): UpdateAction | undefined {
   if (value === undefined || value === 'plan') return 'plan'
@@ -35,108 +9,15 @@ function updateAction(value: string | undefined): UpdateAction | undefined {
   return undefined
 }
 
-function candidateFindings(action: 'prepare' | 'verify', result: ReturnType<typeof prepareUpdateCandidate>): Finding[] {
-  const failures = candidateFailures(result.state)
-  const webFailures = action === 'verify' ? candidateWebGateFailures(result.state) : []
-  const webFindings = action === 'verify'
-    ? ([['vanilla-web', result.state.vanillaWeb], ['combined-web', result.state.combinedWeb]] as const).map(([name, gate]) => {
-      const ok = gate?.staticConfig === true && gate.runtime === true
-      const detail = gate
-        ? `config=${gate.staticConfig} boot=${gate.runtime} graph=${gate.graphEntries} bundles=${gate.servedBundles}/${gate.expectedClientPackages.length}`
-        : 'not run'
-      return finding(ok ? 'ok' : 'error', name, `${name}: ${detail}`, {
-        ...gate?.logFile ? { path: gate.logFile } : {},
-        ...gate?.reason ? { hint: gate.reason } : {},
-      })
-    })
-    : []
-  const gateOk = action === 'prepare'
-    ? result.state.plugins.every(plugin => plugin.build)
-    : candidateVerified(result.state)
-  return [
-    finding('ok', 'candidate', `${result.state.target.version} @ ${result.state.target.sha.slice(0, 12)} in ${result.state.candidateRoot}`),
-    finding('ok', 'harness-install', 'candidate dependencies installed from the frozen lockfile'),
-    finding('ok', 'harness-build', 'candidate Harness full build passed'),
-    ...result.state.plugins.map(plugin => {
-      const ok = action === 'prepare'
-        ? plugin.build
-        : plugin.build && plugin.staticCheck === true && plugin.runtime === true
-      const detail = action === 'prepare'
-        ? `active=${plugin.activeInProfile !== false} copied=${plugin.copied} build=${plugin.build}`
-        : `active=${plugin.activeInProfile !== false} build=${plugin.build} check=${plugin.staticCheck ?? false} cold-boot=${plugin.runtime ?? false}`
-      return finding(ok ? 'ok' : 'error', `plugin-${action}`, `${plugin.name}: ${detail}`, { path: plugin.stagedPath })
-    }),
-    ...result.state.plugins.filter(plugin => plugin.sourceOverride).map(plugin => finding('warn', 'candidate-only-source', `${plugin.name}: staged from explicit compatibility source; update apply will refuse until the active profile source is promoted`, {
-      path: plugin.sourceOverride,
-      hint: `active source remains ${plugin.activeSourcePath ?? '(unknown)'}`,
-    })),
-    ...webFindings,
-    gateOk
-      ? finding('ok', `${action}-gate`, action === 'verify'
-        ? `${result.state.plugins.length}/${result.state.plugins.length} plugins plus vanilla and combined Web gates passed`
-        : `${result.state.plugins.length}/${result.state.plugins.length} plugins passed the ${action} gate`)
-      : finding('error', `${action}-gate`, [
-        ...failures.length > 0 ? [`${failures.length} plugin(s): ${failures.map(plugin => plugin.name).join(', ')}`] : [],
-        ...webFailures.length > 0 ? [`Web gate(s): ${webFailures.join(', ')}`] : [],
-      ].join('; ') || 'candidate gate is incomplete'),
-    finding('info', 'source-safety', 'all plugin work used candidate copies; source plugin bytes were not edited'),
-  ]
-}
-
 export async function cmdUpdate(args: string[], options: CliOptions, root: string): Promise<number> {
   const action = updateAction(args[0])
   if (!action) {
-    printReport(report('update', [finding('error', 'usage', 'dshx update plan|prepare|verify|apply|rollback [--target <dsh-v...>]')]), options.json)
+    printReport(report('update', [finding('error', 'usage', 'dshx update plan [--target <dsh-v...>]')]), options.json)
     return 2
   }
-  if (options.pluginSources?.length && action !== 'plan' && action !== 'prepare') {
-    printReport(report(`update ${action}`, [finding('error', 'plugin-source-scope', '--plugin-source is accepted only by update plan and update prepare; verify reads the prepared state and apply rejects candidate-only sources')]), options.json)
-    return 2
-  }
-  if (action === 'apply' || action === 'rollback') {
-    try {
-      const result = action === 'apply' ? applyUpdate(root, options) : rollbackUpdate(root, options)
-      const findings: Finding[] = action === 'apply'
-        ? [
-          finding('ok', 'checkout', `${result.state.target.version} @ ${result.state.target.sha.slice(0, 12)} on ${result.state.updateBranch}`),
-          finding('ok', 'harness-build', 'target Harness frozen install and full build passed'),
-          finding('ok', 'plugins', `${Object.keys(result.pluginChecks).length}/${Object.keys(result.pluginChecks).length} plugins rebuilt and checked on the target checkout`),
-          finding('ok', 'rollback', 'exact pre-update dependencies and generated plugin artifacts are preserved', { path: result.rollbackPath }),
-          ...officialDisableFindings(result.officialPluginDisables ?? []),
-          finding('info', 'runtime-limit', 'apply does not claim browser/client activation; run the final Host and browser acceptance gate'),
-        ]
-        : [
-          finding('ok', 'checkout', `${result.state.original.version} @ ${result.state.original.sha.slice(0, 12)} restored`),
-          finding('ok', 'dependencies', 'pre-update Harness and plugin dependency trees restored'),
-          finding('ok', 'artifacts', 'pre-update generated plugin artifacts restored'),
-        ]
-      printReport(report(`update ${action}`, findings, {
-        status: result.state.status,
-        rollbackPath: result.rollbackPath,
-        original: result.state.original,
-        target: result.state.target,
-        pluginBuilds: result.pluginBuilds,
-        pluginChecks: result.pluginChecks,
-        officialPluginDisables: result.officialPluginDisables ?? [],
-      }), options.json)
-      return 0
-    } catch (error) {
-      printReport(report(`update ${action}`, [finding('error', action, error instanceof Error ? error.message : String(error))]), options.json)
-      return 1
-    }
-  }
-  if (action === 'prepare' || action === 'verify') {
-    try {
-      const plan = collectUpdatePlan(root, options.target, process.env, action === 'prepare' ? options.pluginSources : [])
-      const result = action === 'prepare'
-        ? prepareUpdateCandidate(root, options)
-        : await verifyUpdateCandidate(root, options)
-      printReport(report(`update ${action}`, candidateFindings(action, result), candidateSummary(plan, result)), options.json)
-      return result.ok ? 0 : 1
-    } catch (error) {
-      printReport(report(`update ${action}`, [finding('error', action, error instanceof Error ? error.message : String(error))]), options.json)
-      return 1
-    }
+  if (action !== 'plan') {
+    printReport(report(`update ${action}`, [finding('error', 'core-source-immutable', 'CORE_SOURCE_IMMUTABLE: DSHX is an external-plugin tool. Harness source preparation, rebuilding, switching and rollback are disabled; only update plan is available.')]), options.json)
+    return 1
   }
   try {
     const plan = collectUpdatePlan(root, options.target, process.env, options.pluginSources)
@@ -146,16 +27,16 @@ export async function cmdUpdate(args: string[], options: CliOptions, root: strin
       plan.checkout.trackedChanges.length === 0
         ? finding('ok', 'tracked-tree', 'no tracked Harness changes')
         : officialDisableOnlyDirty(root, plan.checkout.trackedChanges, plan.officialPluginDisables)
-          ? finding('info', 'tracked-tree', `${plan.checkout.trackedChanges.length} tracked official-plugin disable(s) will be restamped after apply`, {
-            hint: 'these working-tree edits only keep official plugins disabled; they are not a blind-update loss',
+          ? finding('info', 'tracked-tree', `${plan.checkout.trackedChanges.length} tracked official-plugin disable(s) recorded`, {
+            hint: 'these existing edits are inventoried only; DSHX will not change official files',
           })
           : finding('error', 'tracked-tree', `${plan.checkout.trackedChanges.length} tracked Harness change(s) would be lost by a blind update`, {
-            hint: 'commit, stash, or migrate these changes explicitly; update never hides them',
+            hint: 'preserve these existing changes; this command only inventories them',
           }),
       ...plan.officialPluginDisables.disables.length === 0
         ? [finding('ok', 'official-plugin-disable', 'no user-disabled official plugins')]
         : plan.officialPluginDisables.disables.map(item => finding('info', 'official-plugin-disable', `${item.id} (${item.name}): ${item.surfaces.join(', ')}`, {
-          hint: 'apply keeps these disabled and reports the same list for you to judge',
+          hint: 'read-only inventory; no official source is modified',
         })),
       plan.checkout.targetCollisions.length === 0
         ? finding('ok', 'untracked-collisions', 'target does not overwrite discovered untracked paths')
@@ -163,15 +44,15 @@ export async function cmdUpdate(args: string[], options: CliOptions, root: strin
       finding('ok', 'plugins', `${plan.plugins.length} plugin entr${plan.plugins.length === 1 ? 'y' : 'ies'} inventoried`),
       ...plan.staleProfileDependencies.map(item => finding('warn', 'profile-local-missing', `${item.name}: inactive local dependency target is missing and was not staged`, {
         path: item.source,
-        hint: `profile records ${item.spec}; repair or remove that stale dependency before update apply`,
+        hint: `profile records ${item.spec}; repair or remove that stale plugin dependency through the plugin lifecycle`,
       })),
       ...plan.plugins.filter(plugin => !plugin.valid).map(plugin => finding('error', 'plugin-invalid', `${plugin.name}: ${plugin.issue ?? 'invalid plugin entry'}`, { path: plugin.path })),
       ...plan.plugins.filter(plugin => plugin.marker === 'logger-only').map(plugin => finding('warn', 'marker-unobservable', `${plugin.name}: marker uses a logger path that the current Harness launcher stdout may not expose`, {
         path: plugin.path,
-        hint: 'candidate verification will use a staging-only apply probe; source bytes stay unchanged',
+        hint: 'runtime verification requires an observable plugin marker',
       })),
       ...plan.supervisedHost ? [finding('warn', 'live-host', `supervised Host pid ${plan.supervisedHost.pid} is active on port ${plan.supervisedHost.port}`, {
-        hint: 'plan is read-only; prepare stays isolated and apply will require one controlled lifecycle action',
+        hint: 'plan is read-only; source-changing update stages are disabled',
       })] : [finding('ok', 'live-host', 'dshx is not supervising a Host')],
     ]
     for (const blocker of plan.blockers) {

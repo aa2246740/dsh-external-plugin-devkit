@@ -40,6 +40,9 @@ export interface CreatorContext {
   hostPid: number
   hostParentPid: number
   hostPort: number
+  hostProfile?: 'web' | 'desktop'
+  hostRoot?: string
+  hostHome?: string
   bridgeVersion: number
   workspaceRoot?: string
 }
@@ -203,6 +206,7 @@ export function readCreatorContext(env: NodeJS.ProcessEnv = process.env): Creato
     hostPid: positiveInteger(record.hostPid, 'hostPid'),
     hostParentPid: positiveInteger(record.hostParentPid, 'hostParentPid'),
     hostPort,
+    ...(record.hostProfile === 'desktop' ? { hostProfile: 'desktop' as const, hostRoot: boundedAbsolutePath(record.hostRoot, 'hostRoot'), hostHome: boundedAbsolutePath(record.hostHome, 'hostHome') } : {}),
     bridgeVersion,
     ...record.workspaceRoot === undefined
       ? {}

@@ -25,7 +25,7 @@ export async function cmdActivateNewClient(args: string[], options: CliOptions, 
   let transaction: ReturnType<typeof markCreatorActivationRunning> | undefined
   try {
     const context = readCreatorContext()
-    const patchPath = join(profileDir(resolveDshHome(), 'web'), 'cordis.patch.yml')
+    const patchPath = join(profileDir(resolveDshHome(), options.profile), 'cordis.patch.yml')
     const plugin = loadPlugin(root, raw)
     handle = beginCreatorActivation(root, plugin.id, patchPath, options.port, context)
     transaction = markCreatorActivationRunning(root, handle.transaction)

@@ -1,3 +1,4 @@
+import { discoverWebHosts } from './host-discovery.ts'
 import { spawn } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import {
@@ -66,7 +67,7 @@ const APP_RECOVERY_GRACE_MS = 2_000
 const guardianSleepCell = new Int32Array(new SharedArrayBuffer(4))
 
 export interface GuardianDesiredHost {
-  profile: 'web'
+  profile: 'web' | 'desktop'
   port: number
   plugin?: string
   overlay: string
@@ -235,7 +236,8 @@ export function clearGuardianState(root: string): void {
 }
 
 export function armGuardian(root: string, host: HostState, now = Date.now()): GuardianControl {
-  if (host.profile !== 'web') return readGuardianControl(root)
+  if (host.profile !== 'web' && host.profile !== 'desktop') return readGuardianControl(root)
+  const profile = host.profile
   return updateGuardianControl(root, (previous) => {
     // A replacement started by Guardian is process-owned by dshx but still
     // belongs to the adopted App launcher's lifetime. Preserve that lineage
@@ -254,7 +256,7 @@ export function armGuardian(root: string, host: HostState, now = Date.now()): Gu
       generation: randomUUID(),
       enabled: true,
       desired: {
-        profile: 'web',
+        profile,
         port: host.port,
         ...host.plugin ? { plugin: host.plugin } : {},
         overlay: host.overlay,
@@ -403,7 +405,12 @@ export async function adoptOrArmCreatorHost(
     throw new Error(`Creator+ Host identity is incomplete: ${processStartedAt.reason ?? `cannot read pid ${context.hostPid} start time`}`)
   }
   const home = resolveDshHome(dshEnv(root))
-  const hostRoot = resolve(root)
+  const hostRoot = context.hostProfile === 'desktop' ? context.hostRoot! : resolve(root)
+  if (context.hostProfile === 'desktop') {
+    const discovery = discoverWebHosts(root, home)
+    const hosts = discovery.hosts.filter(item => item.home === 'same')
+    if (!discovery.complete || hosts.length !== 1 || hosts[0]?.pid !== context.hostPid || hosts[0]?.launcher !== 'desktop' || hosts[0]?.rootPath !== hostRoot || hosts[0]?.port !== context.hostPort || context.hostHome !== home) throw new Error('Desktop Host identity is not proven')
+  }
   const existing = currentHost(root)
   let host: HostState
   let adopted = false
@@ -451,7 +458,7 @@ export async function adoptOrArmCreatorHost(
     if (!await checkPort(context.hostPort)) throw new Error(`Creator+ Host port ${context.hostPort} is not healthy`)
     host = {
       pid: context.hostPid,
-      profile: 'web',
+      profile: context.hostProfile ?? 'web',
       port: context.hostPort,
       overlay: '',
       logFile: guardianLogPath(root),
@@ -508,10 +515,10 @@ async function quarantineMissingClaimedPlugin(
   dependencies: GuardianDependencies,
 ): Promise<GuardianCycleResult | undefined> {
   const claim = listCreatorClaims(root, now).find(item => (
-    claimedPluginIntegrityFailure(root, item.pluginId, dependencies.dshHome) !== undefined
+    claimedPluginIntegrityFailure(root, item.pluginId, dependencies.dshHome ?? host.home, host.profile) !== undefined
   ))
   if (!claim) return undefined
-  const failure = claimedPluginIntegrityFailure(root, claim.pluginId, dependencies.dshHome)
+  const failure = claimedPluginIntegrityFailure(root, claim.pluginId, dependencies.dshHome ?? host.home, host.profile)
   if (!failure) return undefined
   const repaired = quarantineClaimedPlugin(
     root,
@@ -612,7 +619,7 @@ export async function recoverCreatorClientFailure(
           root,
           matchedClaims[0]!,
           report,
-          join(profileDir(resolveDshHome(), 'web'), 'cordis.patch.yml'),
+          join(profileDir(resolveDshHome(), observedHost.profile), 'cordis.patch.yml'),
           now,
         )
         if (transaction) confidence = 'probable'
@@ -681,7 +688,7 @@ export async function runGuardianCycle(root: string, dependencies: GuardianDepen
   }
 
   const pidIsAlive = Boolean(stored?.pid && alive(stored.pid))
-  const httpIsHealthy = pidIsAlive && stored!.profile === 'web' && await checkPort(stored!.port)
+  const httpIsHealthy = pidIsAlive && (stored!.profile === 'web' || stored!.profile === 'desktop') && await checkPort(stored!.port)
   if (readGuardianControl(root).generation !== generation) return { action: 'superseded' }
   if (pidIsAlive && httpIsHealthy) {
     const healthySince = control.healthySince ? Date.parse(control.healthySince) : now
@@ -698,6 +705,15 @@ export async function runGuardianCycle(root: string, dependencies: GuardianDepen
     return { action: 'healthy', host: stored }
   }
 
+  // Electron exclusively owns Desktop recovery. Never signal or spawn its Host.
+  if (control.desired.profile === 'desktop') {
+    const { transaction, confidence } = causalTransaction(root, control.desired.port, now)
+    const quarantine = transaction ? quarantineCreatorTransaction(root, transaction, now) : undefined
+    if (transaction) markCreatorTransactionRecovered(root, transaction, now)
+    if (!writeGuardianControlIfCurrent(root, generation, { ...control, enabled: false })) return { action: 'superseded' }
+    const incident = recordCreatorIncident(root, { reason: 'host-unhealthy', confidence, sessionIds: incidentSessions(root, transaction?.sessionId), summary: 'Desktop Host is unavailable. The app owns recovery; Guardian did not stop or restart it.', rollback: quarantine?.mode ?? 'none', previousPid: stored?.pid, port: control.desired.port }, now)
+    return { action: 'fused', incident }
+  }
   let recoveredElsewhere = false
   if (pidIsAlive) {
     const startedAt = Date.parse(stored!.startedAt)

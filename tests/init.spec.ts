@@ -62,7 +62,7 @@ describe('init scaffolds', () => {
     assert.equal(pkg.devDependencies['@deepseek-ai/dsh-client-ui-layout'], DSH_PEER_RANGE)
     assert.equal(pkg.devDependencies['@deepseek-ai/dsh-client-ui-renderer'], DSH_PEER_RANGE)
     assert.match(readFileSync(join(root, 'my-plugins/client-demo/tsdown.config.ts'), 'utf8'), /externalClientBundle/)
-    assert.match(readFileSync(join(root, 'my-plugins/client-demo/tsconfig.json'), 'utf8'), /tsconfig\.base\.client\.json/)
+    assert.doesNotMatch(readFileSync(join(root, 'my-plugins/client-demo/tsconfig.json'), 'utf8'), /references|tsconfig\.base\.client\.json/)
     const findings = checkPlugin(loadPlugin(root, 'client-demo'), root)
     assert.ok(findings.some(item => item.code === 'rc8-external-client-build' && item.level === 'ok'), JSON.stringify(findings, null, 2))
     assert.ok(findings.some(item => item.code === 'client-entry' && item.level === 'error'), JSON.stringify(findings, null, 2))

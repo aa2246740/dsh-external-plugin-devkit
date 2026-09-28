@@ -70,7 +70,7 @@ external dshx / Guardian
 
 # 固定 argv 合同
 
-DSHX 0.7.9 的 bundled bridge 提供九个固定工具；独立 `dsh-creator-mode-plus` 0.3.8 另提供无参数的 `dshx_browser_open`，共十个。两者均包含 `dshx_request_takeover`。不能仅刷新 skill 就声称新增工具已加载；必须核对实际注册和能力预检。工作台 Harness 钉是 `dsh-v0.1.7-rc.1`。插件 peer 范围是 `>=0.1.7-rc.1 <0.1.8`。
+DSHX 0.7.9 的 bundled bridge 提供九个固定工具；独立 `dsh-creator-mode-plus` 0.3.8 另提供无参数的 `dshx_browser_open`，共十个。两者均包含 `dshx_request_takeover`。不能仅刷新 skill 就声称新增工具已加载；必须核对实际注册和能力预检。工作台 Harness 钉是 `dsh-v0.1.7-rc.2`。插件 peer 范围是 `>=0.1.7-rc.1 <0.1.8`。
 
 九个模型可见工具分别只允许 `status`、`creator claim <id>`、
 `creator takeover <id> --json`（仅限用户问答后的一次性私有凭据）、

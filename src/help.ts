@@ -58,10 +58,7 @@ export const HELP = `dshx — DeepSeek Harness 进程外插件工作台
   which
   experiment
   update plan                   只读升级助手：官方目标、dirty 风险、插件矩阵与阻断项
-  update prepare               隔离构建目标 Harness 与全部插件（--target / --candidate / --plugin-source）
-  update verify                静态检查并逐个冷启动候选插件，可断点续跑
-  update apply                 事务化切换、全构建、插件依赖合成，并保留精确回滚
-  update rollback              恢复升级前 checkout、依赖树与插件生成物
+  update prepare|verify|apply|rollback  已禁用：CORE_SOURCE_IMMUTABLE（只允许插件开发）
 
 关键行为
   同一个真实 DSH_HOME 只允许一个长期 Web Host；App、dsh web、dshx 只是启动入口。
@@ -86,7 +83,7 @@ export const HELP = `dshx — DeepSeek Harness 进程外插件工作台
   --harness <path>              所有命令的 checkout 消歧器；显式值优先
   --dry-run / --print-prompt
   --task "..."
-  --target dsh-v0.1.7-rc.1     update 的显式官方 release tag；省略时使用工作台钉，不跟随更高的 alpha
+  --target dsh-v0.1.7-rc.2     update 的显式官方 release tag；省略时使用工作台钉，不跟随更高的 alpha
   --candidate <path>           update 候选 checkout 的显式路径
   --plugin-source name=/path   仅候选 staging 使用指定兼容源码；不改活动源，apply 会拒绝
 

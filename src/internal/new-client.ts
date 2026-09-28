@@ -424,10 +424,10 @@ export async function activateNewClient(
   timeoutMs: number,
   dependencies: ActivateNewClientDependencies = {},
 ): Promise<NewClientActivationResult> {
-  if (profile !== 'web') throw new Error('activate-new-client supports only the official Web profile')
+  if (profile !== 'web' && profile !== 'desktop') throw new Error('activate-new-client supports only the official Web profile')
   if (!Number.isInteger(port) || port < 1 || port > 65_535) throw new Error(`invalid Web Host port: ${port}`)
   const plugin = loadPlugin(root, raw)
-  if (plugin.profile !== profile) throw new Error(`${plugin.id} targets profile ${plugin.profile}, not ${profile}`)
+  if (plugin.profile !== profile && !(profile === 'desktop' && plugin.profile === 'web')) throw new Error(`${plugin.id} targets profile ${plugin.profile}, not ${profile}`)
   const sourcePackagePath = join(plugin.dir, 'package.json')
   if (!existsSync(sourcePackagePath)) throw new Error(`client package manifest missing: ${sourcePackagePath}`)
   const sourcePackage = loadJson<PackageJson>(sourcePackagePath)

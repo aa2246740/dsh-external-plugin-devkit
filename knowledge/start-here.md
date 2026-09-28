@@ -20,6 +20,9 @@ sources:
     title: Repository agent standing orders
 ---
 
+
+> 当前强制规则：DSH 官方源码与构建产物只读。插件工作不允许 Host patch、修改临时官方副本或重建官方子项目。`update prepare/verify/apply/rollback` 已禁用，仅保留 `update plan`；后文历史版本说明不解除该规则。
+
 # 你有一份知识库
 
 仓库里已经放好一份 **OKF v0.2 bundle**：

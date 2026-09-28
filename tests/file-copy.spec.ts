@@ -112,6 +112,8 @@ export function apply(ctx) {
     const findings = clientEntryFindings(tmp)
     assert.ok(findings.some(item => item.code === 'rc8-external-client-build' && item.level === 'error'), JSON.stringify(findings))
     assert.ok(findings.some(item => item.code === 'client-entry-id' && item.level === 'error'), JSON.stringify(findings))
+    writeText(join(tmp, 'tsdown.config.ts'), '// Official packages/client/tsdown.client.ts allowlist reference\n')
+    assert.equal(clientEntryFindings(tmp).some(item => item.code === 'rc8-external-client-build' && item.level === 'error'), false)
   })
 
   it('hashes artifact contents and preserves bundle precedence', () => {

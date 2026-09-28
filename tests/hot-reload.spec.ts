@@ -7,6 +7,7 @@ import {
   mkdtempSync,
   readFileSync,
   realpathSync,
+  renameSync,
   rmSync,
   statSync,
   symlinkSync,
@@ -173,6 +174,29 @@ function simulatedDependencies(test: ReturnType<typeof fixture>, failAfterTouch 
 }
 
 describe('controlled server plugin hot reload', () => {
+  it('keeps desktop journals in the development root while retaining immutable runtime identity', async (t) => {
+    const test = fixture()
+    t.after(() => rmSync(test.base, { recursive: true, force: true }))
+    const desktopProfile = join(test.home, 'profiles', 'desktop')
+    renameSync(test.profile, desktopProfile)
+    test.profile = desktopProfile
+    test.patchPath = join(desktopProfile, 'cordis.patch.yml')
+    const runtimeRoot = join(test.base, 'application.asar')
+    writeFileSync(runtimeRoot, 'immutable application bundle')
+    test.host.profile = 'desktop'
+    test.host.hostRoot = runtimeRoot
+    const dependencies = simulatedDependencies(test)
+    dependencies.discoverHosts = () => ({ complete: true, hosts: [{
+      pid: 4242, parentPid: 1, port: 43127, launcher: 'desktop', profile: 'desktop',
+      home: 'same', root: 'other', rootPath: runtimeRoot, processStartedAt: 'birth-4242',
+    }] })
+    const result = await hotReloadPlugin(test.root, 'desktop', 'demo', 43127, 2_000, dependencies)
+    assert.equal(result.journal.path, hotReloadJournalPath(realpathSync(test.root), UUID))
+    assert.equal(JSON.parse(readFileSync(result.journal.path, 'utf8')).host.root, runtimeRoot)
+    assert.equal(readFileSync(runtimeRoot, 'utf8'), 'immutable application bundle')
+    assert.equal(result.journal.cleanupProved, true)
+  })
+
   it('touches the ESM-resolved package export, proves same-PID HMR, and preserves concurrent patch edits', async (t) => {
     const test = fixture()
     t.after(() => rmSync(test.base, { recursive: true, force: true }))

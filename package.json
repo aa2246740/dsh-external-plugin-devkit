@@ -1,6 +1,6 @@
 {
   "name": "dsh-external-plugin-devkit",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "description": "Out-of-process DeepSeek Harness plugin devkit with Creator Mode+ session claims and an external self-recovery Guardian.",
   "type": "module",
   "license": "MIT",
@@ -33,7 +33,8 @@
   "scripts": {
     "dshx": "node --import tsx/esm src/cli.ts",
     "install:creator-plus": "node scripts/install-creator-plus.mjs",
-    "test": "node --import tsx/esm --test tests/*.spec.ts"
+    "test": "node --import tsx/esm --test tests/*.spec.ts",
+    "test:native": "node --test tests/native/*.spec.mjs"
   },
   "engines": {
     "node": "^22.19.0 || >=24.0.0"

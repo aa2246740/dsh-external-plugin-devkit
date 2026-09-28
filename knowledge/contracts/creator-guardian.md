@@ -151,3 +151,10 @@ Creator 会话的 bash guard 同时拒绝认领插件根、Harness link 与 acti
 正在激活、持有者状态无法核实、停止失败、确认取消或超时，都不会授予新会话权限。已开始的停止操作不会被自动恢复。可用外部 `dshx creator inspect <plugin> --json` 查看原认领及待处理交接；不要手删 claims 或 session.lock。`creator takeover` 是固定桥内部提交协议，缺少一次性凭据会拒绝，不能通过 `--force` 调用。
 
 租约到期只表示认领需要重新核验，不再自动授权第二个写入者。正常 `agent/disposed` 仍释放认领；移交中的 dispose 不得破坏正在比较的原认领。
+
+
+## Official Desktop profile support (local compatibility update)
+
+The fixed bridge derives `desktop`, its port, Home, and runtime root from the public `profileContext`; none becomes model input. The CLI preserves Web behavior. For Desktop, a per-invocation private capability returns only config entry identities, or authorizes one install/remove for the current claimed plain plugin. The owning Host calls the public `@deepseek-ai/dsh-plugin-manager/operations` `runPluginCommand` with its bundled package manager and official profile lock. New bundle activation is disabled; the existing checked watched-patch transaction still owns activation and removal. Capabilities expire, are revoked at operation completion and generation disposal, and are never returned in tool text.
+
+Guardian validates the Electron child identity and monitors the Desktop Host. It may quarantine an attributed plugin failure, but never stops, replaces, or restarts the Desktop Host. Electron owns that recovery and normal quit. Desktop HMR binds the discovered application root independently of the plugin-development checkout. Package imports, checked artifacts, claims, same-PID proof, and feature acceptance remain required.

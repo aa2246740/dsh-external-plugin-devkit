@@ -41,7 +41,7 @@ export interface HotReloadJournalRecord {
     pid: number
     processStartedAt: string
     port: number
-    profile: 'web'
+    profile: 'web' | 'desktop'
     home: string
     root: string
   }

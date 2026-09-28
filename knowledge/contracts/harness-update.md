@@ -1,7 +1,7 @@
 ---
 type: Contract
 title: Harness update assistant
-description: 官方 Harness release、全部本地插件、事务 apply 与精确 rollback 的分层门禁。
+description: 只读盘点官方版本与插件兼容清单，禁止通过插件工具构建或切换官方源码。
 tags: [dshx, update, harness, plugin, rollback, rc1]
 aliases: [update assistant, Harness 更新, update plan, update prepare, update verify, update apply, update rollback, client graph]
 status: stable
@@ -10,40 +10,10 @@ generated: { by: dshx/codex, at: 2026-09-04T03:20:00Z }
 stale_after: 2026-11-24
 ---
 
-# 状态机
+# 插件开发不切换 Harness 源码
 
-`plan → prepare → verify → apply` 是单向门禁；`rollback` 只处理已经建立的 apply 事务。任何一步失败都不能把后续状态说成成功。
+仅保留 `dshx update plan`，用于读取当前版本、官方目标版本和插件兼容清单。
 
-| 阶段 | 可见结果 | 明确不证明 |
-|---|---|---|
-| plan | 官方目标 tag/SHA、当前 branch/SHA、tracked dirty、用户禁用的官方插件清单、`my-plugins` 与活动 Web profile 的全部本地插件 | 目标可构建 |
-| prepare | 隔离 worktree 的 frozen install、Harness full build、全部插件 build | 当前 Harness 已更新 |
-| verify | 先隔离 cold boot 原生 Web，再逐个检查全部插件，最后按当前 profile cold boot 活动插件组合图；Web client 还要鉴权后的 graph row + bundle 200 | 组合 UI 或正式 Host 已激活 |
-| apply | 当前 checkout 切到 `dshx/<tag>`，实际依赖/Harness/插件全构建，回滚状态落盘，并把用户禁用的官方插件 restamp 后列入报告 | 正式 Host 已重启或用户行为已验收 |
-| rollback | 原 branch/SHA、根依赖、插件依赖和 `lib/` 恢复 | 升级后的数据迁移可逆（本合同不执行产品数据迁移） |
+`update prepare`、`verify`、`apply`、`rollback` 已由 CLI 无条件拒绝：`CORE_SOURCE_IMMUTABLE`。不会创建源码候选、重新构建官方包、切换 checkout 或执行源码回滚；`--force` 无例外。旧版的升级流水线文档不再构成执行授权。
 
-# 不变量
-
-- 只接受官方 `deepseek-ai/deepseek-harness` origin 和 `dsh-v*` release tag。省略 `--target` 时目标是工作台钉 `dsh-v0.1.7-rc.1`，不是 origin 上版本号更高的 alpha。
-- 新脚手架写入的 `@deepseek-ai/dsh` / `@deepseek-ai/dsh-*` peer 与 dev 范围是 `>=0.1.7-rc.1 <0.1.8`。Host 在导入插件前用这个范围对照运行时版本；`^0.1.5-rc.3` 接受不了 `0.1.7-rc.1`。
-- tracked Harness dirty、会被目标覆盖的 untracked 路径、无效插件清单都阻断 apply。唯一例外：工作区改动只是把用户已禁用的官方插件在出厂 preset 上保持 `disabled: true`。这类改动记在 `$DSH_HOME/.dshx/official-plugin-policy.json`，apply 切到官方树之后必须 restamp，不得把官方插件偷偷打开。
-- apply / plan 必须汇报用户禁用的官方插件清单（id、包名、所在 preset/patch 面、restamp 结果）。清单给用户判断；缺行报 warn，restamp 失败则 apply 失败并回滚。已记录的禁用只能被用户显式重新打开，升级不得删除。
-- `my-plugins` 的真实目录和 symlink，以及活动 Web profile 依赖中的本地 `file:` / `link:` 源都进入矩阵；同名或同一稳定 plugin ID 时 profile 的活动源优先，避免验证过期副本。两个活动 profile 包声明同一 ID 属于真实组合冲突，必须在 plan 阶段失败关闭。缺失的 profile 本地目标必须显式告警且不进入候选 staging。候选验证不改插件源字节。`dsh-external-plugin-devkit` 是 CLI / Creator+ 源，不是产品插件，盘点时跳过，避免 apply 把它的 `node_modules` 当成插件依赖搬空。
-- `update plan` / `prepare` 可用重复的 `--plugin-source name=/absolute/compatible/source` 显式替换候选 staging 源；替代源必须与活动源的 package name 和稳定 plugin ID 一致，state 会保留活动源与替代源的边界。它只证明隔离 candidate，`apply` 必须拒绝，直到用户将兼容源码显式提升为活动 profile 源。
-- Web client 必须通过当前原生 profile package resolution：本地包链接、package-name Loader row、启动 token 换得本地 cookie 后读取的官方 `globalThis["__DSH_BOOT__"]` 条目，以及可读取的 client bundle。候选 probe 精确采用 `exports["./client"]` 声明的 `.js` lazy-CJS 入口；脚手架默认是 `lib/client.js`，已经通过静态合同的手写 `src/client.js` 也不得因目录名被拒绝。
-- `verify` 必须逐个验证全部盘点插件，但 combined Web 只加载当前 profile 的 `dsh.profile.bundles` 与 profile/home patch 中未禁用 insert 点名的活动插件；仅安装为依赖、磁盘上的休眠或互斥实现不能被强行共载。vanilla Web 与活动组合 Web 任一 gate 缺失、失败或只证明 HTTP 可达，都不能 `apply`。
-- apply 前重新核对候选 SHA 与插件 source hash；任何漂移都要求重新 prepare/verify。
-- apply 时若安装、完整构建、任一插件构建或检查失败，自动恢复备份并把状态记为 `auto-rolled-back`。插件重建会从目标 checkout 链接 `@types/node` 和 `typescript`，不依赖插件 lockfile 是否自带 Node 类型。
-- live dshx-supervised Host 存在时 apply/rollback 都拒绝；更新助手不暗中 stop/restart 正式进程。
-
-# 命令
-
-```sh
-dshx update plan [--target dsh-vX.Y.Z-rc.N] [--plugin-source name=/absolute/source]
-dshx update prepare [--target ...] [--candidate /isolated/worktree] [--plugin-source name=/absolute/source]
-dshx update verify [--target ...] [--candidate /same/worktree]
-dshx update apply [--target ...]
-dshx update rollback --target ...
-```
-
-事务状态位于 `.dshx/update-assistant/<tag>/`。它是机器本地证据，不提交 Git。最终报告必须分别写：已实现、已通过本地检查、已通过真实运行时、尚未验证或需要人工操作。
+如用户要升级官方应用，应作为独立的官方应用维护任务处理；插件开发继续使用当前公开接口。不要以插件接口不足为理由自动升级或给 Host 打补丁。详见 [plugin-only](plugin-only.md)。

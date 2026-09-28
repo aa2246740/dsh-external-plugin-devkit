@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { describe, it } from 'node:test'
-import { DESK_HARNESS_TAG, DSH_PEER_RANGE, DSHX_VERSION } from '../src/internal/types.ts'
+import { DESK_HARNESS_SHA, DESK_HARNESS_TAG, DSH_PEER_RANGE, DSHX_VERSION } from '../src/internal/types.ts'
 
 describe('release version', () => {
   it('keeps the CLI, Guardian, package, and lockfile versions equal', () => {
@@ -17,6 +17,7 @@ describe('release version', () => {
     assert.equal(lock.version, pkg.version)
     assert.equal(lock.packages?.['']?.version, pkg.version)
     assert.equal(pkg.peerDependencies?.['@deepseek-ai/dsh'], DSH_PEER_RANGE)
-    assert.equal(DESK_HARNESS_TAG, 'dsh-v0.1.7-rc.1')
+    assert.equal(DESK_HARNESS_TAG, 'dsh-v0.1.7-rc.2')
+    assert.equal(DESK_HARNESS_SHA, '477b4f420553e8a52c2fbccc464d7561b239c443')
   })
 })
