@@ -1,6 +1,6 @@
 {
   "name": "dsh-external-plugin-devkit",
-  "version": "0.9.1",
+  "version": "0.9.3",
   "description": "Out-of-process DeepSeek Harness plugin devkit with Creator Mode+ session claims and an external self-recovery Guardian.",
   "type": "module",
   "license": "MIT",
@@ -68,7 +68,7 @@
     "typescript": "^6.0.3"
   },
   "peerDependencies": {
-    "@deepseek-ai/dsh": ">=0.1.7-rc.1 <0.1.8"
+    "@deepseek-ai/dsh": ">=0.2.0-rc.1 <0.2.1"
   },
   "peerDependenciesMeta": {
     "@deepseek-ai/dsh": {

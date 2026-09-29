@@ -6,17 +6,21 @@
 
 **This is not a Host feature plugin.** Do not install this repo with `dsh plugin add`. There is no Host install spec such as `github:aa2246740/dsh-external-plugin-devkit`.
 
-If you only run official DeepSeek Harness (for example **0.1.7-rc.2**) and you are not writing plugins: **skip this repository.** Stock DSH has no Creator Mode and no DSHX. Feature-plugin install lives in that plugin's own README.
+If you only run official DeepSeek Harness (for example **0.2.0-rc.2**) and you are not writing plugins: **skip this repository.** Stock DSH has no Creator Mode and no DSHX. Feature-plugin install lives in that plugin's own README.
 
 This repo is the **dshx CLI / workbench**. It is for **plugin authors who already have a [Harness checkout](https://github.com/deepseek-ai/deepseek-harness)** and want to write or maintain file-backed plugins outside the Host (Cursor, Claude Code, Codex, Grok, or a human).
 
 Official Creator Mode is for probing a live process. dshx is the other half: write the plugin as files, check the contract, name the layer you changed, then decide whether the Host restarts or the page reloads. **It is not `dsh`, not a Harness fork, and not a Creator Mode replacement.**
 
-0.9.1 targets official **0.1.7-rc.2**, adds Desktop Host discovery, profile operations and hot reload, and enforces the official-source boundary. `update plan` remains read-only; stages that modify Harness are disabled.
+0.9.2 targets official **0.2.0-rc.2**. `update plan` remains read-only; stages that modify Harness are disabled.
+
+## 0.9.2: desk pin is 0.2.0-rc.2
+
+The default target is `dsh-v0.2.0-rc.2` (SHA `639ed015397290b3745d163aafe02ffee4aa3f84`, official package `@deepseek-ai/dsh@0.2.0-rc.2`). The `@deepseek-ai/dsh` peer is `>=0.2.0-rc.1 <0.2.1`: it accepts this RC and rejects `0.2.0` alphas. Official client `INLINE_SAFE` is the same expression as `0.1.7-rc.2`.
 
 ## 0.9.1: RC2 and desktop support
 
-The default target is `dsh-v0.1.7-rc.2`. Desktop support covers Host identity, desktop profile selection, hot-reload transactions, and read-only profile inspection that emits row identities. Guardian leaves desktop recovery to the app.
+0.9.1's default target was `dsh-v0.1.7-rc.2`. Desktop support covers Host identity, desktop profile selection, hot-reload transactions, and read-only profile inspection that emits row identities. Guardian leaves desktop recovery to the app.
 
 Desktop profile installation and removal require the current Creator+ fixed tools and a Host-issued capability. The external CLI does not bypass that bridge. Validate Web and desktop profiles separately; each plugin still needs activation and behavior checks for its changed surface.
 
@@ -99,7 +103,7 @@ DSHX 0.7.3 fixes bundle-plugin removal ordering. The external supervisor runs `d
 
 Use `verify-boot` only when you need an isolated cold-boot proof. Use `sync-artifact` only when a package must land in the profile — it will say `ARTIFACT_SYNCED; LIVE_ACTIVATION_UNPROVEN` and stop there.
 
-DSHX 0.9.1 includes a Creator Mode+ user preset with nine fixed tools. Standalone Creator+ 0.3.8 adds `dshx_browser_open` for ten. On a claim conflict, call `dshx_request_takeover` in the current conversation; explicit user confirmation stops old work before transferring ownership. See [knowledge/contracts/creator-mode-plus.md](knowledge/contracts/creator-mode-plus.md).
+DSHX 0.9.2 includes a Creator Mode+ user preset with nine fixed tools. Standalone Creator+ 0.3.8 adds `dshx_browser_open` for ten. On a claim conflict, call `dshx_request_takeover` in the current conversation; explicit user confirmation stops old work before transferring ownership. See [knowledge/contracts/creator-mode-plus.md](knowledge/contracts/creator-mode-plus.md).
 
 More: [start here](knowledge/start-here.md) · [why work outside Creator Mode](knowledge/why-external.md) · [command surface](knowledge/references/dshx-cli.md) · [standing orders](AGENTS.md)
 
