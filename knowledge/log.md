@@ -2,7 +2,7 @@
 
 ## 2026-09-28
 
-* **0.9.2 Harness 0.2.0-rc.1**: desk update target is `dsh-v0.2.0-rc.1` (SHA `4878cdabd87d4041bdaff61d04c966883b9fd07a`, package `@deepseek-ai/dsh@0.2.0-rc.1`). `dshx update plan --target dsh-v0.2.0-rc.1` resolves that tag. Omitted `--target` does not float onto a later alpha. Peer range is `>=0.2.0-rc.1 <0.2.1` (accepts this RC, rejects 0.2.0 alphas). Client inline allowlist is unchanged from rc.2.
+* **0.9.2 Harness 0.2.0-rc.2**: desk update target is `dsh-v0.2.0-rc.2` (SHA `639ed015397290b3745d163aafe02ffee4aa3f84`, package `@deepseek-ai/dsh@0.2.0-rc.2`). `dshx update plan --target dsh-v0.2.0-rc.2` resolves that tag. Omitted `--target` does not float onto a later alpha. Peer range is `>=0.2.0-rc.1 <0.2.1` (accepts this RC, rejects 0.2.0 alphas). Client inline allowlist is unchanged from rc.2.
 
 ## 2026-09-24
 

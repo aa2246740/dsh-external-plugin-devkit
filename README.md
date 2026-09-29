@@ -6,17 +6,17 @@
 
 **这不是 Host 功能插件。** 不要用 `dsh plugin add` 装本仓库，也没有 `github:aa2246740/dsh-external-plugin-devkit` 这种 Host 安装命令。
 
-只跑官方 DeepSeek Harness（例如 **0.2.0-rc.1**）、不写插件的人：**跳过这个仓库。** 官方原装 DSH 没有 Creator Mode，也没有 DSHX；功能插件的安装写在那个插件自己的 README 里。
+只跑官方 DeepSeek Harness（例如 **0.2.0-rc.2**）、不写插件的人：**跳过这个仓库。** 官方原装 DSH 没有 Creator Mode，也没有 DSHX；功能插件的安装写在那个插件自己的 README 里。
 
 本仓库是 **dshx CLI / 工作台**。给**手里有一份 [Harness checkout](https://github.com/deepseek-ai/deepseek-harness)、要在仓外写或维护文件插件**的作者用（Cursor、Claude Code、Codex、Grok，或人自己跑）。
 
 官方 Creator Mode 适合在活进程里探针。dshx 管另一半：把插件写成文件、检查合同、看这次改的是哪一层，再决定要不要重启 Host、刷新页面。**不是 `dsh`，不是 Harness 的 fork，也不是 Creator Mode 的替代品。**
 
-0.9.2 对齐官方 **0.2.0-rc.1**。`update plan` 保留只读盘点；修改 Harness 的更新阶段已禁用。
+0.9.2 对齐官方 **0.2.0-rc.2**。`update plan` 保留只读盘点；修改 Harness 的更新阶段已禁用。
 
-## 0.9.2：工作台钉到 0.2.0-rc.1
+## 0.9.2：工作台钉到 0.2.0-rc.2
 
-工作台默认目标为 `dsh-v0.2.0-rc.1`（SHA `4878cdabd87d4041bdaff61d04c966883b9fd07a`，官方包 `@deepseek-ai/dsh@0.2.0-rc.1`）。`@deepseek-ai/dsh` peer 为 `>=0.2.0-rc.1 <0.2.1`：接受该 RC，拒绝 `0.2.0` alpha。官方客户端 `INLINE_SAFE` 与 `0.1.7-rc.2` 相同。
+工作台默认目标为 `dsh-v0.2.0-rc.2`（SHA `639ed015397290b3745d163aafe02ffee4aa3f84`，官方包 `@deepseek-ai/dsh@0.2.0-rc.2`）。`@deepseek-ai/dsh` peer 为 `>=0.2.0-rc.1 <0.2.1`：接受该 RC，拒绝 `0.2.0` alpha。官方客户端 `INLINE_SAFE` 与 `0.1.7-rc.2` 相同。
 
 ## 0.9.1：RC2 与桌面支持
 
