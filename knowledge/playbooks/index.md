@@ -10,7 +10,7 @@
 * [Hot-reconcile a config entry](hot-config-entry.md) - watched patch，同 PID mount/unmount/reconfigure
 * [Activate a user preset](activate-user-preset.md) - Host 不重启；新会话验证 preset generation
 * [Update an existing client bundle](update-existing-client-bundle.md) - rebuilt + 同页面行为；无需 Host restart
-* [Add a new client plugin](add-new-client-plugin.md) - Host 热挂后刷新/重开页面
+* [Add a new client plugin](add-new-client-plugin.md) - Host 热挂后验证当前页面 graph 同步
 * [Restart a server plugin](restart-server-plugin.md) - module 变更的安全默认分支
 * [Restart from outside](restart-outside.md) - 仅重启当前 supervised Host；禁止会话内杀宿主
 * [Verify an isolated cold boot](verify-boot.md) - dump + marker + HTTP；不是 live activation
@@ -19,3 +19,5 @@
 * [Diagnose model UX](diagnose-model-ux.md) - 超时 / retry 预算耗尽；RC8 默认五次
 * [Persist files, not memory](persist-files.md) - 交付物是磁盘
 * [Synchronize an artifact](ship-plugin.md) - link: / legacy file:；不证明 live activation
+
+* [Install a local RC2 bundle](install-local-bundle.md) - Web/Desktop 本地包安装，无需 npm

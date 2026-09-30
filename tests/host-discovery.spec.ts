@@ -7,6 +7,11 @@ const root = '/work/deepseek-harness'
 const source = join(root, 'apps/cli/src/bin.ts')
 
 describe('Web Host discovery', () => {
+  it('binds a published CLI to its installed runtime rather than the selected source checkout', () => {
+    const rows = parseWebProcessTable('900 1 /opt/node /runtime/node_modules/@deepseek-ai/dsh/lib/bin.js --profile web --port 44001', root)
+    assert.equal(rows[0]?.rootPath, '/runtime')
+    assert.equal(rows[0]?.profile, 'web')
+  })
   it('recognizes the official Desktop child with unquoted macOS app paths', () => {
     const app = '/Users/test/Applications/DeepSeek Harness.app/Contents'
     const runtime = `${app}/Resources/app.asar/dsh`

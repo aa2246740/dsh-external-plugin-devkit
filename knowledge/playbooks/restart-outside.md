@@ -14,7 +14,7 @@ sources:
 
 # 先问是否需要
 
-先读 [live activation](../contracts/live-activation.md)。只有 manifest / server 分支默认需要 Host restart。安全规则“只能从外面重启”不等于“每次改插件都要重启”。
+先读 [live activation](../contracts/live-activation.md)。RC2 bundle 可同 PID 重组，server 优先受控热替换；只有实际运行时证据明确要求重启才进入本流程。安全规则“只能从外面重启”不等于“每次改插件都要重启”。
 
 # 命令
 

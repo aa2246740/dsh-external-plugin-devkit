@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { describe, it } from 'node:test'
 import { activationDecision } from '../src/internal/activation.ts'
+import { activationCapabilities } from '../src/internal/activation-capabilities.ts'
 
 const facts = {
   id: 'demo',
@@ -10,6 +11,10 @@ const facts = {
   hasClient: true,
   inOfflineComposition: true,
   packageResolvable: true,
+  capabilities: activationCapabilities('0.2.0-rc.2', [
+    { id: 'hmr', name: '@deepseek-ai/dsh-hmr' },
+    { id: 'client-hmr', name: '@deepseek-ai/dsh-client-hmr' },
+  ], 'calling-host'),
 }
 
 describe('activation lifecycle decisions', () => {
@@ -24,13 +29,14 @@ describe('activation lifecycle decisions', () => {
   it('keeps watched patch updates in the current host process', () => {
     const decision = activationDecision('patch', facts)
     assert.equal(decision.hostRestart, 'not-required')
-    assert.equal(decision.browserReload, 'conditional')
+    assert.equal(decision.browserReload, 'not-required')
   })
 
-  it('treats profile manifest changes as next-boot composition', () => {
+  it('uses RC2 profile HMR for bundle changes on the current Host', () => {
     const decision = activationDecision('manifest', facts)
-    assert.equal(decision.hostRestart, 'required')
-    assert.match(decision.restartReason, /captured only when the Host boots/)
+    assert.equal(decision.hostRestart, 'not-required')
+    assert.match(decision.restartReason, /watches bundle selection/)
+    assert.equal(decision.browserReload, 'not-required')
   })
 
   it('rejects a plain dependency edit as manifest restart evidence', () => {
@@ -42,7 +48,7 @@ describe('activation lifecycle decisions', () => {
     })
     assert.equal(decision.hostRestart, 'not-required')
     assert.match(decision.restartReason, /dependency link alone/)
-    assert.match(decision.blockers.join(' '), /boot-captured bundle evidence/)
+    assert.match(decision.blockers.join(' '), /requires bundle evidence/)
   })
 
   it('discovers a user preset without restarting but requires a new session generation', () => {
@@ -58,8 +64,29 @@ describe('activation lifecycle decisions', () => {
     assert.equal(existing.browserReload, 'not-required')
     const added = activationDecision('new-client', facts)
     assert.equal(added.hostRestart, 'not-required')
-    assert.equal(added.browserReload, 'required')
+    assert.equal(added.browserReload, 'not-required')
     assert.match(added.preconditions.join(' '), /dependency.*prerequisite.*not make this a manifest branch/)
+  })
+
+  it('does not infer a restart or reload when runtime capability is unknown', () => {
+    const unknown = { ...facts, capabilities: undefined }
+    assert.equal(activationDecision('manifest', unknown).hostRestart, 'not-decided')
+    assert.equal(activationDecision('new-client', unknown).browserReload, 'not-decided')
+  })
+
+  it('keeps a profile without HMR and a page without graph sync explicit', () => {
+    const unsupported = { ...facts, capabilities: activationCapabilities('0.2.0-rc.2', [], 'calling-host') }
+    assert.equal(activationDecision('manifest', unsupported).hostRestart, 'required')
+    assert.equal(activationDecision('new-client', unsupported).browserReload, 'required')
+  })
+
+  it('does not substitute RC2 checkout assumptions for an older calling runtime', () => {
+    const old = { ...facts, capabilities: activationCapabilities('0.1.7-rc.2', [
+      { id: 'hmr', name: '@deepseek-ai/dsh-hmr' },
+      { id: 'client-hmr', name: '@deepseek-ai/dsh-client-hmr' },
+    ], 'calling-host') }
+    assert.equal(activationDecision('manifest', old).hostRestart, 'not-decided')
+    assert.equal(activationDecision('new-client', old).browserReload, 'not-decided')
   })
 
   it('provides bounded hot reload as the next server operation without claiming activation or restart authority', () => {

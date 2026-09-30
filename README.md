@@ -12,13 +12,13 @@
 
 官方 Creator Mode 适合在活进程里探针。dshx 管另一半：把插件写成文件、检查合同、看这次改的是哪一层，再决定要不要重启 Host、刷新页面。**不是 `dsh`，不是 Harness 的 fork，也不是 Creator Mode 的替代品。**
 
-0.9.4 对齐官方 **0.2.0-rc.2**，修复 npm 安装后的命令启动入口。`update plan` 保留只读盘点；修改 Harness 的更新阶段已禁用。
+0.9.5 新增官方 Web/Desktop 本地 bundle 安装，并按 RC2 的 profile HMR 与 client graph 同步能力修正激活判断。`update plan` 保留只读盘点；修改 Harness 的更新阶段已禁用。
 
 ## npm 命令入口
 
 ```sh
-npx --yes dsh-external-plugin-devkit@0.9.4 --version
-npx --yes dsh-external-plugin-devkit@0.9.4 --help
+npx --yes dsh-external-plugin-devkit@0.9.5 --version
+npx --yes dsh-external-plugin-devkit@0.9.5 --help
 ```
 
 npm 包现在用 JavaScript 入口加载自带的 `tsx` 依赖，解决 Node.js 无法直接执行 `node_modules` 中 TypeScript 入口的问题。实际开发仍需下面的 Harness 工作台配置；不要把 DSHX 当功能插件安装进 Host。
@@ -91,7 +91,7 @@ dshx update plan
 
 ## 没有万能热重载
 
-改 watched patch、下次启动的 bundle、用户 preset、已经在页面里的 client、新的 client 入口、服务端模块，或只是拷了产物——这七种不是同一个动作。默认保持同一个 DSH PID。普通 dependency 不是 `manifest`，也不是重启理由。
+改 watched patch、profile bundle、用户 preset、已经在页面里的 client、新的 client 入口、服务端模块，或只是拷了产物——这七种不是同一个动作。默认保持同一个 DSH PID。普通 dependency 不是 `manifest`，也不是重启理由。
 
 ```sh
 dshx kb cat contracts/live-activation
@@ -129,3 +129,13 @@ MIT。DeepSeek Harness 是另一个项目。这里和 DeepSeek 没有隶属关�
 ### Creator Shell 回归验证
 
 修改 Creator 守卫后，运行 `DSHX_HARNESS=<absolute-checkout> npm run test:native`。测试使用真实 Cordis、Agent、工具和沙箱，在临时本地 Git 仓库完成提交、打标签与推送；不需要 GitHub 凭据。沙箱不可用时测试失败，不回退到无隔离执行。
+
+## RC2 本地插件安装
+
+官方 Desktop 支持本地包，无需先发 npm。构建完成且 `package.json` 声明 `dsh.bundle.patch` 后：
+
+```sh
+dshx plugin add /absolute/path/to/plugin --profile desktop --port <当前端口>
+```
+
+命令使用当前 Host 的官方插件管理接口和私密认证交接。RC2 能在相同进程内合成新 bundle，并把新 client 行同步到当前页面。仍须操作插件验证功能。Creator+ 的 plain 开发插件继续认领后调用固定 `dshx_activate_new_client`，不要重复 bundle 挂载。详见 [本地安装](knowledge/playbooks/install-local-bundle.md)。

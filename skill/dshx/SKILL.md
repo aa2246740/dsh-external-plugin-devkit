@@ -26,7 +26,7 @@ DSHX 与 Creator Mode+ 只用于独立外部插件。官方 Harness 源码、内
 
 Use `dshx` for profile-scoped, file-backed plugins developed by an external agent or through the optional Creator Mode+ safe bridge. The CLI and Guardian outside DSH are the supervisor; the updated Creator Mode+ bridge exposes ten fixed operations when the session-browser-open capability is present, including plugin claims, bounded new-client activation, `dshx_hot_reload`, and source-preserving safe removal, but never process control. Require the matching bridge capability before using the new tool. Do not transfer the original Creator Mode's in-memory lifecycle assumptions to external packages.
 
-Use a **same-PID default** for plugin work. Select the branch by the runtime surface that must change, not by prerequisite files a command happens to write. A plain profile dependency provides module resolution; it is not manifest activation or restart evidence. A first Web client remains `new-client`: hot-mount the Host row, keep the DSH PID, then reopen the page. Missing server module-HMR evidence means `not-decided`, not restart-required. An otherwise valid server plan succeeds and supplies the bounded hot-reload next action; actual target/Host gates still run in that operation. For a checked existing server plugin, follow `playbooks/restart-server-plugin` and the bounded `hot-reload` command. A failed hot reload does not authorize a Host restart.
+Use a **same-PID default** for plugin work. Select the branch by the runtime surface that must change, not by prerequisite files a command happens to write. A plain profile dependency provides module resolution; it is not manifest activation or restart evidence. A first Web client remains `new-client`: hot-mount the Host row, keep the DSH PID, then observe the current page. RC2 client HMR synchronizes new graph rows; reload only when that transport is unavailable. Missing server module-HMR evidence means `not-decided`, not restart-required. An otherwise valid server plan succeeds and supplies the bounded hot-reload next action; actual target/Host gates still run in that operation. For a checked existing server plugin, follow `playbooks/restart-server-plugin` and the bounded `hot-reload` command. A failed hot reload does not authorize a Host restart.
 
 For a multi-file server, declare the exact package-relative runtime entry/helper files in `dshx.yml` under `hotReload.artifacts` before check. Entry-only replacement can leave old helpers cached. Require hashes for the complete declared set and test the changed behavior. Root scope is the default and the only fixed Creator-tool scope. External self-upgrade follows the server playbook: use `--scope preset` for a private-only module, or explicit `--scope mixed` when one root mount shares that exact module with private session instances. Both replace the complete named module instance set and require same-session proof; they never authorize managed-shell bypass or a new Host.
 
@@ -70,7 +70,7 @@ The updated standalone Creator+ can call the no-argument `dshx_browser_open` aft
 
 For browser/WebUI 401 errors or autonomous browser testing, read `kb cat contracts/browser-access`. Run `browser status` to separate current-Host authentication from browser readiness. External `browser open` uses an explicitly configured adapter for the Agent's permitted browser runtime; the Codex smoke adapter is `examples/browser/codex-smoke.mjs`. Creator watch/claim refreshes the private current-Host handoff. Preserve `WEB_AUTH_REQUIRED` when no credential source exists; a bare port is not authentication.
 
-Creator+ obtains current-Host authentication through the official Connection service and keeps credentials inside the bridge. `WEB_AUTH_REQUIRED` is a bridge/launcher authentication blocker, not proof that the plugin is broken. Preserve source and the claim, report the exact blocker, and retry the fixed tool after the bridge is repaired. Keep Host authentication enabled; never ask for a token in chat or scan credential stores/logs. External DSHX launchers can pass `DSHX_WEB_STARTUP_URL` privately for the selected loopback Host. Activation success still requires a page reload for a new client, then a real user workflow before claiming delivery.
+Creator+ obtains current-Host authentication through the official Connection service and keeps credentials inside the bridge. `WEB_AUTH_REQUIRED` is a bridge/launcher authentication blocker, not proof that the plugin is broken. Preserve source and the claim, report the exact blocker, and retry the fixed tool after the bridge is repaired. Keep Host authentication enabled; never ask for a token in chat or scan credential stores/logs. External DSHX launchers can pass `DSHX_WEB_STARTUP_URL` privately for the selected loopback Host. RC2 client HMR can load a new client on the current page. Observe that page and a real user workflow before claiming delivery; reload only if its graph transport is unavailable.
 
 ## Resolve the checkout
 
@@ -108,6 +108,16 @@ continue with an external-plugin design. Official application maintenance is a
 separate product workflow, not a plugin implementation step. Read
 `contracts/plugin-only` and `contracts/harness-update` before proposing it.
 
+## Install a local RC2 plugin
+
+First distinguish a bundle from a plain watched development plugin. Official Desktop accepts local packages; npm publication is not required. Read `kb cat playbooks/install-local-bundle`.
+
+- External Agent + built package with `dsh.bundle.patch`: run `dshx plugin add /absolute/package --profile desktop --port <current-port>` (or the current Web profile). `--dry-run` checks local shape without installation. The command uses the current Host's authenticated public manager and verifies the local link, bundle selection and same-PID result. Private launcher input or a current DSHX browser binding supplies authentication.
+- Creator+ session + plain plugin: claim it and use fixed `dshx_activate_new_client`. Its private Desktop capability belongs to that invocation; external Agents never reuse it.
+- External Web + plain plugin: use the existing `activate-new-client` watched transaction.
+
+`init --kind client` creates a plain plugin. A bundle needs its own `dsh.bundle.patch` declaration and insert patch. Never mount the same plugin through both routes. Do not publish to npm, change a version to a registry version, or edit official core merely to install local code. `WEB_AUTH_REQUIRED` requires repairing the private handoff; never ask for tokens in chat.
+
 ## Classify activation before acting
 
 When the target already exists, is build-ready, and the request involves installation, delivery, HMR, hot-plugging, refresh, or restart, run:
@@ -125,11 +135,11 @@ Choose exactly one changed-surface branch:
 
 | Branch | Action | Host restart | Browser reload |
 |---|---|---|---|
-| `patch` | Edit the watched profile/home `cordis.patch.yml`; verify Host-tree reconcile | No | Only if this adds a client entry |
-| `manifest` | Change boot-captured `dsh.profile.bundles` / package `dsh.bundle`; verify after the next boot | Yes, with boot-capture evidence | Verify client separately |
+| `patch` | Edit the watched profile/home `cordis.patch.yml`; verify Host-tree reconcile | No | RC2 graph sync can update the current page |
+| `manifest` | Use official bundle installation/selection and verify its `application` result | No with verified RC2 profile HMR; unknown stays undecided | Verify current-page graph sync and behavior |
 | `preset` | Write a user-owned preset, preserve its composition stamp when bytes are unchanged, then verify it in a new/blank session | No, when process-global resources are generation-safe | Only if the current page cached the roster |
 | `client` | Rebuild an already-rostered `lib/client.js`; observe client HMR and same-page behavior | No | No; plugin React-local state resets |
-| `new-client` | Hot-activate the Host patch entry, then reload/reopen the page for the new graph row | No | Yes |
+| `new-client` | Hot-activate the Host patch entry, then observe the current-page graph and UI | No | Only when graph transport is unavailable |
 | `server` | Check artifacts, then bounded official module HMR via `hot-reload`; unknown remains pending | No automatic restart | Conditional |
 | `artifact` | Synchronize bytes or a plain dependency only; activation is separate | No for this step | No for this step |
 
@@ -141,7 +151,7 @@ For `new-client`, do not hand-edit the profile manifest and watched patch as sep
 ./scripts/dshx.sh activate-new-client <plugin> --profile web --port <current-web-port>
 ```
 
-The command owns the order: official profile link, resolvability proof, bounded import preparation through official HMR, watched-patch insert/retrigger, current Host manifest proof. Preparation refreshes only the unmounted package's checked files, removes its temporary observer and HMR instance, and keeps the same Host PID. This lets a corrected plugin recover from a previously cached import failure. Exit 0 proves through `CLIENT_MANIFEST_PRESENT`; reload the page and verify UI separately. On failure, fix the named source, configuration or access problem and retry this command. Continue independent authorized work while a specific check is blocked.
+The command owns the order: official profile link, resolvability proof, bounded import preparation through official HMR, watched-patch insert/retrigger, current Host manifest proof. Preparation refreshes only the unmounted package's checked files, removes its temporary observer and HMR instance, and keeps the same Host PID. This lets a corrected plugin recover from a previously cached import failure. Exit 0 proves through `CLIENT_MANIFEST_PRESENT`; observe the current page and verify UI separately. A graph snapshot alone is not feature acceptance. On failure, fix the named source, configuration or access problem and retry this command. Continue independent authorized work while a specific check is blocked.
 
 Read only the selected branch:
 

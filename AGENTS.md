@@ -29,10 +29,10 @@ A search snippet is only an id pointer. Read the matched document and its offici
 Before any install, ship, HMR, refresh, or restart advice, use a same-PID default, read knowledge/contracts/live-activation.md, and classify the changed runtime surface. A plain dependency write is a resolution prerequisite, not manifest activation or restart evidence:
 
 - patch: watched config-tree reconciliation; no Host restart.
-- manifest: boot-captured `dsh.profile.bundles` / package `dsh.bundle` composition; Host restart requires that exact evidence.
+- manifest: RC2 profile HMR reconciles bundle selection on the same Host. Verify the actual runtime/provider and official manager outcome; unknown capability does not authorize restart.
 - preset: user preset discovery; no Host restart, verify in a new/blank session.
 - client: existing page entry client HMR; no Host restart or page reload.
-- new-client: Host patch can reconcile live; browser page reload required.
+- new-client: Host patch and RC2 client graph can reconcile live. Observe the current page; reload only when its graph transport is unavailable.
 - server: missing module-HMR evidence means activation is undecided, not restart-required. Prefer the bounded hot-reload transaction and prove same-PID replacement; its failure does not authorize a restart.
 - artifact: bytes or dependency-only work; no restart for this step, activation remains separate.
 
@@ -60,6 +60,22 @@ can consume stale configuration.
 Keep `DSHX_VERSION` equal to `package.json`. `ensureGuardian` may replace a
 fresh, live older Guardian through one bounded handoff; stale or unverifiable
 PID state must fail closed without sending a signal.
+
+## Release and local installation completion
+
+An authorized formal release includes matching GitHub main/tag/Release and npm
+publication. Verify the public version, dist-tag, downloaded artifact and actual
+CLI or plugin installation before reporting completion.
+
+On the development machine, also inventory the active CLI, selected Harness,
+already-installed Agent skill links, and Creator Mode+ runtime resolution.
+Synchronize the intended local installations with the released checkout. Run
+`dshx which` and resolve every stale installed skill target; a missing optional
+integration is different from an installed integration pointing at an older
+release. Verify the launcher bytes/version and Creator Mode+ bridge compatibility.
+Preserve unrelated Agent configuration, source work and running Hosts. Existing
+Agent conversations must re-read the updated skill to replace cached guidance.
+GitHub/npm success alone is not evidence that this local synchronization happened.
 
 ## Use evidence-scoped commands
 

@@ -28,7 +28,7 @@ export function cmdActivationPlan(args: string[], options: CliOptions, root: str
         ? finding('info', 'bundle-declaration', 'package declares dsh.bundle')
         : finding('info', 'bundle-declaration', 'package does not declare dsh.bundle'),
       facts.bundleRegistered
-        ? finding('ok', 'bundle-registration', `dsh.profile.bundles contains ${facts.packageName} (captured at host boot)`)
+        ? finding('ok', 'bundle-registration', `dsh.profile.bundles contains ${facts.packageName}; live application is verified separately`)
         : finding('info', 'bundle-registration', `dsh.profile.bundles does not contain ${facts.packageName}`),
       facts.profilePatchEntry || facts.homePatchEntry
         ? finding('ok', 'watched-patch-entry', `stable id ${facts.id} appears in ${facts.profilePatchEntry ? 'profile' : 'home'} cordis.patch.yml`)

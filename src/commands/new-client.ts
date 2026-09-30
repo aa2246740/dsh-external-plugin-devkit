@@ -11,6 +11,7 @@ import { profileDir, resolveDshHome } from '../internal/paths.ts'
 import { loadPlugin } from '../internal/plugin.ts'
 import type { CliOptions } from '../internal/types.ts'
 import { join } from 'node:path'
+import { inspectActivation, activationDecision } from '../internal/activation.ts'
 
 /** Link, hot-mount, and prove one newly built external Web client without process control. */
 export async function cmdActivateNewClient(args: string[], options: CliOptions, root: string): Promise<number> {
@@ -30,6 +31,10 @@ export async function cmdActivateNewClient(args: string[], options: CliOptions, 
     handle = beginCreatorActivation(root, plugin.id, patchPath, options.port, context)
     transaction = markCreatorActivationRunning(root, handle.transaction)
     const result = await activateNewClient(root, options.profile, raw, options.port, options.timeoutMs)
+    let browserReloadDecision: 'required' | 'not-required' | 'conditional' | 'not-decided' = 'not-decided'
+    // The completed Host transaction remains successful if this optional
+    // capability inspection is unavailable. Page verification stays required.
+    try { browserReloadDecision = activationDecision('new-client', inspectActivation(root, options.profile, raw)).browserReload } catch {}
     finishCreatorActivation(root, transaction, { ok: true, hostAlive: true })
     const output = report('activate-new-client', [
       finding('ok', 'source-built', `SOURCE_BUILT: ${result.packageName} passed dshx client handoff checks`, { path: result.packageDir }),
@@ -38,12 +43,14 @@ export async function cmdActivateNewClient(args: string[], options: CliOptions, 
       finding('ok', 'watched-patch', `${result.patchAction === 'inserted' ? 'inserted' : 'retriggered'} stable Host row ${result.id}`, { path: result.patchPath }),
       finding('ok', 'host-tree-active', `HOST_TREE_ACTIVE: current Web Host manifest contains ${result.hostEntry.id}`),
       finding('ok', 'client-manifest-present', `CLIENT_MANIFEST_PRESENT: ${result.hostEntry.clientUrl}`),
-      finding('info', 'browser-reload-required', 'Reload/reopen the official WebUI now; this command does not control the browser.'),
-      finding('info', 'client-loaded-unproven', 'CLIENT_LOADED and VISUAL_BEHAVIOR_VERIFIED are not claimed until the reloaded page is observed.'),
+      finding('info', 'client-graph-verification', 'RC2 client HMR can synchronize the new row on the current page. Observe that page first; reload only when its graph transport is unavailable.'),
+      finding('info', 'client-loaded-unproven', 'CLIENT_LOADED and VISUAL_BEHAVIOR_VERIFIED require observing the page; the Host manifest alone does not prove them.'),
     ], {
       evidence: ['SOURCE_BUILT', 'ARTIFACT_SYNCED', 'NEXT_BOOT_REGISTERED', 'HOST_TREE_ACTIVE', 'CLIENT_MANIFEST_PRESENT'],
       hostRestart: false,
-      browserReload: true,
+      browserReload: browserReloadDecision === 'required',
+      browserReloadDecision,
+      clientVerificationRequired: true,
       result,
     })
     printReport(output, options.json)

@@ -49,7 +49,7 @@ dshx activation-plan demo --change patch
 
 # 何时重启
 
-只在 manifest / server 分支。先 dshx status 确认当前 owned PID，再 restart-supervised。patch、已有 client HMR、新 client 的 Host 行都不应为了“保险”重启整个 Host；新 client 只需另外刷新页面。
+先核对实际运行时和官方操作结果。RC2 bundle、watched patch 和 client graph 可以同 PID 更新，server 优先受控热替换。只有明确的启动边界或恢复证据才进入外部重启流程；能力未知不授权重启。
 
 # 禁止
 

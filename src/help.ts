@@ -8,16 +8,16 @@ export const HELP = `dshx — DeepSeek Harness 进程外插件工作台
 
 分支
   patch       真实 profile/home cordis.patch.yml 被监听；Host 同 PID 热重组
-  manifest    dsh.profile.bundles / package dsh.bundle 是启动时捕获的组合；需要 Host restart
+  manifest    RC2 profile HMR 可同 PID 重读 bundle；以实际运行时能力和官方安装结果为准
   preset      用户 preset 每次重新发现；Host 不重启，使用新会话，已缓存名单时刷新页面
   client      当前页面已有 entry 的 lib/client.js；client HMR，不重启 Host、不刷新页面
-  new-client  Host entry 可热挂；旧页面不采纳 graph 新行，必须刷新/重开页面
+  new-client  RC2 Host 与 client graph 可热更新；先验证当前页面，传输不可用时再刷新
   server      缺少 module HMR 证据则保持未确定；受控 hot-reload 通过后验证功能
   artifact    只同步字节或普通依赖；本步不重启，live activation 仍未证明
 
 分支防误判
   普通 profile dependency 只是解析前提，不是 manifest activation，也不是重启理由。
-  首次 Web client 即使会写 dependency，仍走 new-client：Host 不重启，只刷新/重开页面。
+  首次 Web client 即使会写 dependency，仍走 new-client：Host 不重启，再验证当前页面的新行和功能。
   缺少 server HMR 证据表示未确定，不授权重启；优先受控 hot-reload 并验证同 PID。
 
 推荐闭环
@@ -40,6 +40,7 @@ export const HELP = `dshx — DeepSeek Harness 进程外插件工作台
   activation-plan <target>      只读 inventory；--change 选择生命周期分支
   activate-new-client <plugin>  固定顺序 link → watched patch → 当前 Host manifest；不重启、不刷新页面
   hot-reload <plugin>           检查后受控替换已加载服务端模块；同 PID，功能另验；外部可显式 --scope preset|mixed
+  plugin add <local-dir>        外部安装本地 bundle；--profile web|desktop --port <当前端口>；无需 npm
   plugin remove <package>       同名 Loader id 的 bundle 安全卸载：live disable → 同 PID absence → 官方 remove
   overlay [name]                生成一次性绝对 --patch 文件；该文件不受 user-patch watcher 监听
   dump [name]                   离线合成；退出 0 不是 boot/live 证明
@@ -120,7 +121,7 @@ export const LOOP = `外部插件开发闭环
    client     → kb cat playbooks/update-existing-client-bundle
    new-client → activate-new-client <plugin> --profile web --port <当前端口>
    server     → kb cat playbooks/restart-server-plugin
-   manifest   → 只有 boot-captured bundle composition 才在下一次 Host boot 后验证
+   manifest   → 核对 RC2 profile HMR 与官方 manager 的 application 结果
 
 7. 分开验收
    Host tree active 不等于 client loaded。

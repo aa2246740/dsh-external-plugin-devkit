@@ -109,7 +109,7 @@ contract error。到这里仍只有 `SOURCE_BUILT`，不是 live UI 证明。
 # 激活仍走生命周期分支
 
 - 当前页面已有 package id：走 `client`，观察 `rebuilt` 与同页行为。
-- 第一次加入 package id：走 `new-client`，先验 Host 行，再刷新/重开页面。
+- 第一次加入 package id：走 `new-client`，先验 Host 行，再观察 RC2 当前页面的 graph 同步和实际功能。
 - 只复制产物：仍是 `ARTIFACT_SYNCED; LIVE_ACTIVATION_UNPROVEN`。
 
 构建边界不改变 [live activation](live-activation.md) 的 restart/reload 结论。

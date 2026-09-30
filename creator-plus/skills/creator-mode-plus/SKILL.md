@@ -20,7 +20,7 @@ Build file-backed plugins against the official DeepSeek Harness browser WebUI th
 
 ## Authenticated Host proof
 
-Creator+ obtains current-Host authentication through the official Connection service and keeps credentials inside the bridge. `WEB_AUTH_REQUIRED` is a bridge/launcher authentication blocker, not proof that the plugin is broken. Preserve source and the claim, report the exact blocker, and retry the fixed tool after the bridge is repaired. Keep Host authentication enabled; never ask for a token in chat or scan credential stores/logs. External DSHX launchers can pass `DSHX_WEB_STARTUP_URL` privately for the selected loopback Host. Activation success still requires a page reload for a new client, then a real user workflow before claiming delivery.
+Creator+ obtains current-Host authentication through the official Connection service and keeps credentials inside the bridge. `WEB_AUTH_REQUIRED` is a bridge/launcher authentication blocker, not proof that the plugin is broken. Preserve source and the claim, report the exact blocker, and retry the fixed tool after the bridge is repaired. Keep Host authentication enabled; never ask for a token in chat or scan credential stores/logs. External DSHX launchers can pass `DSHX_WEB_STARTUP_URL` privately for the selected loopback Host. RC2 client HMR can load a new client on the current page. Observe that page and a real user workflow before claiming delivery; reload only if its graph transport is unavailable.
 
 ## Workflow
 
@@ -36,7 +36,7 @@ Creator+ obtains current-Host authentication through the official Connection ser
    - `client`: rebuild the already-rostered client and observe same-page HMR; do not call the new-client tool.
    - `preset`: write only a user preset and verify it in a new/blank session.
    - `server`: `hostRestart: not-decided` means missing activation evidence, not restart-required. Preserve the claim and checked source, and hand exact target/scope evidence to the external supervisor for bounded official module HMR. Root Loader replacement does not prove preset-private bridge replacement. Do not invoke raw mutating CLI commands from this session.
-   - `manifest`: identify the boot-captured composition boundary before handing off to the external supervisor. Launcher identity alone never authorizes a restart; this session cannot restart its Host.
+   - `manifest`: verify RC2 profile HMR and the official manager outcome before handing the bundle operation to the external supervisor. Launcher identity alone never authorizes a restart; this session cannot restart its Host.
    - `patch` or `artifact`: follow the plan literally; neither result alone proves browser activation.
 9. After successful `new-client`, browser testing remains a task-time Agent or user-prompt decision; Creator Mode+ does not require a particular browser tool. Claim `CLIENT_LOADED` or `VISUAL_BEHAVIOR_VERIFIED` only after direct browser observation or an explicit live user report. A user report that the requested behavior works ends speculative diagnosis and further mutation.
 10. Report only observed layers: `SOURCE_BUILT`, `ARTIFACT_SYNCED`, `NEXT_BOOT_REGISTERED`, `HOST_TREE_ACTIVE`, `CLIENT_MANIFEST_PRESENT`, `CLIENT_LOADED`, `VISUAL_BEHAVIOR_VERIFIED`.

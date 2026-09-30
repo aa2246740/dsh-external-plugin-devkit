@@ -40,7 +40,7 @@ sources:
 
 二者不是同一物。`dsh plugin add` 成功后会把声明了 `dsh.bundle` 的依赖提升进 bundles。原先手写的 `insert` 不会自动删，于是 [duplicate loader id](../pitfalls/duplicate-loader-id.md)。
 
-Host 启动时读取并展开 bundle 层；运行中的 user-patch watcher 复用这份已捕获的 bundle patches，只重读 profile/home `cordis.patch.yml`。所以 manifest / bundle 文件变更是 **next boot**，用户 patch 行才是同进程热重组面。见 [live activation](live-activation.md)。
+RC2 的 profile HMR 监听 profile `package.json` 和配置文件，重新读取 bundle 清单与 patch 并在同一 Host 内合成。官方插件管理页的安装/启用操作会等待重组并返回 `application`。新 bundle 可返回 `applied`；替换已安装包的代码可能返回 `restart-required`，不可把两者混为一谈。见 [live activation](live-activation.md)。
 
 # 看树
 

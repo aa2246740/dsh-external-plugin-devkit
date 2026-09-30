@@ -7,6 +7,9 @@ import { loadJson, loadYaml } from './io.ts'
 import { profileDir, resolveDshHome } from './paths.ts'
 import { loadPlugin } from './plugin.ts'
 import type { ActivationChange, PluginManifest, ProfileName } from './types.ts'
+import { readCreatorContext } from './creator.ts'
+import { activationCapabilities, runtimeVersion, type ActivationCapabilities } from './activation-capabilities.ts'
+import { discoverWebHosts } from './host-discovery.ts'
 
 interface PackageJson {
   name?: string
@@ -35,6 +38,7 @@ export interface ActivationFacts {
   supervisedPid?: number
   supervisedProfile?: ProfileName
   dumpError?: string
+  capabilities?: ActivationCapabilities
   handoff?: ReturnType<typeof restartHandoff>
 }
 
@@ -133,6 +137,17 @@ export function inspectActivation(root: string, profile: ProfileName, raw: strin
   const entries = dumped.code === 0 ? parseDumpEntries(dumped.stdout) : []
   const composed = entries.find(entry => entry.id === target.id || entry.name === target.packageName)
   const host = currentHost(root)
+  const creator = readCreatorContext()
+  const discovery = discoverWebHosts(root, home)
+  const sameHome = discovery.hosts.filter(item => item.home === 'same')
+  const discovered = discovery.complete && sameHome.length === 1 && !discovery.hosts.some(item => item.home === 'unknown')
+    && sameHome[0]?.profile === profile && (!creator || sameHome[0]?.pid === creator.hostPid) ? sameHome[0] : undefined
+  const hostRoot = creator?.hostRoot ?? discovered?.rootPath
+  const hasHost = creator !== undefined || host?.profile === profile || sameHome.length > 0 || !discovery.complete
+    || discovery.hosts.some(item => item.home === 'unknown')
+  const selectedRoot = hasHost ? hostRoot : root
+  const capabilities = activationCapabilities(runtimeVersion(selectedRoot), dumped.code === 0 ? entries : undefined,
+    hostRoot ? 'calling-host' : hasHost ? 'unknown' : 'selected-checkout')
   const packageResolvable = existsSync(join(prof, 'node_modules', target.packageName))
     || existsSync(join(target.dir, 'package.json'))
     || Boolean(target.plugin?.entryAbs && existsSync(target.plugin.entryAbs))
@@ -152,32 +167,35 @@ export function inspectActivation(root: string, profile: ProfileName, raw: strin
     packageResolvable,
     supervisedPid: host?.pid,
     supervisedProfile: host?.profile,
+    capabilities,
     handoff: restartHandoff(host, launcherExecutable(host)),
     ...dumped.code === 0 ? {} : { dumpError: (dumped.stderr || dumped.stdout || `exit ${dumped.code}`).trim().slice(0, 400) },
   }
 }
 
-export function activationDecision(change: ActivationChange, facts: Pick<ActivationFacts, 'id' | 'bundleDeclared' | 'bundleRegistered' | 'hasClient' | 'inOfflineComposition' | 'packageResolvable'>): ActivationDecision {
+export function activationDecision(change: ActivationChange, facts: Pick<ActivationFacts, 'id' | 'bundleDeclared' | 'bundleRegistered' | 'hasClient' | 'inOfflineComposition' | 'packageResolvable' | 'capabilities'>): ActivationDecision {
+  const graphSync = facts.capabilities?.clientGraphSync
+  const clientReload = graphSync === 'supported' ? 'not-required' : graphSync === 'unavailable' ? 'required' : 'not-decided'
   if (change === 'patch') {
     return {
       method: 'watched cordis.patch.yml reconciliation',
       hostRestart: 'not-required',
       restartReason: 'the watched patch reconciles inside the current Host process',
-      browserReload: facts.hasClient ? 'conditional' : 'not-required',
+      browserReload: facts.hasClient ? clientReload : 'not-required',
       blockers: facts.packageResolvable ? [] : ['plugin module is not resolvable from the active profile'],
       preconditions: ['edit the active profile/home cordis.patch.yml with a stable loader id', 'the plugin module must resolve from the active profile'],
-      proof: ['DSH pid stays unchanged', 'host inventory or a plugin-owned marker proves the entry mounted/disposed', 'a newly added client entry still needs the browser page reloaded'],
+      proof: ['DSH pid stays unchanged', 'host inventory or a plugin-owned marker proves the entry mounted/disposed', 'observe client graph reconciliation and changed behavior on the current page; reload only when its graph transport is unavailable'],
     }
   }
   if (change === 'manifest') {
     if (!facts.bundleDeclared && !facts.bundleRegistered) {
       return {
-        method: 'plain profile dependency state; no boot-captured bundle change is established',
+        method: 'plain profile dependency state; no bundle composition change is established',
         hostRestart: 'not-required',
         restartReason: 'a dependency link alone is not a running Loader change or a Host restart reason',
         browserReload: 'not-required',
         blockers: [
-          'manifest branch requires boot-captured bundle evidence: a package dsh.bundle declaration or an existing dsh.profile.bundles row',
+          'manifest branch requires bundle evidence: a package dsh.bundle declaration or an existing dsh.profile.bundles row',
         ],
         preconditions: [
           'select the branch by the runtime surface, not by prerequisite files a command writes',
@@ -187,14 +205,17 @@ export function activationDecision(change: ActivationChange, facts: Pick<Activat
         proof: ['keep the current DSH pid unchanged; no live activation or deactivation is claimed by a plain dependency edit'],
       }
     }
+    const refresh = facts.capabilities?.bundleRefresh
     return {
-      method: 'boot-captured dsh.profile.bundles / package dsh.bundle composition for the next boot',
-      hostRestart: 'required',
-      restartReason: 'the selected bundle composition is captured only when the Host boots',
-      browserReload: facts.hasClient ? 'required' : 'not-required',
+      method: refresh === 'supported' ? 'official live profile bundle reconciliation' : 'profile bundle reconciliation with runtime capability verification',
+      hostRestart: refresh === 'supported' ? 'not-required' : refresh === 'unavailable' ? 'required' : 'not-decided',
+      restartReason: refresh === 'supported' ? 'RC2 profile HMR watches bundle selection and reconciles the current Host'
+        : refresh === 'unavailable' ? 'the inspected RC2 profile has no active profile HMR provider'
+          : 'runtime/profile HMR capability is unproved; this plan authorizes no restart',
+      browserReload: facts.hasClient ? clientReload : 'not-required',
       blockers: [],
       preconditions: ['package installation and bundle ordering complete without duplicate loader ids'],
-      proof: ['profile manifest records the dependency/bundle', 'a new host boot contains the entry', 'verify browser behavior separately for client packages'],
+      proof: ['profile manifest records the dependency/bundle', 'the official manager reports application: applied and the same Host contains the entry; restart-required is a separate pending outcome', 'verify browser graph synchronization and behavior separately for client packages'],
     }
   }
   if (change === 'preset') {
@@ -235,10 +256,10 @@ export function activationDecision(change: ActivationChange, facts: Pick<Activat
   }
   if (change === 'new-client') {
     return {
-      method: 'watched host patch activation, then browser page reload for a new client graph row',
+      method: 'watched host patch activation, then client graph reconciliation',
       hostRestart: 'not-required',
-      restartReason: 'the Host row hot-mounts through the watched patch; only the page boot graph is stale',
-      browserReload: 'required',
+      restartReason: 'the Host row hot-mounts through the watched patch; RC2 client HMR can synchronize new graph rows',
+      browserReload: clientReload,
       blockers: [
         ...facts.hasClient ? [] : ['target package does not declare a client entry'],
         ...facts.packageResolvable ? [] : ['target package is not currently resolvable'],
@@ -248,7 +269,7 @@ export function activationDecision(change: ActivationChange, facts: Pick<Activat
         'add a stable profile/home patch entry without also mounting the same bundle twice',
         'the package and built client entry resolve from the active profile',
       ],
-      proof: ['host entry becomes active with the same DSH pid', 'reload/reopen the page', 'the new boot manifest and visible UI/behavior prove the client loaded'],
+      proof: ['host entry becomes active with the same DSH pid', 'observe the new entry in the current page through client HMR; reload only when that transport is unavailable', 'the Host manifest alone does not prove client loading; verify the visible UI/behavior'],
     }
   }
   if (change === 'server') {

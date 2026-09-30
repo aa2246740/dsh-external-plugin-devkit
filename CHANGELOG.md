@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.9.5 — 2026-09-30
+
+- Add external `plugin add <local-directory>` through the authenticated official RC2 plugin manager for Web/Desktop. No npm publication or Creator private ticket is required.
+- Verify the exact local link, bundle selection, manager outcome and unchanged Host identity. Join uncertain requests without submitting duplicate installations.
+- Plan RC2 bundle and new-client activation from runtime/provider evidence; keep unknown capabilities undecided and verify graph synchronization on the current page.
+- Update CLI, Agent skills and knowledge guidance; retain Creator+ fixed-tool and managed-shell boundaries.
+- Include local CLI/skill synchronization in release completion.
+
+
 ## 0.9.4 - 2026-09-30
 
 - Fix `npx dsh-external-plugin-devkit` and the npm-installed `dshx` command failing with `ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING`. A JavaScript launcher registers the existing `tsx` dependency before loading the CLI.

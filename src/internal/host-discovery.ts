@@ -98,7 +98,7 @@ function publishedCliIndex(words: readonly string[]): number {
 function rootFromCliWord(word: string | undefined): string | undefined {
   if (!word) return undefined
   const normalized = word.replaceAll('\\', '/')
-  const suffixes = ['/apps/cli/src/bin.ts', '/apps/cli/lib/bin.js']
+  const suffixes = ['/apps/cli/src/bin.ts', '/apps/cli/lib/bin.js', '/node_modules/@deepseek-ai/dsh/lib/bin.js']
   const suffix = suffixes.find(value => normalized.endsWith(value))
   if (!suffix || !normalized.startsWith('/')) return undefined
   return normalized.slice(0, -suffix.length)

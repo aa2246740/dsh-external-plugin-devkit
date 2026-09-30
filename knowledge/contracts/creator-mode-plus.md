@@ -109,7 +109,7 @@ plan 会验证 `lib/client.js` handoff，不能要求未构建 scaffold 先通�
    root 挂载固定 Host bridge，使同包的 browser sentry 能进入官方 client graph。
 2. installer 从当前 shipped Standard 整体复制出用户 preset，精确注入 persona、skill 和固定工具行；拒绝覆盖已有用户 preset。
 3. roster 发现 preset 不需要 Host restart；已开始会话不换 generation，必须用新会话或仍为空白的会话。RC8 可能让旧、新 generation 同时存活，因此 preset 中任何进程级 route/resource 必须由 Host-scoped 跨 generation lease 共享，或移到 Host composition。
-4. 新 client 首次进入页面 graph 时刷新页面；已有 client bundle 后续更新走同页 HMR。
+4. RC2 新 client 行通过 graph 同步进入当前页面；已有 bundle 更新通过 rebuilt 替换。分别观察实际加载与功能。
 5. managed upgrade 如果没有改变 `agent.cordis.yml` 内容，必须保留它的精确 filesystem stamp，不能因为 skill/metadata 变化制造一个新 generation。
 6. 只按 `SOURCE_BUILT`、`PRESET_ROSTER_VISIBLE`、`PRESET_SESSION_ACTIVE`、`CLIENT_LOADED`、`VISUAL_BEHAVIOR_VERIFIED` 等实际观察层报告。
 
@@ -146,7 +146,7 @@ SOURCE_BUILT check
 package，Loader 可能保留负解析缓存；命令会明确命名这个 scar，由外部 supervisor
 一次性重启并复验，Creator Mode+ 不得自行重启或无限重试。正常的新流程没有这次重启。
 
-`CLIENT_MANIFEST_PRESENT` 只说明当前 Host 提供了 bundle。刷新后的页面没有实际加载
+`CLIENT_MANIFEST_PRESENT` 只说明当前 Host 提供了 bundle。当前页面没有实际加载
 package id 和功能之前，Creator Mode+ 只能报告“已注册”，不能报告“可用”或“完成”。
 
 # 服务端模块的受限热替换
@@ -167,5 +167,5 @@ Host 脱载时立即失败关闭：live row 保持 quarantine，profile dependen
 
 - Standard 与 Creator 的 preset/session discovery 合同未变，Creator Mode+ 仍然无需为 roster discovery 重启 Host。
 - installer 复制 RC8 Standard，因此保留其 disabled Codex/Claude Code tool rows；Creator Mode+ 不自动安装或启用任何原生产品 provider。
-- 用户选择某个 provider 时先走 `manifest` 分支安装对应 Profile Bundle 并重启，再走 `preset` 分支启用复制行并开新会话。两个动作不得合写成“热插拔完成”。
+- 用户选择某个 provider 时先走 `manifest` 分支安装对应 Profile Bundle 并核对官方 manager 的激活结果，再走 `preset` 分支启用复制行并开新会话。两个动作不得合写成“热插拔完成”。
 - RC8 外部 client package 使用 [external client build](client-build.md)，不修改 Harness workspace glob。

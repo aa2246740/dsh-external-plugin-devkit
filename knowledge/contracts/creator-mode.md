@@ -58,7 +58,7 @@ dsh plugin --profile <name> add @deepseek-ai/dsh-subagent-codex
 dsh plugin --profile <name> add @deepseek-ai/dsh-subagent-claude-code
 ```
 
-安装 Bundle 只让 Host 在下次启动后具备 provider，属于 `manifest` 分支；它不
+安装 Bundle 属于 `manifest` 分支；RC2 profile HMR 可同 PID 激活，须核对官方 manager 的结果。它不
 自动认证、启动产品，也不把工具授予某个 Agent。随后在复制出的用户 preset
 里只启用所需的 disabled tool row，属于 `preset` 分支，并用新会话验证。
 

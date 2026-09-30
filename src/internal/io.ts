@@ -80,7 +80,7 @@ const COMMAND_FLAGS: Record<string, ReadonlySet<string>> = {
   'activate-new-client': new Set(['--json', '--profile', '--port', '--timeout']),
   'hot-reload': new Set(['--json', '--profile', '--port', '--timeout', '--scope']),
   creator: new Set(['--json']),
-  plugin: new Set(['--json', '--profile', '--port', '--timeout']),
+  plugin: new Set(['--json', '--profile', '--port', '--timeout', '--dry-run']),
   doctor: new Set(['--json', '--profile']),
   session: new Set(['--json']),
   which: new Set(['--json']),

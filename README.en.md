@@ -12,13 +12,13 @@ This repo is the **dshx CLI / workbench**. It is for **plugin authors who alread
 
 Official Creator Mode is for probing a live process. dshx is the other half: write the plugin as files, check the contract, name the layer you changed, then decide whether the Host restarts or the page reloads. **It is not `dsh`, not a Harness fork, and not a Creator Mode replacement.**
 
-0.9.4 targets official **0.2.0-rc.2** and fixes the CLI entry point after npm installation. `update plan` remains read-only; stages that modify Harness are disabled.
+0.9.5 adds official local Web/Desktop bundle installation and corrects activation planning for RC2 profile HMR and current-page graph synchronization. `update plan` remains read-only; stages that modify Harness are disabled.
 
 ## Run from npm
 
 ```sh
-npx --yes dsh-external-plugin-devkit@0.9.4 --version
-npx --yes dsh-external-plugin-devkit@0.9.4 --help
+npx --yes dsh-external-plugin-devkit@0.9.5 --version
+npx --yes dsh-external-plugin-devkit@0.9.5 --help
 ```
 
 The npm package now uses a JavaScript entry point to load its `tsx` dependency, avoiding Node.js rejecting a TypeScript entry under `node_modules`. Development commands still need the Harness workbench configuration below. Do not install DSHX into the Host as a feature plugin.
@@ -91,7 +91,7 @@ The stills below are from the same local run. The official UI was not opened.
 
 ## There is no universal hot reload
 
-A watched patch, a next-boot bundle, a user preset, a client already on the page, a new client entry, a server module, and a copied artifact are seven different states. Keep the same DSH PID by default. A plain dependency is not `manifest` activation and not a restart reason.
+A watched patch, a profile bundle, a user preset, a client already on the page, a new client entry, a server module, and a copied artifact are seven different states. Keep the same DSH PID by default. A plain dependency is not `manifest` activation and not a restart reason.
 
 ```sh
 dshx kb cat contracts/live-activation
@@ -123,3 +123,13 @@ MIT. DeepSeek Harness is a separate project. This repo is not affiliated with De
 ## Browser authentication and Agent tests
 
 Use `dshx browser status` to check the existing Host. External `browser bind` accepts an official startup URL privately through `DSHX_WEB_STARTUP_URL`; Creator watch/claim refreshes this handoff automatically. `browser open` uses `DSHX_BROWSER_ADAPTER`, an explicit executable receiving private JSON on stdin. See [browser access](knowledge/contracts/browser-access.md) for launcher coverage, expiry, adapter protocol, and the shipped Codex two-context smoke test. HTTP authentication, an authenticated browser run, and feature acceptance are separate.
+
+## Local plugin installation on RC2
+
+Official Desktop accepts local packages without npm publication. Build the package and declare `dsh.bundle.patch`, then run:
+
+```sh
+dshx plugin add /absolute/path/to/plugin --profile desktop --port <current-port>
+```
+
+This uses the current Host's official plugin manager and private authentication handoff. RC2 can reconcile a new bundle and sync its client entries on the same page. Verify the feature afterward. Creator+ plain development plugins continue through the claimed fixed `dshx_activate_new_client` tool; never mount one plugin twice. See [the local install playbook](knowledge/playbooks/install-local-bundle.md).

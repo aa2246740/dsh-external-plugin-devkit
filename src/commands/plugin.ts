@@ -1,8 +1,30 @@
 import { finding, printReport, report } from '../internal/io.ts'
 import { removeProfilePlugin } from '../internal/profile-plugin-remove.ts'
 import type { CliOptions } from '../internal/types.ts'
+import { installLocalBundle, localBundle } from '../internal/plugin-install.ts'
 
 export async function cmdPlugin(args: string[], options: CliOptions, root: string): Promise<number> {
+  if (args[0] === 'add') {
+    try {
+      if (!args[1] || args.length !== 2) throw new Error('usage: dshx plugin add <local-package-dir> --profile web|desktop --port <current-host-port> [--dry-run]')
+      if (options.dryRun) {
+        const bundle = localBundle(args[1])
+        printReport(report('plugin add', [finding('ok', 'local-bundle', 'LOCAL_BUNDLE_READY: no npm publication is needed', { path: bundle.dir }),
+          finding('info', 'dry-run', 'No install or Host mutation performed; the actual command verifies the single same-Home Host and uses its authenticated public plugin manager.')], { bundle }), options.json)
+        return 0
+      }
+      const installed = await installLocalBundle(root, args[1], options.profile, options.port, options.timeoutMs)
+      printReport(report('plugin add', [
+        finding('ok', 'profile-installed', `PROFILE_INSTALLED: ${installed.name}@${installed.version}`, { path: installed.profileDir }),
+        finding('ok', 'host-bundle-active', `HOST_BUNDLE_ACTIVE: official manager applied this bundle on unchanged PID ${installed.hostPid}`),
+        finding('info', 'client-verification-required', 'Observe the plugin on the current page. RC2 client HMR can sync the new graph; Host activation alone does not prove its UI or behavior.'),
+      ], { installed }), options.json)
+      return 0
+    } catch (error) {
+      printReport(report('plugin add', [finding('error', 'plugin-add', error instanceof Error ? error.message : String(error))]), options.json)
+      return 1
+    }
+  }
   try {
     const action = args[0]
     const pluginId = args[1]

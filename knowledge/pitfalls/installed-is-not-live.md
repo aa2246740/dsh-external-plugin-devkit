@@ -1,7 +1,7 @@
 ---
 type: Pitfall
 title: Installed is not live
-description: dsh plugin add、bundle 清单或 artifact copy 成功只说明持久安装/下次启动状态，不能证明当前 Host 或浏览器已激活。
+description: 磁盘安装、Host 激活和页面功能需要各自的证据；RC2 manager applied 也不能代替 UI 验收。
 tags: [install, activation, bundle, ship]
 aliases: [插件装了没生效, installed not live, plugin add not active, artifact synced, LIVE_ACTIVATION_UNPROVEN]
 status: stable
@@ -25,9 +25,9 @@ pnpm add 成功
 → 所以当前页面已生效   # 错
 ```
 
-前四项最多证明 profile 磁盘状态。运行中 Host 不会因此重新读取 bundle manifest；浏览器还另有 boot graph 和 client HMR 生命周期。
+前四项最多证明 profile 磁盘状态。RC2 profile HMR 可以重读 bundle，但必须核对官方 manager 的 application 结果、同 PID 行状态，以及页面加载和功能。
 
-反过来也不能因为 dependency 写进了 `package.json` 就机械要求重启。依赖是解析前提；只有 `dsh.profile.bundles` / package `dsh.bundle` 的 boot-captured composition 才属于 manifest restart 分支。首次 Web client 使用 `new-client` 同 PID 激活 Host 行，再刷新页面。
+反过来也不能因为 dependency 写进了 `package.json` 就机械要求重启。依赖是解析前提；RC2 新 bundle 可同 PID 重组，首次 client 可通过 graph 同步进入当前页面。运行时能力未知时保持未确定。
 
 # 修复
 

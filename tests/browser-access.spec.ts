@@ -82,7 +82,9 @@ test('browser adapter receives credentials only on stdin and output is whitelist
   const host = { home: root, root, pid: 41, processStartedAt: 'boot-1', port: 3080 }
   try {
     writeFileSync(executable, `#!/usr/bin/env node\nlet data='';for await(const chunk of process.stdin)data+=chunk;const input=JSON.parse(data);if(process.argv.length!==2||process.env.DSHX_WEB_STARTUP_URL)process.exit(1);process.stderr.write(input.startupUrl);process.stdout.write(JSON.stringify({status:'BROWSER_AUTHENTICATED',origin:input.origin,secret:input.startupUrl}));`, { mode: 0o700 })
-    const result = await openBrowserAdapter(executable, host, 'http://127.0.0.1:3080/?token=private-test-token', 3000)
+    // This checks credential transport, not process-start latency under the
+    // full suite. The separate 50 ms case below still proves timeout behavior.
+    const result = await openBrowserAdapter(executable, host, 'http://127.0.0.1:3080/?token=private-test-token', 10000)
     assert.deepEqual(result, { status: 'BROWSER_AUTHENTICATED', origin: 'http://127.0.0.1:3080' })
     await assert.rejects(openBrowserAdapter(undefined, host, undefined, 1000), /BROWSER_ADAPTER_REQUIRED/)
     writeFileSync(executable, '#!/usr/bin/env node\nsetInterval(()=>{},1000)', { mode: 0o700 })

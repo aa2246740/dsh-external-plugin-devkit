@@ -26,7 +26,7 @@ sources:
 3. 修改被监听的真实用户 patch；`.dshx/overlays/*.yml` 是一次性 `--patch` 启动参数文件，不是这条热更新面。
 4. 等 watcher 事务重组。坏 YAML/坏配置应保留 last-good tree；先修错误，不要用重启掩盖。
 5. 记录修改前后 DSH PID 相同，并用 plugin inventory、插件自有健康端点或可逆行为证明 entry mount/unmount。
-6. 如果这是一个新 client entry，继续 [新增 client 插件](add-new-client-plugin.md) 的页面刷新步骤。
+6. 如果这是一个新 client entry，继续 [新增 client 插件](add-new-client-plugin.md) 的当前页面验证步骤。
 
 # 完成标准
 
