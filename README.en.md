@@ -12,7 +12,16 @@ This repo is the **dshx CLI / workbench**. It is for **plugin authors who alread
 
 Official Creator Mode is for probing a live process. dshx is the other half: write the plugin as files, check the contract, name the layer you changed, then decide whether the Host restarts or the page reloads. **It is not `dsh`, not a Harness fork, and not a Creator Mode replacement.**
 
-0.9.2 targets official **0.2.0-rc.2**. `update plan` remains read-only; stages that modify Harness are disabled.
+0.9.4 targets official **0.2.0-rc.2** and fixes the CLI entry point after npm installation. `update plan` remains read-only; stages that modify Harness are disabled.
+
+## Run from npm
+
+```sh
+npx --yes dsh-external-plugin-devkit@0.9.4 --version
+npx --yes dsh-external-plugin-devkit@0.9.4 --help
+```
+
+The npm package now uses a JavaScript entry point to load its `tsx` dependency, avoiding Node.js rejecting a TypeScript entry under `node_modules`. Development commands still need the Harness workbench configuration below. Do not install DSHX into the Host as a feature plugin.
 
 ## 0.9.2: desk pin is 0.2.0-rc.2
 

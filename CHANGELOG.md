@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.4 - 2026-09-30
+
+- Fix `npx dsh-external-plugin-devkit` and the npm-installed `dshx` command failing with `ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING`. A JavaScript launcher registers the existing `tsx` dependency before loading the CLI.
+- Verify `--version` and `--help` from an actual `node_modules` installation path without external loader flags. Keep the official DSH `0.2.0-rc.2` target and existing Creator+ bridge behavior.
+
 ## 0.9.2 - 2026-09-28
 
 - Pin the desk Harness target to official `dsh-v0.2.0-rc.1` (package `@deepseek-ai/dsh@0.2.0-rc.1`, SHA `4878cdabd87d4041bdaff61d04c966883b9fd07a`). `dshx update plan --target dsh-v0.2.0-rc.1` resolves that tag. Omitting `--target` stays on it and does not follow a later alpha.

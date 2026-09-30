@@ -12,7 +12,16 @@
 
 官方 Creator Mode 适合在活进程里探针。dshx 管另一半：把插件写成文件、检查合同、看这次改的是哪一层，再决定要不要重启 Host、刷新页面。**不是 `dsh`，不是 Harness 的 fork，也不是 Creator Mode 的替代品。**
 
-0.9.2 对齐官方 **0.2.0-rc.2**。`update plan` 保留只读盘点；修改 Harness 的更新阶段已禁用。
+0.9.4 对齐官方 **0.2.0-rc.2**，修复 npm 安装后的命令启动入口。`update plan` 保留只读盘点；修改 Harness 的更新阶段已禁用。
+
+## npm 命令入口
+
+```sh
+npx --yes dsh-external-plugin-devkit@0.9.4 --version
+npx --yes dsh-external-plugin-devkit@0.9.4 --help
+```
+
+npm 包现在用 JavaScript 入口加载自带的 `tsx` 依赖，解决 Node.js 无法直接执行 `node_modules` 中 TypeScript 入口的问题。实际开发仍需下面的 Harness 工作台配置；不要把 DSHX 当功能插件安装进 Host。
 
 ## 0.9.2：工作台钉到 0.2.0-rc.2
 
