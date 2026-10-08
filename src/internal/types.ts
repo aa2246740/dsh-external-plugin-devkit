@@ -90,7 +90,7 @@ export interface CliOptions {
   scope: HotReloadScope
 }
 
-export const DSHX_VERSION = '0.9.5'
+export const DSHX_VERSION = '0.9.6'
 /** Official release this desk is proved against. Omitted `update` targets stay here. */
 export const DESK_HARNESS_TAG = 'dsh-v0.2.0-rc.2'
 /** Commit of {@link DESK_HARNESS_TAG} on deepseek-ai/deepseek-harness. */
