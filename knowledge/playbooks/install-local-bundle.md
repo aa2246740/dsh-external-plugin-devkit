@@ -5,7 +5,7 @@ description: 外部 Agent 通过官方公开插件管理接口安装本地 Web/D
 tags: [install, local, desktop, bundle, rc2]
 aliases: [本地插件, 本地安装, plugin add, link, file, npm, Claude]
 status: stable
-verified_against: { tag: dsh-v0.2.0-rc.2, sha: 639ed015397290b3745d163aafe02ffee4aa3f84 }
+verified_against: { tag: dsh-v0.2.1-rc.2, sha: 687f282e8625c6b8d11ff58211a90524be2e4317 }
 sources:
   - id: install-spec
     resource: packages/boot/plugin-manager/src/install-spec.ts

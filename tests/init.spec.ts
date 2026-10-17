@@ -47,6 +47,7 @@ describe('init scaffolds', () => {
     const pkg = loadJson<{
       exports: Record<string, string | { default: string }>,
       scripts: Record<string, string>,
+      engines?: { dsh?: string },
       peerDependencies: Record<string, string>,
       devDependencies: Record<string, string>,
     }>(join(root, 'my-plugins/client-demo/package.json'))
@@ -55,6 +56,7 @@ describe('init scaffolds', () => {
       default: './lib/client.js',
     })
     assert.equal(pkg.scripts.build, 'tsc -p tsconfig.json && tsdown')
+    assert.equal(pkg.engines?.dsh, DSH_PEER_RANGE)
     assert.equal(pkg.peerDependencies['@deepseek-ai/dsh'], DSH_PEER_RANGE)
     assert.equal(pkg.peerDependencies['@deepseek-ai/dsh-client-ui-renderer'], DSH_PEER_RANGE)
     assert.equal(pkg.peerDependencies['@deepseek-ai/dsh-client-ui-layout'], DSH_PEER_RANGE)

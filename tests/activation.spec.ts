@@ -11,7 +11,7 @@ const facts = {
   hasClient: true,
   inOfflineComposition: true,
   packageResolvable: true,
-  capabilities: activationCapabilities('0.2.0-rc.2', [
+  capabilities: activationCapabilities('0.2.1-rc.2', [
     { id: 'hmr', name: '@deepseek-ai/dsh-hmr' },
     { id: 'client-hmr', name: '@deepseek-ai/dsh-client-hmr' },
   ], 'calling-host'),
@@ -75,7 +75,7 @@ describe('activation lifecycle decisions', () => {
   })
 
   it('keeps a profile without HMR and a page without graph sync explicit', () => {
-    const unsupported = { ...facts, capabilities: activationCapabilities('0.2.0-rc.2', [], 'calling-host') }
+    const unsupported = { ...facts, capabilities: activationCapabilities('0.2.1-rc.2', [], 'calling-host') }
     assert.equal(activationDecision('manifest', unsupported).hostRestart, 'required')
     assert.equal(activationDecision('new-client', unsupported).browserReload, 'required')
   })

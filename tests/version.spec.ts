@@ -8,6 +8,7 @@ describe('release version', () => {
     const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as {
       version?: string
       peerDependencies?: Record<string, string>
+      engines?: { node?: string; dsh?: string }
     }
     const lock = JSON.parse(readFileSync(new URL('../package-lock.json', import.meta.url), 'utf8')) as {
       version?: string
@@ -17,7 +18,8 @@ describe('release version', () => {
     assert.equal(lock.version, pkg.version)
     assert.equal(lock.packages?.['']?.version, pkg.version)
     assert.equal(pkg.peerDependencies?.['@deepseek-ai/dsh'], DSH_PEER_RANGE)
-    assert.equal(DESK_HARNESS_TAG, 'dsh-v0.2.0-rc.2')
-    assert.equal(DESK_HARNESS_SHA, '639ed015397290b3745d163aafe02ffee4aa3f84')
+    assert.equal(pkg.engines?.dsh, DSH_PEER_RANGE)
+    assert.equal(DESK_HARNESS_TAG, 'dsh-v0.2.1-rc.2')
+    assert.equal(DESK_HARNESS_SHA, '687f282e8625c6b8d11ff58211a90524be2e4317')
   })
 })

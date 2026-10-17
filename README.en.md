@@ -6,7 +6,7 @@
 
 **This is not a Host feature plugin.** Do not install this repo with `dsh plugin add`. There is no Host install spec such as `github:aa2246740/dsh-external-plugin-devkit`.
 
-If you only run official DeepSeek Harness (for example **0.2.0-rc.2**) and you are not writing plugins: **skip this repository.** Stock DSH has no Creator Mode and no DSHX. Feature-plugin install lives in that plugin's own README.
+If you only run official DeepSeek Harness (for example **0.2.1-rc.2**) and you are not writing plugins: **skip this repository.** Stock DSH has no Creator Mode and no DSHX. Feature-plugin install lives in that plugin's own README.
 
 This repo is the **dshx CLI / workbench**. It is for **plugin authors who already have a [Harness checkout](https://github.com/deepseek-ai/deepseek-harness)** and want to write or maintain file-backed plugins outside the Host (Cursor, Claude Code, Codex, Grok, or a human).
 
@@ -23,9 +23,13 @@ npx --yes dsh-external-plugin-devkit@0.9.5 --help
 
 The npm package now uses a JavaScript entry point to load its `tsx` dependency, avoiding Node.js rejecting a TypeScript entry under `node_modules`. Development commands still need the Harness workbench configuration below. Do not install DSHX into the Host as a feature plugin.
 
-## 0.9.2: desk pin is 0.2.0-rc.2
+## 0.9.7: desk pin is 0.2.1-rc.2
 
-The default target is `dsh-v0.2.0-rc.2` (SHA `639ed015397290b3745d163aafe02ffee4aa3f84`, official package `@deepseek-ai/dsh@0.2.0-rc.2`). The `@deepseek-ai/dsh` peer is `>=0.2.0-rc.1 <0.2.1`: it accepts this RC and rejects `0.2.0` alphas. Official client `INLINE_SAFE` is the same expression as `0.1.7-rc.2`.
+The default target is `dsh-v0.2.1-rc.2` (SHA `687f282e8625c6b8d11ff58211a90524be2e4317`, official package `@deepseek-ai/dsh@0.2.1-rc.2`). The `@deepseek-ai/dsh` peer and `engines.dsh` are `>=0.2.1-rc.1 <0.2.2`: they accept this RC and reject `0.2.1` alphas. Official client `INLINE_SAFE` is the same expression as `0.2.0-rc.2`.
+
+## 0.9.2: desk pin was 0.2.0-rc.2
+
+The default target was `dsh-v0.2.0-rc.2` (SHA `639ed015397290b3745d163aafe02ffee4aa3f84`). Peer was `>=0.2.0-rc.1 <0.2.1`. That range does not accept `0.2.1-rc.*`.
 
 ## 0.9.1: RC2 and desktop support
 

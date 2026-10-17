@@ -5,7 +5,7 @@ description: RC2 client HMR 可同步新 graph 行；新插件不显示时先查
 tags: [client, browser, graph, reload]
 aliases: [client reload, refresh page, new client missing, 新插件页面不显示, graph frame]
 status: stable
-verified_against: { tag: dsh-v0.2.0-rc.2, sha: 639ed015397290b3745d163aafe02ffee4aa3f84 }
+verified_against: { tag: dsh-v0.2.1-rc.2, sha: 687f282e8625c6b8d11ff58211a90524be2e4317 }
 sources:
   - id: client-hmr
     resource: packages/client/hmr/src/client/index.ts

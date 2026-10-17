@@ -5,7 +5,7 @@ description: ship 只同步产物；区分配置、bundle、preset、客户端�
 tags: [activation, hmr, hot-reload, plugin, lifecycle]
 aliases: [HMR, hot reload, hot-reload, 热重载, 热插拔, 不重启, 做插件要重启整个 DeepSeek Harness 吗, live activation, cordis.patch.yml, client reload, bundle, manifest, user preset, Creator Mode, restart]
 status: stable
-verified_against: { tag: dsh-v0.2.0-rc.2, sha: 639ed015397290b3745d163aafe02ffee4aa3f84, date: 2026-09-30 }
+verified_against: { tag: dsh-v0.2.1-rc.2, sha: 687f282e8625c6b8d11ff58211a90524be2e4317, date: 2026-10-18 }
 sources:
   - id: profile-hmr
     resource: packages/boot/hmr/src/index.ts

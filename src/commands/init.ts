@@ -228,6 +228,7 @@ function writeScaffold(dir: string, name: string, kind: string, externalWorkspac
       ],
       engines: {
         node: '^22.19.0 || >=24.0.0',
+        dsh: DSH_PEER_RANGE,
       },
       license: 'MIT',
       peerDependencies: {
