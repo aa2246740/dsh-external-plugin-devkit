@@ -7,4 +7,4 @@ npx --yes dsh-external-plugin-devkit@0.9.4 --version
 npx --yes dsh-external-plugin-devkit@0.9.4 --help
 ```
 
-DSHX is a development CLI, not a Host feature plugin. Do not install it through `dsh plugin add`. The target remains official DeepSeek Harness `0.2.0-rc.2`; Creator+ bridge operations are unchanged.
+DSHX is a development CLI, not a Host feature plugin. Do not install it through `dsh plugin add`. The target remains official DeepSeek Harness `0.2.1-rc.2`; Creator+ bridge operations are unchanged.

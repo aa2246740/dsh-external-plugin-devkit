@@ -34,7 +34,7 @@ export function activationCapabilities(
 ): ActivationCapabilities {
   const active = (name: string) => entries?.some(entry => entry.name === name && !entry.disabled) === true
   // Keep unqualified versions undecided instead of extrapolating a restart rule.
-  const knownRuntime = version === '0.2.0-rc.2'
+  const knownRuntime = version === '0.2.1-rc.2'
   const profileHmr: CapabilityState = entries === undefined ? 'unknown'
     : active('@deepseek-ai/dsh-hmr') ? 'supported' : 'unavailable'
   return {
