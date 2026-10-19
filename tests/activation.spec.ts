@@ -11,7 +11,7 @@ const facts = {
   hasClient: true,
   inOfflineComposition: true,
   packageResolvable: true,
-  capabilities: activationCapabilities('0.2.0-rc.2', [
+  capabilities: activationCapabilities('0.2.1-rc.2', [
     { id: 'hmr', name: '@deepseek-ai/dsh-hmr' },
     { id: 'client-hmr', name: '@deepseek-ai/dsh-client-hmr' },
   ], 'calling-host'),
@@ -75,9 +75,26 @@ describe('activation lifecycle decisions', () => {
   })
 
   it('keeps a profile without HMR and a page without graph sync explicit', () => {
-    const unsupported = { ...facts, capabilities: activationCapabilities('0.2.0-rc.2', [], 'calling-host') }
+    const unsupported = { ...facts, capabilities: activationCapabilities('0.2.1-rc.2', [], 'calling-host') }
     assert.equal(activationDecision('manifest', unsupported).hostRestart, 'required')
     assert.equal(activationDecision('new-client', unsupported).browserReload, 'required')
+  })
+
+  it('qualifies both desk RC2 pins and leaves other runtimes undecided', () => {
+    const entries = [
+      { id: 'hmr', name: '@deepseek-ai/dsh-hmr' },
+      { id: 'client-hmr', name: '@deepseek-ai/dsh-client-hmr' },
+    ]
+    for (const version of ['0.2.0-rc.2', '0.2.1-rc.2']) {
+      const caps = activationCapabilities(version, entries, 'calling-host')
+      assert.equal(caps.bundleRefresh, 'supported', version)
+      assert.equal(caps.clientGraphSync, 'supported', version)
+    }
+    for (const version of ['0.2.1-alpha.1', '0.2.0-rc.1', '0.3.0-rc.1']) {
+      const caps = activationCapabilities(version, entries, 'calling-host')
+      assert.equal(caps.bundleRefresh, 'unknown', version)
+      assert.equal(caps.clientGraphSync, 'unknown', version)
+    }
   })
 
   it('does not substitute RC2 checkout assumptions for an older calling runtime', () => {
