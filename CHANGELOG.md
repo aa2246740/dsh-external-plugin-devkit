@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.7 — 2026-10-19
+
+- Pin the desk Harness target to official `dsh-v0.2.1-rc.2` (package `@deepseek-ai/dsh@0.2.1-rc.2`, SHA `687f282e8625c6b8d11ff58211a90524be2e4317`). `dshx update plan --target dsh-v0.2.1-rc.2` resolves that tag. Omitting `--target` stays on it and does not follow a later alpha.
+- Move the `@deepseek-ai/dsh` peer to `>=0.2.1-rc.2 <0.3.0-0`: accepts this RC and later `0.2.1`/`0.2.x` builds, rejects `0.2.1` alphas and `0.3.0` prereleases. DSH reads the range with `includePrerelease`, so the previous `>=0.2.0-rc.1 <0.2.1` matched `0.2.1-rc.2` only by accident of prerelease ordering while rejecting the `0.2.1` finals this desk now follows.
+- Qualify `0.2.1-rc.2` for desktop HMR and page graph-sync alongside `0.2.0-rc.2`; every other runtime stays undecided instead of extrapolating a restart rule.
+- Keep the client-bundle inline allowlist. Official `INLINE_SAFE` at `dsh-v0.2.1-rc.2` is the same expression as `dsh-v0.2.0-rc.2`.
+
 ## 0.9.5 — 2026-09-30
 
 - Add external `plugin add <local-directory>` through the authenticated official RC2 plugin manager for Web/Desktop. No npm publication or Creator private ticket is required.

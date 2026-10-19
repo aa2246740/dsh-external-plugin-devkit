@@ -1,5 +1,9 @@
 # Directory Update Log
 
+## 2026-10-19
+
+* **0.9.7 Harness 0.2.1-rc.2**: desk update target is `dsh-v0.2.1-rc.2` (SHA `687f282e8625c6b8d11ff58211a90524be2e4317`, package `@deepseek-ai/dsh@0.2.1-rc.2`). `dshx update plan --target dsh-v0.2.1-rc.2` resolves that tag. Omitted `--target` does not float onto a later alpha. Peer range moves to `>=0.2.1-rc.2 <0.3.0-0` (accepts this RC plus `0.2.1`/`0.2.x`, rejects `0.2.1` alphas and `0.3.0` prereleases); the previous `>=0.2.0-rc.1 <0.2.1` matched `0.2.1-rc.2` only under `includePrerelease` and rejected `0.2.1` finals. Activation capability qualifies both `0.2.0-rc.2` and `0.2.1-rc.2`; every other runtime stays undecided. Client inline allowlist is unchanged: official `INLINE_SAFE` is byte-identical at `dsh-v0.2.0-rc.2` and `dsh-v0.2.1-rc.2`.
+
 ## 2026-09-28
 
 * **0.9.2 Harness 0.2.0-rc.2**: desk update target is `dsh-v0.2.0-rc.2` (SHA `639ed015397290b3745d163aafe02ffee4aa3f84`, package `@deepseek-ai/dsh@0.2.0-rc.2`). `dshx update plan --target dsh-v0.2.0-rc.2` resolves that tag. Omitted `--target` does not float onto a later alpha. Peer range is `>=0.2.0-rc.1 <0.2.1` (accepts this RC, rejects 0.2.0 alphas). Client inline allowlist is unchanged from rc.2.

@@ -6,7 +6,7 @@
 
 **这不是 Host 功能插件。** 不要用 `dsh plugin add` 装本仓库，也没有 `github:aa2246740/dsh-external-plugin-devkit` 这种 Host 安装命令。
 
-只跑官方 DeepSeek Harness（例如 **0.2.0-rc.2**）、不写插件的人：**跳过这个仓库。** 官方原装 DSH 没有 Creator Mode，也没有 DSHX；功能插件的安装写在那个插件自己的 README 里。
+只跑官方 DeepSeek Harness（例如 **0.2.1-rc.2**）、不写插件的人：**跳过这个仓库。** 官方原装 DSH 没有 Creator Mode，也没有 DSHX；功能插件的安装写在那个插件自己的 README 里。
 
 本仓库是 **dshx CLI / 工作台**。给**手里有一份 [Harness checkout](https://github.com/deepseek-ai/deepseek-harness)、要在仓外写或维护文件插件**的作者用（Cursor、Claude Code、Codex、Grok，或人自己跑）。
 
@@ -23,9 +23,9 @@ npx --yes dsh-external-plugin-devkit@0.9.5 --help
 
 npm 包现在用 JavaScript 入口加载自带的 `tsx` 依赖，解决 Node.js 无法直接执行 `node_modules` 中 TypeScript 入口的问题。实际开发仍需下面的 Harness 工作台配置；不要把 DSHX 当功能插件安装进 Host。
 
-## 0.9.2：工作台钉到 0.2.0-rc.2
+## 工作台钉：0.2.1-rc.2
 
-工作台默认目标为 `dsh-v0.2.0-rc.2`（SHA `639ed015397290b3745d163aafe02ffee4aa3f84`，官方包 `@deepseek-ai/dsh@0.2.0-rc.2`）。`@deepseek-ai/dsh` peer 为 `>=0.2.0-rc.1 <0.2.1`：接受该 RC，拒绝 `0.2.0` alpha。官方客户端 `INLINE_SAFE` 与 `0.1.7-rc.2` 相同。
+工作台默认目标为 `dsh-v0.2.1-rc.2`（SHA `687f282e8625c6b8d11ff58211a90524be2e4317`，官方包 `@deepseek-ai/dsh@0.2.1-rc.2`）。`@deepseek-ai/dsh` peer 为 `>=0.2.1-rc.2 <0.3.0-0`：接受该 RC 与后续 `0.2.1`/`0.2.x` 版本，拒绝 `0.2.1` alpha 和 `0.3.0` 预发布。上一枚工作台钉是 `dsh-v0.2.0-rc.2`；官方客户端 `INLINE_SAFE` 两枚 tag 逐字节相同。
 
 ## 0.9.1：RC2 与桌面支持
 

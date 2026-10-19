@@ -90,18 +90,22 @@ export interface CliOptions {
   scope: HotReloadScope
 }
 
-export const DSHX_VERSION = '0.9.6'
+export const DSHX_VERSION = '0.9.7'
 /** Official release this desk is proved against. Omitted `update` targets stay here. */
-export const DESK_HARNESS_TAG = 'dsh-v0.2.0-rc.2'
+export const DESK_HARNESS_TAG = 'dsh-v0.2.1-rc.2'
 /** Commit of {@link DESK_HARNESS_TAG} on deepseek-ai/deepseek-harness. */
-export const DESK_HARNESS_SHA = '639ed015397290b3745d163aafe02ffee4aa3f84'
+export const DESK_HARNESS_SHA = '687f282e8625c6b8d11ff58211a90524be2e4317'
 /**
  * Peer range for `@deepseek-ai/dsh` and `@deepseek-ai/dsh-*`.
- * Official `apps/cli` package `@deepseek-ai/dsh` at this tag is `0.2.0-rc.2`.
- * Accepts `0.2.0-rc.2` and later `0.2.0` builds below `0.2.1`. Rejects `0.2.0` alphas.
- * `>=0.1.7-rc.1 <0.1.8` does not accept `0.2.0-rc.2`.
+ * Official `apps/cli` package `@deepseek-ai/dsh` at this tag is `0.2.1-rc.2`.
+ * Accepts `0.2.1-rc.2` and later `0.2.1`/`0.2.x` builds below `0.3.0`. Rejects `0.2.1` alphas.
+ * DSH reads this range with `includePrerelease`, so the lower bound must name the pinned RC:
+ * a bare `>=0.2.1` sorts above `0.2.1-rc.2` and would reject it. The `<0.3.0-0` upper bound
+ * stays below every `0.3.0` prerelease instead of admitting one.
+ * A narrower `>=0.2.0-rc.1 <0.2.1` matched this RC only under `includePrerelease` and rejected
+ * the `0.2.1` finals this desk now follows.
  */
-export const DSH_PEER_RANGE = '>=0.2.0-rc.1 <0.2.1'
+export const DSH_PEER_RANGE = '>=0.2.1-rc.2 <0.3.0-0'
 export const DEFAULT_PORT = 3080
 export const DEFAULT_TIMEOUT_MS = 60_000
 export const DEFAULT_PROFILE: ProfileName = 'web'
