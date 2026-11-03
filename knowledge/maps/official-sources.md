@@ -9,7 +9,7 @@ generated: { by: dshx/grok-4.6, at: 2026-08-17T14:00:00Z }
 stale_after: 2026-11-17
 ---
 
-当前工作台对照官方 **0.2.0-rc.2**（tag `dsh-v0.2.0-rc.2`，SHA `639ed015397290b3745d163aafe02ffee4aa3f84`，包 `@deepseek-ai/dsh` 版本 `0.2.0-rc.2`）。省略 `dshx update plan` 的 `--target` 时使用这枚工作台钉，不跟随更高的 alpha。显式 `--target dsh-v0.2.0-rc.2` 解析同一枚 tag。插件对 `@deepseek-ai/dsh` 与 `@deepseek-ai/dsh-*` 的 peer 范围是 `>=0.2.0-rc.1 <0.2.1`：接受 `0.2.0-rc.2`，拒绝 `0.2.0` alpha。`>=0.1.7-rc.1 <0.1.8` 接受不了 `0.2.0-rc.2`。更早合同篇仍可能钉在 rc.8 / 0.1.1-rc.2 / 0.1.7-rc.2；跨版本改插件 API 先读 [compat-0.1.5](/contracts/compat-0.1.5.md)。路径相对仓库根。
+当前工作台对照官方 **0.2.1-rc.5**（tag `dsh-v0.2.1-rc.5`，SHA `b830ec950faba0a46dda564be3e2d854afed94f1`，包 `@deepseek-ai/dsh` 版本 `0.2.1-rc.5`）。省略 `dshx update plan` 的 `--target` 时使用这枚工作台钉，不跟随更高的 alpha。显式 `--target dsh-v0.2.1-rc.5` 解析同一枚 tag。插件对 `@deepseek-ai/dsh` 与 `@deepseek-ai/dsh-*` 的 peer，以及 `engines.dsh`，范围是 `>=0.2.1-rc.1 <0.2.2`：接受 `0.2.1-rc.5`，拒绝 `0.2.1` alpha。`>=0.2.0-rc.1 <0.2.1` 接受不了 `0.2.1-rc.5`。更早合同篇仍可能钉在 0.2.0-rc.2 / 0.1.7-rc.2；跨版本改插件 API 先读 [compat-0.1.5](/contracts/compat-0.1.5.md)。路径相对仓库根。
 
 **不要先把这些文件整篇读完。** 先走 [symptoms](symptoms.md) 或下面的「已拆成」列，需要逐条核对再打开原件。
 
@@ -46,7 +46,7 @@ stale_after: 2026-11-17
 9. `apps/cli/src/{profile-boot.ts,plugin.ts,dump-config.ts,args.ts}`、`apps/cli/reference/README.md`
 10. `website/docs.ts`
 11. `docs/architecture.md`、`docs/testing.md`
-12. `packages/core/agent-loop/src/invariant.ts`
+12. `packages/core/agent-loop/src/agent.ts`
 13. `docs/cookbook/{adding-a-tool,adding-a-settings-card,extension-cookbook,adding-an-llm-adapter,adding-a-conversation-node}.md`
 14. `docs/user/develop/basic/{index,tool,config,publish}.md`
 15. `docs/user/develop/framework/{index,service,events}.md`、`docs/cordis-tutorial/01-04`

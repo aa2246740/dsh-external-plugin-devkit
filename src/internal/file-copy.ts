@@ -27,6 +27,8 @@ const CLIENT_BASELINE = new Set([
   'react-dom',
   'react-dom/client',
   '@deepseek-ai/cordis',
+  'zod',
+  '@tanstack/react-virtual',
   '@deepseek-ai/dsh-client-store',
   '@deepseek-ai/dsh-client-ui-slots',
   '@deepseek-ai/dsh-client-ui-primitives',
@@ -193,11 +195,20 @@ export function clientEntryFindings(pluginDir: string): Finding[] {
   const buildConfigPath = join(pluginDir, 'tsdown.config.ts')
   if (existsSync(buildConfigPath)) {
     const buildConfig = readFileSync(buildConfigPath, 'utf8')
-    if (/['"][^'"\n]*packages\/client\/tsdown\.client[^'"\n]*['"]/.test(buildConfig)) {
-      findings.push(finding('error', 'rc8-external-client-build', 'repository clientBundle only accepts packages/*/* and cannot build my-plugins/*', {
-        path: buildConfigPath,
-        hint: "import externalClientBundle from '../../tools/dshx/src/client-build.js' instead",
-      }))
+    const officialImport = buildConfig.match(/['"]([^'"\n]*packages\/client\/tsdown\.client[^'"\n]*)['"]/)?.[1]
+    if (officialImport !== undefined) {
+      const targetPreset = resolve(pluginDir, officialImport.endsWith('.ts') ? officialImport : `${officialImport}.ts`)
+      const presetIsLegacy = existsSync(targetPreset) && readFileSync(targetPreset, 'utf8').includes('packages/*/*/package.json')
+      const callArg = buildConfig.match(/\b(?:clientBundle|clientLibrary|staticLinked)\s*\(\s*([^,\n)]+)/)?.[1]?.trim()
+      const passesPackageDir = callArg !== undefined && !/^['"](?![./])/.test(callArg)
+      if (presetIsLegacy || !passesPackageDir) {
+        findings.push(finding('error', 'rc8-external-client-build', 'repository clientBundle(id) only accepts packages/*/*; pass packageDir (e.g. import.meta.dirname) on rc.5+ or use externalClientBundle', {
+          path: buildConfigPath,
+          hint: "use externalClientBundle from '../../tools/dshx/src/client-build.js' or pass import.meta.dirname to rc.5+ clientBundle(packageDir, ...)",
+        }))
+      } else {
+        findings.push(finding('ok', 'rc8-external-client-build', 'uses rc.5+ packageDir clientBundle signature', { path: buildConfigPath }))
+      }
     } else if (buildConfig.includes('externalClientBundle')) {
       findings.push(finding('ok', 'rc8-external-client-build', 'uses the target-aware out-of-tree dshx client bundle adapter', { path: buildConfigPath }))
     }

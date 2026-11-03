@@ -70,3 +70,85 @@ test('lease expiration does not authorize a second writer; explicit re-takeover 
  store.markTakeoverReady(root,grant.id,grant.grant,[]);store.commitTakeover(root,'demo',context('old'),grant)
  assert.doesNotThrow(()=>claimCreatorPlugin(root,'demo',context('old')))
 })
+test('requestTakeover drains live background jobs through the SessionId and job.owner contract', async t => {
+ const root = fixture(t)
+ const { mkdirSync, copyFileSync } = await import('node:fs')
+ mkdirSync(join(root, 'apps/cli/src'), { recursive: true })
+ mkdirSync(join(root, 'tools/dshx/src/internal'), { recursive: true })
+ writeFileSync(join(root, 'apps/cli/src/bin.ts'), '')
+ writeFileSync(join(root, 'tools/dshx/src/cli.ts'), '')
+ copyFileSync(join(process.cwd(), 'src/internal/creator-claims.mjs'), join(root, 'tools/dshx/src/internal/creator-claims.mjs'))
+ // @ts-ignore -- runtime JS module
+ const { requestTakeover } = await import('../src/creator-plus/takeover.js')
+ const oldAgent = { id: 'old', status: 'idle', session: { header: { cwd: root }, snapshotEvents: () => [] }, cancel() {}, whenIdle: async () => {} }
+ const newAgent = { id: 'new', status: 'idle', session: { header: { cwd: root }, snapshotEvents: () => [] }, cancel() {}, whenIdle: async () => {} }
+ const listCallers: unknown[] = [], killCalls: unknown[][] = [], waitCalls: unknown[][] = []
+ let jobStatus: 'running' | 'cancelled' = 'running'
+ const jobs = {
+  list(caller?: string) {
+   listCallers.push(caller)
+   if (caller !== 'old') return []
+   return [{ id: 'job-1', owner: 'old', status: jobStatus }]
+  },
+  kill(id: string, caller?: string, reason?: string) {
+   killCalls.push([id, caller, reason])
+   if (caller !== 'old') throw new Error(`expected caller SessionId 'old', got ${String(caller)}`)
+   jobStatus = 'cancelled'
+   return 'requested'
+  },
+  async wait(id: string, timeoutMs: number, caller?: string) {
+   waitCalls.push([id, timeoutMs, caller])
+   if (caller !== 'old') throw new Error(`expected caller SessionId 'old', got ${String(caller)}`)
+   return { id, owner: 'old', status: jobStatus }
+  },
+ }
+ const agents = {
+  get: (id: string) => id === 'old' ? oldAgent : id === 'new' ? newAgent : undefined,
+  list: () => [oldAgent, newAgent],
+  roots: () => [oldAgent, newAgent],
+  isOwnedBy: () => false,
+ }
+ let observedApproveLabel = ''
+ const ctx = {
+  agents,
+  jobs,
+  tools: { guard: () => () => {} },
+  on: () => () => {},
+  effect: (fn: () => unknown) => fn(),
+  userQuestions: {
+   ask: async ({ questions }: any) => {
+    const q = questions[0]
+    observedApproveLabel = q.options[1].label
+    return { answers: [{ id: q.id, selected: [q.options[1].label] }] }
+   },
+  },
+ }
+ const result = await requestTakeover(
+  ctx,
+  'demo',
+  { agent: newAgent, signal: new AbortController().signal },
+  {
+   envRoot: root,
+   configFile: '/missing',
+   cwd: '/missing',
+   moduleDir: '/missing',
+   hostPort: 43127,
+   runDshx: async (args: string[], _exec: unknown, opts: any) => {
+    if (args[1] === 'watch') return { exitCode: 0, stdout: '{}', stderr: '' }
+    if (args[1] === 'takeover') {
+     store.commitTakeover(root, 'demo', context('new'), opts.takeoverGrant)
+     return { exitCode: 0, stdout: '{}', stderr: '' }
+    }
+    throw new Error(`unexpected args: ${args.join(' ')}`)
+   },
+  },
+ )
+ assert.equal(result.exitCode, 0)
+ assert.equal(observedApproveLabel, '停止旧任务并接管')
+ assert.equal(jobStatus, 'cancelled')
+ assert.ok(listCallers.includes('old'))
+ assert.equal(listCallers.some(caller => typeof caller === 'object'), false)
+ assert.deepEqual(killCalls, [['job-1', 'old', 'Creator+ user-confirmed takeover']])
+ assert.deepEqual(waitCalls, [['job-1', 20_000, 'old']])
+ assert.equal(store.inspectClaim(root, 'demo').claim.sessionId, 'new')
+})

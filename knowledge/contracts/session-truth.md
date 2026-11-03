@@ -12,9 +12,9 @@ sources:
   - id: architecture
     resource: docs/architecture.md
     title: Session as source of truth
-  - id: invariant
-    resource: packages/core/agent-loop/src/invariant.ts
-    title: log-reconstruction desync
+  - id: agent-loop
+    resource: packages/core/agent-loop/src/agent.ts
+    title: Frozen deriveMessages request boundary
   - id: persistence
     resource: docs/subsystems/persistence.md
     title: Session persistence
@@ -24,13 +24,13 @@ sources:
 
 官方表述：**Model-visible means logged.** Session 事件日志是 append-only 真相源。Trajectory 是同一窗口上的 turn 账本，不读 Chat snapshot。
 
-# 符号级不变量
+# 符号级边界不变量
 
-对 `isAgentLoopRequest` 的 `llm/stream`：
+`packages/core/agent-loop/src/agent.ts` 在构造每次 `isAgentLoopRequest` 请求时直接从会话事件派生并冻结上下文：
 
-`JSON.stringify(options.messages) !== JSON.stringify(session.deriveMessages())` → fail（`log-reconstruction desync`）
+`const boundaryMessages = session.deriveMessages()` → `deepFreeze(message)` + `markAgentLoopRequest(Object.freeze({ ...header.config, messages: boundaryMessages, ... }))`
 
-因此任何要进模型请求的新输入，必须先成为 session 事件。不要手改 `request.messages`。
+（早期版本的 `@deepseek-ai/dsh-invariants` / `invariant.ts` 运行时比对已在 `0.2.1-rc.5` 前移除，改为由 `agent.ts` 直接派生并深度冻结只读请求边界。）因此任何要进模型请求的新输入，必须先成为 session 事件，无法也不应手改 `request.messages`。
 
 # 和插件验证的关系
 

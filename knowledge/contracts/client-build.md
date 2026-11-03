@@ -1,11 +1,11 @@
 ---
 type: Runtime Contract
 title: Target Harness external client build boundary
-description: 官方 clientBundle 只发现 packages/*/*；my-plugins 外部包使用 target-aware dshx externalClientBundle 保留 lazy-CJS、共享模块、CSS 和 HMR 合同。
-tags: [client, build, rc8, rc1, tsdown, external-plugin]
+description: 0.2.1-rc.5 clientBundle 改为接收 packageDir（历史版本仅扫 packages/*/*）；外部包可用 target-aware externalClientBundle 或 clientBundle(import.meta.dirname) 保持 lazy-CJS、图片内联与构建变量一致。
+tags: [client, build, rc8, rc1, rc5, tsdown, external-plugin]
 aliases: [clientBundle, externalClientBundle, target aware client, rc8 external client, packages glob, my-plugins build, no packages manifest]
 status: stable
-verified_against: { tag: dsh-v0.1.5-rc.2, sha: fb2c4b9e698e30edb738bca4cf0618587db7d203, date: 2026-09-11 }
+verified_against: { tag: dsh-v0.2.1-rc.5, sha: b830ec950faba0a46dda564be3e2d854afed94f1, date: 2026-11-02 }
 sources:
   - id: official-client-build
     resource: packages/client/tsdown.client.ts
@@ -26,16 +26,7 @@ sources:
 
 # 边界，不是报错绕行
 
-官方 `packages/client/tsdown.client.ts` 的 `clientBundle()` 是仓库内部
-workspace preset。它按包名扫描 `packages/*/*/package.json`，所以
-`my-plugins/<name>` 即使有正确 `package.json`，也会报：
-
-```text
-tsdown: no packages/*/*/package.json declares the name <id>
-```
-
-不要改 Harness 核心、不要把 scratch 插件搬进 `packages/`、也不要扩大
-官方 glob。外部插件属于另一条分发边界。
+0.2.1 之前的 `packages/client/tsdown.client.ts` 按包名扫描 `packages/*/*/package.json`，传包名会报 `no packages/*/*/package.json declares the name <id>`。`0.2.1-rc.5` 起官方 `clientBundle(packageDir, libEntry)` 改为接收包目录（如 `import.meta.dirname`），但仍依赖仓内 `../../scripts/*`。不要改 Harness 核心或把外部插件搬进 `packages/`。
 
 # dshx 的目标版本适配器
 
@@ -43,12 +34,12 @@ tsdown: no packages/*/*/package.json declares the name <id>
 正在构建的外部包根读取 manifest，同时从 `DSHX_HARNESS` 指向的目标 checkout
 读取 `packages/client/web/src/platform.ts`，并保持：
 
-- Host half 为 ESM，生产依赖保持外部引用；
+- Host half 为 ESM，生产依赖保持外部引用，并将公开 `DSH_CLIENT_*` 构建变量固定进产物（其余 `process.env` 保持运行时读取）；
 - browser half 为 `lib/client.js` lazy-CJS；
 - `window.__ModuleLoader__.load({ id, factory })` 注册；
 - React、Cordis 和其他共享模块保持同一运行时 identity；
-- CSS Modules、全局 CSS 与 `?inline` CSS 由插件拥有并可随 fiber 清理；
-- 官方声明为 browser-safe 的纯函数包（当前包括 `dsh-util-workspace-path`，以及 rc.2 起、`dsh-v0.2.0-rc.2` 仍包含的 `@deepseek-ai/dsh-api-workspace-controller/default-workspace`）随插件内联，不生成 Loader module-table 请求；该包的其它入口仍要声明 `dsh.client.external` 或改走服务；
+- CSS Modules、全局 CSS 与 `?inline` CSS 由插件拥有并可随 fiber 清理；`.svg`、`.png`、`.webp` 导入内联为带 watch 的 base64 data URL；
+- 官方声明为 browser-safe 的纯函数包（当前包括 `dsh-util-workspace-path`，以及 rc.2 起、`dsh-v0.2.1-rc.5` 仍包含的 `@deepseek-ai/dsh-api-workspace-controller/default-workspace`）随插件内联，不生成 Loader module-table 请求；该包的其它入口仍要声明 `dsh.client.external` 或改走服务；
 - 未声明的 `@deepseek-ai/*` runtime import 失败关闭，避免把服务 identity 私自打包进去。
 - client entry 直接读取的 `ctx.<service>` 必须出现在该入口导出的 Cordis `inject` 中；构建和 `dshx check` 都会在产物进入 Host 前拒绝缺项。
 

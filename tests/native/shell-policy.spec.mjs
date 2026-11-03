@@ -39,6 +39,11 @@ async function harness(t) {
   const core = join(official, 'packages/core/index.js'); writeFileSync(core, 'official')
   const ctx = new Context()
   t.after(async () => { await ctx.fiber.dispose(); rmSync(temp, { recursive: true, force: true }) })
+  ctx.provide('workingDirectory', {
+    defaultDirectory: workspace,
+    get: session => session.header.cwd ?? workspace,
+    ensure: async agent => agent.session.header.cwd ?? workspace,
+  })
   for (const plugin of [Llm,Sessions,Projections,SystemPrompt,Tools,Approval,Agents,Provider,Subprocess,ShellEnv]) await ctx.plugin(plugin)
   let policyFiber = await ctx.plugin(Policy, { mode: 'workspace-write', workspaceRoot: workspace })
   await ctx.plugin(Bash, { cwd: workspace, timeoutMs: 10_000 })

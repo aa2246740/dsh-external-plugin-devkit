@@ -5,7 +5,7 @@ description: RC2 可同 PID 热挂 Host 行，并由 client HMR 同步到当前�
 tags: [client, graph, reload, activation]
 aliases: [new client, client reload, 新客户端插件, 页面刷新, new graph entry]
 status: stable
-verified_against: { tag: dsh-v0.2.0-rc.2, sha: 639ed015397290b3745d163aafe02ffee4aa3f84 }
+verified_against: { tag: dsh-v0.2.1-rc.5, sha: b830ec950faba0a46dda564be3e2d854afed94f1 }
 sources:
   - id: web-boot
     resource: packages/client/web/src/boot.ts

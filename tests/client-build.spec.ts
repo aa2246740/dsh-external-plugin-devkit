@@ -34,8 +34,13 @@ describe('externalClientBundle', () => {
   // otherwise a plain `npm test` without DSHX_HARNESS fails on import alone.
   interface BundleConfig {
     name: string
+    define?: Record<string, string>
     deps: { neverBundle(specifier: string): boolean; alwaysBundle(specifier: string): boolean }
-    plugins: Array<{ resolveId(source: string): unknown }>
+    plugins: Array<{
+      name: string
+      resolveId(source: string, importer?: string): unknown
+      load?(this: { addWatchFile(id: string): void }, id: string): Promise<string | null>
+    }>
     outputOptions: { banner: string }
   }
   let externalClientBundle: (id: string, libEntry: string[], options?: { packageRoot?: string; clientEntry?: string }) => [BundleConfig, BundleConfig]
@@ -59,6 +64,56 @@ describe('externalClientBundle', () => {
     assert.equal(client.deps.neverBundle('demo-provider/client'), true)
     assert.equal(client.deps.alwaysBundle('clsx'), true)
     assert.match(client.outputOptions.banner, /id: "external-demo"/)
+  })
+
+  it('fixes DSH_CLIENT_* values into both Host and browser defines without clobbering Host process.env', () => {
+    const previous = process.env.DSH_CLIENT_APP_TITLE
+    process.env.DSH_CLIENT_APP_TITLE = 'Fixed Title'
+    try {
+      const root = packageRoot({
+        name: 'external-demo',
+        dsh: { client: { platform: 'web' } },
+      })
+      const [host, client] = externalClientBundle('external-demo', ['lib/types/index.js'], { packageRoot: root })
+      assert.equal(host.define?.['process.env.DSH_CLIENT_APP_TITLE'], JSON.stringify('Fixed Title'))
+      assert.equal(client.define?.['process.env.DSH_CLIENT_APP_TITLE'], JSON.stringify('Fixed Title'))
+      assert.equal(host.define?.['process.env'], undefined)
+      assert.equal(client.define?.['process.env'], '{}')
+    } finally {
+      if (previous === undefined) delete process.env.DSH_CLIENT_APP_TITLE
+      else process.env.DSH_CLIENT_APP_TITLE = previous
+    }
+  })
+
+  it('inlines .svg, .png, and .webp imports as watched base64 data URLs with lib/types fallback', async () => {
+    const root = packageRoot({
+      name: 'external-demo',
+      dsh: { client: { platform: 'web' } },
+    })
+    const svgPath = join(root, 'src/client/icon.svg')
+    const pngPath = join(root, 'src/client/pixel.png')
+    const webpPath = join(root, 'src/client/badge.webp')
+    writeText(svgPath, '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"></svg>')
+    mkdirSync(dirname(pngPath), { recursive: true })
+    writeFileSync(pngPath, Buffer.from([0x89, 0x50, 0x4e, 0x47]))
+    writeFileSync(webpPath, Buffer.from('RIFF\x00\x00\x00\x00WEBP', 'binary'))
+    const [, client] = externalClientBundle('external-demo', ['lib/types/index.js'], { packageRoot: root })
+    const imagePlugin = client.plugins.find(plugin => plugin.name === 'dshx-image-inline')
+    assert.ok(imagePlugin)
+    const importerFromTypes = join(root, 'lib/types/client/index.js')
+    assert.equal(imagePlugin.resolveId('./icon.svg', importerFromTypes), svgPath)
+    assert.equal(imagePlugin.resolveId('./pixel.png', importerFromTypes), pngPath)
+    assert.equal(imagePlugin.resolveId('./badge.webp', importerFromTypes), webpPath)
+    assert.equal(imagePlugin.resolveId('./other.txt', importerFromTypes), null)
+    const watched: string[] = []
+    const ctx = { addWatchFile(id: string) { watched.push(id) } }
+    const svgModule = await imagePlugin.load!.call(ctx, svgPath)
+    const pngModule = await imagePlugin.load!.call(ctx, pngPath)
+    const webpModule = await imagePlugin.load!.call(ctx, webpPath)
+    assert.match(svgModule ?? '', /^export default "data:image\/svg\+xml;base64,/)
+    assert.match(pngModule ?? '', /^export default "data:image\/png;base64,/)
+    assert.match(webpModule ?? '', /^export default "data:image\/webp;base64,/)
+    assert.deepEqual(watched, [svgPath, pngPath, webpPath])
   })
 
   it('fails closed on an id mismatch or an invalid module-table request', () => {

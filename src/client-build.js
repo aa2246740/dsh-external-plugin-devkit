@@ -2,18 +2,20 @@ import { assertPluginSource } from './core-boundary.js'
 /**
  * Target-aware browser bundle preset for out-of-tree dshx plugins.
  *
- * DeepSeek Harness' own `clientBundle()` intentionally resolves manifests from
- * two-level package directories under `packages/`. A plugin under
- * `my-plugins/` therefore needs this adapter:
- * it reads the package being built from its own directory while preserving the
- * official lazy-CJS registration, shared module identities, CSS ownership, and
- * client HMR cleanup markers.
+ * Pre-0.2.1 DeepSeek Harness `clientBundle(id)` resolved manifests only from
+ * two-level directories under `packages/`, while 0.2.1-rc.5
+ * `clientBundle(packageDir)` still depends on monorepo-internal `scripts/`
+ * helpers. This standalone adapter reads the package being built from its own
+ * directory and the shared module table from the target Harness checkout, while
+ * preserving lazy-CJS registration, shared module identities, CSS ownership,
+ * inlined image data URLs, and `DSH_CLIENT_*` build-value parity across Host
+ * and browser halves.
  */
 
 import { existsSync, readFileSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
-import { isBuiltin } from 'node:module'
-import { basename, dirname, resolve } from 'node:path'
+import { createRequire, isBuiltin } from 'node:module'
+import { basename, dirname, extname, isAbsolute, resolve, sep } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { transform } from 'lightningcss'
 import { assertClientCordisInject } from './internal/client-cordis-inject.js'
@@ -38,8 +40,14 @@ const CSS_GLOBAL_PREFIX = '\0dshx-css-global:'
 const CSS_INLINE_PREFIX = '\0dshx-css-inline:'
 const VIRTUAL_SUFFIX = '.mjs'
 const INLINE_QUERY = '?inline'
+const TYPES_MARKER = `${sep}lib${sep}types${sep}`
+const IMAGE_MEDIA_TYPES = new Map([
+  ['.svg', 'image/svg+xml'],
+  ['.png', 'image/png'],
+  ['.webp', 'image/webp'],
+])
 
-// Official packages/client/tsdown.client.ts INLINE_SAFE at dsh-v0.2.0-rc.2.
+// Official packages/client/tsdown.client.ts INLINE_SAFE at dsh-v0.2.1-rc.5.
 // Unchanged from dsh-v0.1.7-rc.2, including dsh-api-workspace-controller/default-workspace.
 const INLINE_SAFE = /^(?:@deepseek-ai\/dsh-(?:file-reference|session|llm|tools|brand|deque|output-retention|typert-protocol|util-crypto|util-values|util-workspace-path)(?:\/|$)|@deepseek-ai\/dsh-token-meter\/client$|@deepseek-ai\/dsh-native-command\/types$|@deepseek-ai\/dsh-host-open-in-app\/shared$|@deepseek-ai\/dsh-plugin-manager\/registry$|@deepseek-ai\/dsh-agent-preset-registry\/display$|@deepseek-ai\/dsh-api-workspace-controller\/default-workspace$|@deepseek-ai\/dsh-spill-policy\/notice$)/
 const VENDORED_LIBRARY = /^@deepseek-ai\/(cosmokit|schemastery)(\/|$)/
@@ -84,19 +92,24 @@ function clientDeclaration(id, manifest) {
   return declaration
 }
 
-function clientDefines(environment) {
-  const mode = environment.NODE_ENV ?? 'production'
-  const values = {
-    'process.env': '{}',
-    'process.env.NODE_ENV': JSON.stringify(mode),
-    'import.meta.env.MODE': JSON.stringify(mode),
-    'import.meta.env': JSON.stringify({ MODE: mode }),
-  }
+function clientBuildValueDefines(environment) {
+  const values = {}
   for (const [name, value] of Object.entries(environment)) {
     if (!name.startsWith('DSH_CLIENT_') || value === undefined) continue
     values[`process.env.${name}`] = JSON.stringify(value)
   }
   return values
+}
+
+function clientDefines(environment) {
+  const mode = environment.NODE_ENV ?? 'production'
+  return {
+    'process.env': '{}',
+    'process.env.NODE_ENV': JSON.stringify(mode),
+    'import.meta.env.MODE': JSON.stringify(mode),
+    'import.meta.env': JSON.stringify({ MODE: mode }),
+    ...clientBuildValueDefines(environment),
+  }
 }
 
 function escapeSpecifier(name) {
@@ -134,7 +147,13 @@ function styleModule(id, path, css, classMap) {
 }
 
 function assetPath(source, importer) {
-  return importer === undefined ? source : resolve(dirname(importer), source)
+  if (importer === undefined) return source
+  if (!source.startsWith('.') && !isAbsolute(source)) return createRequire(importer).resolve(source)
+  const emitted = resolve(dirname(importer), source)
+  if (existsSync(emitted)) return emitted
+  const boundary = emitted.indexOf(TYPES_MARKER)
+  if (boundary < 0) return emitted
+  return resolve(emitted.slice(0, boundary), 'src', emitted.slice(boundary + TYPES_MARKER.length))
 }
 
 function cssPlugins(id, requested) {
@@ -201,6 +220,19 @@ function cssPlugins(id, requested) {
       const { code } = transform({ filename: path, code: source, minify: true })
       return styleModule(id, path, code.toString())
     },
+  }, {
+    name: 'dshx-image-inline',
+    resolveId(source, importer) {
+      if (importer === undefined || !IMAGE_MEDIA_TYPES.has(extname(source))) return null
+      return assetPath(source, importer)
+    },
+    async load(fileId) {
+      const mediaType = IMAGE_MEDIA_TYPES.get(extname(fileId))
+      if (mediaType === undefined) return null
+      this.addWatchFile(fileId)
+      const data = await readFile(fileId)
+      return `export default ${JSON.stringify(`data:${mediaType};base64,${data.toString('base64')}`)};`
+    },
   }]
 }
 
@@ -237,6 +269,7 @@ export function externalClientBundle(id, libEntry, options = {}) {
     fixedExtension: false,
     dts: false,
     clean: false,
+    define: clientBuildValueDefines(process.env),
     deps: {
       neverBundle: specifier => matches(production, specifier),
       alwaysBundle: specifier => !isBuiltin(specifier) && !matches(production, specifier),

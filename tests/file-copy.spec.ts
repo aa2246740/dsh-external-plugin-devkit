@@ -100,7 +100,7 @@ export function apply(ctx) {
     )
   })
 
-  it('rejects RC8 internal clientBundle and a mismatched lazy-CJS id', () => {
+  it('rejects RC8 internal clientBundle(id) and a mismatched lazy-CJS id, while allowing rc.5+ clientBundle(packageDir)', () => {
     const tmp = mkdtempSync(join(tmpdir(), 'dshx-client-rc8-'))
     writeText(join(tmp, 'package.json'), `${JSON.stringify({
       name: 'demo',
@@ -112,6 +112,11 @@ export function apply(ctx) {
     const findings = clientEntryFindings(tmp)
     assert.ok(findings.some(item => item.code === 'rc8-external-client-build' && item.level === 'error'), JSON.stringify(findings))
     assert.ok(findings.some(item => item.code === 'client-entry-id' && item.level === 'error'), JSON.stringify(findings))
+    writeText(join(tmp, 'tsdown.config.ts'), "import { clientBundle } from '../../packages/client/tsdown.client.ts'\nexport default clientBundle('demo', ['lib/types/index.js'])\n")
+    assert.equal(clientEntryFindings(tmp).some(item => item.code === 'rc8-external-client-build' && item.level === 'error'), true)
+    writeText(join(tmp, 'tsdown.config.ts'), "import { clientBundle } from '../../packages/client/tsdown.client.ts'\nexport default clientBundle(import.meta.dirname, ['lib/types/index.js'])\n")
+    assert.equal(clientEntryFindings(tmp).some(item => item.code === 'rc8-external-client-build' && item.level === 'error'), false)
+    assert.equal(clientEntryFindings(tmp).some(item => item.code === 'rc8-external-client-build' && item.level === 'ok'), true)
     writeText(join(tmp, 'tsdown.config.ts'), '// Official packages/client/tsdown.client.ts allowlist reference\n')
     assert.equal(clientEntryFindings(tmp).some(item => item.code === 'rc8-external-client-build' && item.level === 'error'), false)
   })

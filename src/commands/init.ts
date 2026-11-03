@@ -228,6 +228,7 @@ function writeScaffold(dir: string, name: string, kind: string, externalWorkspac
       ],
       engines: {
         node: '^22.19.0 || >=24.0.0',
+        dsh: DSH_PEER_RANGE,
       },
       license: 'MIT',
       peerDependencies: {
@@ -276,9 +277,11 @@ function writeScaffold(dir: string, name: string, kind: string, externalWorkspac
       : [`pnpm --dir my-plugins/${name} install --ignore-workspace`, `pnpm --dir my-plugins/${name} build`],
     '```',
     '',
-    'The generated `tsdown.config.ts` uses dshx `externalClientBundle`; RC8\'s',
-    'repository-internal `packages/client/tsdown.client.ts` rejects `my-plugins/*`.',
-    '`dshx check` stays red until `lib/client.js` contains the lazy-CJS handoff.',
+    'The generated `tsdown.config.ts` uses dshx `externalClientBundle` as a',
+    'standalone target-aware adapter (pre-0.2.1 `clientBundle(id)` rejected',
+    '`my-plugins/*`; 0.2.1-rc.5 `clientBundle(packageDir)` requires passing',
+    '`import.meta.dirname`). `dshx check` stays red until `lib/client.js`',
+    'contains the lazy-CJS handoff.',
   ] : []
   writeText(join(dir, 'README.md'), [
     `# ${name}`,
